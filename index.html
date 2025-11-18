@@ -204,6 +204,31 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
+/* format an ISO-ish string to "YYYY-MM-DD HH:MM:SS UTC"
+   This ensures tooltips show the exact datetime when the views were recorded.
+*/
+function formatRecordedTime(iso){
+  if(!iso) return '—';
+  // if it's only a date like "YYYY-MM-DD", treat as midnight UTC
+  let asIso = String(iso);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(asIso)) asIso = asIso + 'T00:00:00.000Z';
+  // keep only first 19 characters (YYYY-MM-DDTHH:MM:SS) then replace T with space and append UTC
+  try {
+    // Some entries may already be in Date objects or slightly different; create Date to normalize
+    const d = new Date(asIso);
+    if(isNaN(d.getTime())) return iso;
+    const YYYY = d.getUTCFullYear();
+    const MM = String(d.getUTCMonth()+1).padStart(2,'0');
+    const DD = String(d.getUTCDate()).padStart(2,'0');
+    const hh = String(d.getUTCHours()).padStart(2,'0');
+    const mm = String(d.getUTCMinutes()).padStart(2,'0');
+    const ss = String(d.getUTCSeconds()).padStart(2,'0');
+    return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss} UTC`;
+  } catch(e){
+    return iso;
+  }
+}
+
 /* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
 const BANNER_COLORS = {
   "一歌": "#33AAEE",
@@ -692,13 +717,11 @@ function drawChartForSelection(period){
   // timesFull: display the exact datetime when the views were recorded (use orig if present)
   const timesFull = points.map(p => {
     if(p.orig){
-      try {
-        return new Date(p.orig).toLocaleString();
-      } catch(e){
-        return p.orig;
-      }
+      // show the exact recorded datetime (normalized to "YYYY-MM-DD HH:MM:SS UTC")
+      return formatRecordedTime(p.orig);
     }
-    try { return p.t.toLocaleString(); } catch(e) { return p.t.toISOString(); }
+    // fallback: use the point timestamp
+    return formatRecordedTime(p.t.toISOString());
   });
 
   // choose color: if banner is '-' or missing use unit color; otherwise banner color
