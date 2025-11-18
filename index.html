@@ -284,7 +284,21 @@ async function loadData(){
 
     buildGroupOptions();
     renderRankList();
-    selectDefault();
+
+    // preserve selection across reloads: if user had selected a video, re-select latest data for it
+    if(currentSelected && currentSelected.videoId){
+      const fresh = DATA.find(x=>x.videoId === currentSelected.videoId);
+      if(fresh){
+        // re-select fresh object (this updates latest metrics and redraws chart)
+        selectVideo(fresh);
+      } else {
+        // if not found, choose default
+        selectDefault();
+      }
+    } else {
+      selectDefault();
+    }
+
   }catch(err){
     console.error(err);
     document.getElementById('rankList').innerText = 'データ読み込みエラー: ' + err.message;
@@ -557,17 +571,26 @@ const ctx = document.getElementById('trendChart').getContext('2d');
 let chart = null;
 
 function selectVideo(v){
-  currentSelected = v;
-  document.getElementById('selectedTitle').innerText = v.title;
+  // Accept either a video object from DATA or an object that at least contains videoId.
+  const vid = (v && v.videoId) ? v.videoId : (typeof v === 'string' ? v : null);
+  let fresh = null;
+  if(vid) fresh = DATA.find(x=>x.videoId === vid) || v;
+  else fresh = v;
+
+  currentSelected = fresh;
+  if(!currentSelected) return;
+
+  document.getElementById('selectedTitle').innerText = currentSelected.title || '（動画を選択してください）';
   // keep link only in selectedMeta to avoid duplicate banner/unit display
-  document.getElementById('selectedMeta').innerHTML = `<a href="${v.url}" target="_blank" style="color:var(--accent)">${v.url ? 'YouTubeへ' : ''}</a>`;
+  document.getElementById('selectedMeta').innerHTML = `<a href="${currentSelected.url || '#'}" target="_blank" style="color:var(--accent)">${currentSelected.url ? 'YouTubeへ' : ''}</a>`;
+
   // show the latest API-fetched value (should be the last history entry's views)
-  const lastRec = v.history && v.history.length ? v.history[v.history.length-1] : null;
-  const lastViews = lastRec ? lastRec.views : (v.views || 0);
+  const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
+  const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
   document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回';
-  document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
-  document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
-  document.getElementById('publishDate').innerText = v.published || '—';
+  document.getElementById('viewDelta7').innerText = fmt(calcDelta(currentSelected.history,7)) + ' 回';
+  document.getElementById('viewDelta30').innerText = fmt(calcDelta(currentSelected.history,30)) + ' 回';
+  document.getElementById('publishDate').innerText = currentSelected.published || '—';
 
   // Show badges (unit and banner) in the right-top stats area (replaces the old 最新再生数)
   const badgesEl = document.getElementById('selectedBadges');
@@ -576,8 +599,8 @@ function selectVideo(v){
 
     const bannerBadge = document.createElement('div');
     bannerBadge.className = 'badge clickable';
-    bannerBadge.innerText = v.banner || '—';
-    const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#2563eb';
+    bannerBadge.innerText = currentSelected.banner || '—';
+    const bannerHex = (currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : '#2563eb';
     bannerBadge.style.backgroundColor = mixWithWhite(bannerHex);
     bannerBadge.style.color = '#111827';
     bannerBadge.style.border = '1px solid rgba(15,23,42,0.04)';
@@ -586,7 +609,7 @@ function selectVideo(v){
       e.stopPropagation();
       scopeEl.value = 'all';
       buildGroupOptions();
-      try { groupFilterEl.value = `banner:${v.banner}`; } catch(e){}
+      try { groupFilterEl.value = `banner:${currentSelected.banner}`; } catch(e){}
       renderRankList();
       rankListEl.scrollTop = 0;
     });
@@ -594,8 +617,8 @@ function selectVideo(v){
 
     const unitBadge = document.createElement('div');
     unitBadge.className = 'badge clickable';
-    unitBadge.innerText = v.unit || '—';
-    const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#2563eb';
+    unitBadge.innerText = currentSelected.unit || '—';
+    const unitHex = (currentSelected.unit && UNIT_COLORS[currentSelected.unit]) ? UNIT_COLORS[currentSelected.unit] : '#2563eb';
     unitBadge.style.backgroundColor = mixWithWhite(unitHex);
     unitBadge.style.color = '#111827';
     unitBadge.style.border = '1px solid rgba(15,23,42,0.04)';
@@ -604,14 +627,15 @@ function selectVideo(v){
       e.stopPropagation();
       scopeEl.value = 'all';
       buildGroupOptions();
-      try { groupFilterEl.value = `unit:${v.unit}`; } catch(e){}
+      try { groupFilterEl.value = `unit:${currentSelected.unit}`; } catch(e){}
       renderRankList();
       rankListEl.scrollTop = 0;
     });
     badgesEl.appendChild(unitBadge);
   }
 
-  drawChartForSelection('all');
+  // redraw chart using up-to-date history
+  drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
 function drawChartForSelection(period){
@@ -654,66 +678,80 @@ function drawChartForSelection(period){
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
-  if(chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: currentSelected.title,
-        data,
-        tension:0.2,
-        fill:true,
-        backgroundColor: areaColor,
-        borderColor: lineColor,
-        pointRadius:3,
-        // attach times array so tooltip callback can access time including clock
-        timesFull: timesFull
-      }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      interaction: { mode: 'nearest', intersect: false },
-      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
-      scales: {
-        x: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
-          type: 'category'
-        },
-        y: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
-          beginAtZero: false,
-          offset: false
-        }
+  if(chart){
+    // update existing chart data & styling to reflect latest values without recreating tooltip behavior
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].backgroundColor = areaColor;
+    chart.data.datasets[0].borderColor = lineColor;
+    // attach timesFull for tooltip title
+    chart.data.datasets[0].timesFull = timesFull;
+    chart.update('none');
+  } else {
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: currentSelected.title,
+          data,
+          tension:0.2,
+          fill:true,
+          backgroundColor: areaColor,
+          borderColor: lineColor,
+          pointRadius:3,
+          // attach times array so tooltip callback can access time including clock
+          timesFull: timesFull
+        }]
       },
-      plugins: {
-        legend:{display:false},
-        tooltip:{
-          callbacks:{
-            // show localized full datetime (including time) as tooltip title
-            title: function(items){
-              if(!items || !items.length) return '';
-              const it = items[0];
-              const ds = chart.data.datasets[it.datasetIndex];
-              if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
-              // fallback to label (date)
-              return chart.data.labels[it.dataIndex] || '';
-            },
-            // show views as label
-            label: function(context){
-              return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction: { mode: 'nearest', intersect: false },
+        layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+        scales: {
+          x: {
+            display:true,
+            grid:{color:'rgba(15,23,42,0.03)'},
+            ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
+            type: 'category'
+          },
+          y: {
+            display:true,
+            grid:{color:'rgba(15,23,42,0.03)'},
+            ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
+            beginAtZero: false,
+            offset: false
+          }
+        },
+        plugins: {
+          legend:{display:false},
+          tooltip:{
+            callbacks:{
+              // show localized full datetime (including time) as tooltip title
+              title: function(items){
+                if(!items || !items.length) return '';
+                const it = items[0];
+                const ds = chart.data.datasets[it.datasetIndex];
+                if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
+                // fallback to label (date)
+                return chart.data.labels[it.dataIndex] || '';
+              },
+              // show views as label
+              label: function(context){
+                return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+              }
             }
           }
         }
       }
-    }
-  });
+    });
+  }
 
-  // Note: we intentionally do not add an external click-to-show-text handler (per previous request).
+  // Ensure latest API value is shown in the metric after (re)draw
+  const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
+  const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
+  const selViews = document.getElementById('selectedViews');
+  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
 }
 
 /* --- clicking outside the chart restores latest API value into the metric --- */
@@ -732,7 +770,7 @@ document.addEventListener('click', function(evt){
 });
 
 /* --- event binding --- */
-// replaced reload button by clearGroups button (clears group filters)
+// clear groups button
 if(clearBtn) clearBtn.addEventListener('click', function(){
   scopeEl.value = 'all';
   buildGroupOptions();
