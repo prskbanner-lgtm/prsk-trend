@@ -200,59 +200,43 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
-/* --- banner color map (user-specified) --- */
-const BANNER_COLOR_MAP = {
-  "一歌": "#3AE",
-  "咲希": "#FD4",
-  "穂波": "#E66",
-  "志歩": "#BD2",
-  "みのり": "#FCA",
-  "遥": "#9CF",
-  "愛莉": "#FAC",
-  "雫": "#9ED",
-  "こはね": "#F69",
-  "杏": "#0BD",
-  "彰人": "#F72",
-  "冬弥": "#07D",
-  "司": "#FB0",
-  "えむ": "#F6B",
-  "寧々": "#3D9",
-  "類": "#B8E",
-  "奏": "#B68",
-  "まふゆ": "#88C",
-  "絵名": "#CA8",
-  "瑞希": "#DAC"
+/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) ---
+ Provided shorthand -> expanded full hex as requested.
+*/
+const BANNER_COLORS = {
+  "一歌": "#33AAEE",   // #3AE -> #33AAEE
+  "咲希": "#FFDD44",   // #FD4 -> #FFDD44
+  "穂波": "#EE6666",   // #E66 -> #EE6666
+  "志歩": "#BBDD22",   // #BD2 -> #BBDD22
+  "みのり": "#FFCCAA", // #FCA -> #FFCCAA
+  "遥":   "#99CCFF",   // #9CF -> #99CCFF
+  "愛莉": "#FFAACC",   // #FAC -> #FFAACC
+  "雫":   "#99EEDD",   // #9ED -> #99EEDD
+  "こはね": "#FF6699", // #F69 -> #FF6699
+  "杏":   "#00BBDD",   // #0BD -> #00BBDD
+  "彰人": "#FF7722",   // #F72 -> #FF7722
+  "冬弥": "#0077DD",   // #07D -> #0077DD
+  "司":   "#FFBB00",   // #FB0 -> #FFBB00
+  "えむ": "#FF66BB",   // #F6B -> #FF66BB
+  "寧々": "#33DD99",   // #3D9 -> #33DD99
+  "類":   "#BB88EE",   // #B8E -> #BB88EE
+  "奏":   "#BB6688",   // #B68 -> #BB6688
+  "まふゆ": "#8888CC", // #88C -> #8888CC
+  "絵名": "#CCAA88",   // #CA8 -> #CCAA88
+  "瑞希": "#DDAACC"    // #DAC -> #DDAACC
 };
 
-/* convert hex (3 or 6 digits, with or without #) to {r,g,b} */
-function hexToRgb(hex) {
-  if(!hex) return {r:37,g:99,b:235}; // fallback (same as --accent)
-  hex = String(hex).trim().replace('#','');
+/* convert hex color (#RRGGBB) to rgba string with alpha */
+function hexToRgba(hex, alpha){
+  if(!hex) return `rgba(37,99,235,${alpha})`; // fallback
+  hex = hex.replace('#','');
   if(hex.length === 3){
-    const r = parseInt(hex[0]+hex[0], 16);
-    const g = parseInt(hex[1]+hex[1], 16);
-    const b = parseInt(hex[2]+hex[2], 16);
-    return {r,g,b};
+    hex = hex.split('').map(c=>c+c).join('');
   }
-  if(hex.length === 6){
-    const r = parseInt(hex.slice(0,2),16);
-    const g = parseInt(hex.slice(2,4),16);
-    const b = parseInt(hex.slice(4,6),16);
-    return {r,g,b};
-  }
-  // fallback parse attempt
-  try {
-    const r = parseInt(hex.slice(0,2),16) || 37;
-    const g = parseInt(hex.slice(2,4),16) || 99;
-    const b = parseInt(hex.slice(4,6),16) || 235;
-    return {r,g,b};
-  } catch(e){
-    return {r:37,g:99,b:235};
-  }
-}
-function hexToRgba(hex, alpha=1){
-  const c = hexToRgb(hex);
-  return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+  const r = parseInt(hex.slice(0,2),16);
+  const g = parseInt(hex.slice(2,4),16);
+  const b = parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 /* --- load data/videos.json --- */
@@ -511,16 +495,16 @@ function drawChartForSelection(period){
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
-  // determine color by banner
-  const banner = currentSelected.banner || '';
-  const colorHex = BANNER_COLOR_MAP[banner] || '#2563eb';
-  const lineColor = hexToRgba(colorHex, 0.92); // fairly opaque for line
-  const fillColor = hexToRgba(colorHex, 0.08); // faint fill under line
+  // choose color based on banner mapping, fallback to default accent
+  const banner = currentSelected.banner;
+  const colorHex = BANNER_COLORS[banner] || '#2563eb';
+  const areaColor = hexToRgba(colorHex, 0.06);
+  const lineColor = colorHex;
 
   if(chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: fillColor, borderColor: lineColor, pointRadius:3 }]},
+    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: areaColor, borderColor: lineColor, pointRadius:3 }]},
     options: {
       responsive:true, maintainAspectRatio:false,
       interaction: { mode: 'nearest', intersect: false },
@@ -529,13 +513,17 @@ function drawChartForSelection(period){
         x: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 } 
+          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
+          // treat labels as category (dates) so no time component shown
+          type: 'category'
         },
         y: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 0, callback: v => Intl.NumberFormat().format(v) },
-          beginAtZero: false
+          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
+          beginAtZero: false,
+          // tighten left margin by disabling extra offset
+          offset: false
         }
       },
       plugins: { 
@@ -552,13 +540,10 @@ function drawChartForSelection(period){
   // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
 
-  // ensure previous handlers removed to avoid duplicate listeners
+  // remove previous click handlers (if any) to avoid duplicates
   canvas.onclick = null;
-  canvas.replaceWith(canvas.cloneNode(true));
-  // re-select context after replacing node
-  const newCanvas = document.getElementById('trendChart').getContext('2d').canvas;
-  // Need to update ctx variable reference for subsequent operations — but keep using chart from closure
-  newCanvas.addEventListener('click', function(evt){
+
+  canvas.addEventListener('click', function(evt){
     // prevent document click handler from immediately hiding the info
     evt.stopPropagation();
 
@@ -573,6 +558,7 @@ function drawChartForSelection(period){
       const value = chart.data.datasets[datasetIndex].data[index];
       const label = chart.data.labels[index];
       if(pi){
+        // show only the value and date in concise form
         pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
       }
     } else {
