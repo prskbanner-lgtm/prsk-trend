@@ -61,7 +61,7 @@
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00)); cursor:pointer;}
+    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
     /* responsive */
@@ -200,7 +200,9 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
-/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
+/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) ---
+ Provided shorthand -> expanded full hex.
+*/
 const BANNER_COLORS = {
   "一歌": "#33AAEE",   // #3AE -> #33AAEE
   "咲希": "#FFDD44",   // #FD4 -> #FFDD44
@@ -224,13 +226,15 @@ const BANNER_COLORS = {
   "瑞希": "#DDAACC"    // #DAC -> #DDAACC
 };
 
-/* --- Unit color mapping when banner is '-' (expanded) --- */
+/* --- Unit color mapping (for when banner is "-" or missing) ---
+ Provided shorthand -> expanded full hex as requested.
+*/
 const UNIT_COLORS = {
   "レオニ": "#4455DD",   // #45D -> #4455DD
   "モモジャン": "#88DD44",// #8D4 -> #88DD44
-  "ビビバス": "#EE1166", // #E16 -> #EE1166
+  "ビビバス": "#EE1166",  // #E16 -> #EE1166
   "ワンダショ": "#FF9900",// #F90 -> #FF9900
-  "ニーゴ": "#884499"    // #849 -> #884499
+  "ニーゴ": "#884499"     // #849 -> #884499
 };
 
 /* convert hex color (#RRGGBB) to rgba string with alpha */
@@ -343,7 +347,9 @@ function calcDelta(history, days){
   return lastViews - startViews;
 }
 
-/* --- render ranking --- */
+/* --- render ranking & trend picks --- */
+let _lastTopPicks = { new:null, week:null, month:null, total:null }; // keep references for click handlers
+
 function renderRankList(){
   const globalAnnotated = DATA.map(v=>{
     const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
@@ -382,45 +388,60 @@ function renderRankList(){
     }
   }
 
-  // set text
-  document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
-  document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
-  document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
+  // assign to persistent picks (normalize shape)
+  _lastTopPicks.week = topWeekGlobal && topWeekGlobal.title ? topWeekGlobal : null;
+  _lastTopPicks.month = topMonthGlobal && topMonthGlobal.title ? topMonthGlobal : null;
+  _lastTopPicks.total = topTotalGlobal && topTotalGlobal.title ? topTotalGlobal : null;
+  _lastTopPicks.new = topNewGlobal && topNewGlobal.video ? topNewGlobal.video : null;
 
-  if(topNewGlobal && topNewGlobal.video){
-    const title = topNewGlobal.video.title || '—';
-    const d = topNewGlobal.date;
+  // populate trend items text
+  document.getElementById('trendWeek').innerText = _lastTopPicks.week ? `${_lastTopPicks.week.title} — ${fmt(_lastTopPicks.week.d7)} 回` : '—';
+  document.getElementById('trendMonth').innerText = _lastTopPicks.month ? `${_lastTopPicks.month.title} — ${fmt(_lastTopPicks.month.d30)} 回` : '—';
+  document.getElementById('trendTotal').innerText = _lastTopPicks.total ? `${_lastTopPicks.total.title} — ${fmt(_lastTopPicks.total.latest)} 回` : '—';
+
+  if(_lastTopPicks.new){
+    const d = getPublishDate(_lastTopPicks.new) || new Date();
     const yyyyMMdd = d.toISOString().slice(0,10);
-    document.getElementById('trendNew').innerText = `${title} — ${yyyyMMdd}`;
+    document.getElementById('trendNew').innerText = `${_lastTopPicks.new.title} — ${yyyyMMdd}`;
   } else {
     document.getElementById('trendNew').innerText = '—';
   }
 
-  // attach click behavior to trend items to show that video's info
-  const trendItemWeek = document.getElementById('trendItemWeek');
-  if(trendItemWeek){
-    trendItemWeek.onclick = () => {
-      if(topWeekGlobal && topWeekGlobal.videoId) selectVideo(topWeekGlobal);
-    };
+  // attach click handlers and unit-color borders to trend items
+  function setupTrendItem(itemId, video){
+    const el = document.getElementById(itemId);
+    if(!el) return;
+    // reset border to default first
+    el.style.border = '';
+    el.style.cursor = '';
+    el.onclick = null;
+
+    if(video){
+      // determine unit color (if unit exists in mapping)
+      const unitColor = UNIT_COLORS[video.unit] || null;
+      if(unitColor){
+        el.style.border = `2px solid ${unitColor}`;
+      } else {
+        // keep subtle default border otherwise
+        el.style.border = '1px solid rgba(15,23,42,0.04)';
+      }
+      el.style.cursor = 'pointer';
+      el.onclick = function(e){
+        // stop propagation to avoid outer handlers
+        e.stopPropagation();
+        selectVideo(video);
+      };
+    } else {
+      // no video -> default border
+      el.style.border = '1px solid rgba(15,23,42,0.04)';
+      el.style.cursor = 'default';
+    }
   }
-  const trendItemMonth = document.getElementById('trendItemMonth');
-  if(trendItemMonth){
-    trendItemMonth.onclick = () => {
-      if(topMonthGlobal && topMonthGlobal.videoId) selectVideo(topMonthGlobal);
-    };
-  }
-  const trendItemTotal = document.getElementById('trendItemTotal');
-  if(trendItemTotal){
-    trendItemTotal.onclick = () => {
-      if(topTotalGlobal && topTotalGlobal.videoId) selectVideo(topTotalGlobal);
-    };
-  }
-  const trendItemNew = document.getElementById('trendItemNew');
-  if(trendItemNew){
-    trendItemNew.onclick = () => {
-      if(topNewGlobal && topNewGlobal.video) selectVideo(topNewGlobal.video);
-    };
-  }
+
+  setupTrendItem('trendItemWeek', _lastTopPicks.week);
+  setupTrendItem('trendItemMonth', _lastTopPicks.month);
+  setupTrendItem('trendItemTotal', _lastTopPicks.total);
+  setupTrendItem('trendItemNew', _lastTopPicks.new);
 
   // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
@@ -529,12 +550,13 @@ function drawChartForSelection(period){
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
-  // choose color: banner preferred; if banner is '-' use unit mapping; fallback default
+  // choose color: if banner is '-' or falsy, use unit color mapping; else use banner color
   const banner = currentSelected.banner;
-  let colorHex = '#2563eb';
-  if(banner && banner !== '-' && BANNER_COLORS[banner]) colorHex = BANNER_COLORS[banner];
-  else if((banner === '-' || !banner) && currentSelected.unit && UNIT_COLORS[currentSelected.unit]) colorHex = UNIT_COLORS[currentSelected.unit];
-
+  let colorHex = BANNER_COLORS[banner];
+  if(!colorHex || banner === '-' || banner.trim() === ''){
+    // fallback to unit color if available
+    colorHex = UNIT_COLORS[currentSelected.unit] || '#2563eb';
+  }
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
@@ -583,7 +605,6 @@ function drawChartForSelection(period){
     evt.stopPropagation();
 
     if(!chart) return;
-    // Use nearest mode with intersect: false to get the closest point in the chart area
     const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
     const pi = document.getElementById('pointInfo');
     if(pointsAtEvent && pointsAtEvent.length){
