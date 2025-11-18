@@ -639,9 +639,14 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  // labels: date only (YYYY-MM-DD)
+  // labels: date only (YYYY-MM-DD) for axis ticks
   const labels = points.map(p => p.t.toISOString().slice(0,10));
+  // data values
   const data = points.map(p => p.v);
+  // full timestamp strings for tooltip (localized including time)
+  const timesFull = points.map(p => {
+    try { return p.t.toLocaleString(); } catch(e) { return p.t.toISOString(); }
+  });
 
   // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
@@ -652,7 +657,20 @@ function drawChartForSelection(period){
   if(chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: areaColor, borderColor: lineColor, pointRadius:3 }]},
+    data: {
+      labels,
+      datasets: [{
+        label: currentSelected.title,
+        data,
+        tension:0.2,
+        fill:true,
+        backgroundColor: areaColor,
+        borderColor: lineColor,
+        pointRadius:3,
+        // attach times array so tooltip callback can access time including clock
+        timesFull: timesFull
+      }]
+    },
     options: {
       responsive:true, maintainAspectRatio:false,
       interaction: { mode: 'nearest', intersect: false },
@@ -676,16 +694,26 @@ function drawChartForSelection(period){
         legend:{display:false},
         tooltip:{
           callbacks:{
-            label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; }
+            // show localized full datetime (including time) as tooltip title
+            title: function(items){
+              if(!items || !items.length) return '';
+              const it = items[0];
+              const ds = chart.data.datasets[it.datasetIndex];
+              if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
+              // fallback to label (date)
+              return chart.data.labels[it.dataIndex] || '';
+            },
+            // show views as label
+            label: function(context){
+              return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+            }
           }
         }
       }
     }
   });
 
-  // NOTE: user requested that the small textual display under the chart (date — views) NOT be shown.
-  // Therefore we do NOT add any click/tap handler that populates a separate element with that text,
-  // and we do NOT change the "最新再生数" metric when tapping the chart.
+  // Note: we intentionally do not add an external click-to-show-text handler (per previous request).
 }
 
 /* --- clicking outside the chart restores latest API value into the metric --- */
