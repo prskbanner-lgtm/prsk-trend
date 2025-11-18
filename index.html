@@ -667,10 +667,11 @@ function drawChartForSelection(period){
     ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
     return;
   }
-  // convert to entries with timestamp and views
+  // convert to entries with timestamp, views and original datetime string (if available)
   const pts = hist.map(h => {
-    const ts = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
-    return ts ? { t: ts, v: (h.views || 0) } : null;
+    const origIso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
+    const ts = origIso ? new Date(origIso) : null;
+    return ts ? { t: ts, v: (h.views || 0), orig: origIso } : null;
   }).filter(Boolean);
 
   let points = pts.slice();
@@ -688,8 +689,15 @@ function drawChartForSelection(period){
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   // data values
   const data = points.map(p => p.v);
-  // full timestamp strings for tooltip (localized including time)
+  // timesFull: display the exact datetime when the views were recorded (use orig if present)
   const timesFull = points.map(p => {
+    if(p.orig){
+      try {
+        return new Date(p.orig).toLocaleString();
+      } catch(e){
+        return p.orig;
+      }
+    }
     try { return p.t.toLocaleString(); } catch(e) { return p.t.toISOString(); }
   });
 
@@ -705,7 +713,7 @@ function drawChartForSelection(period){
     chart.data.datasets[0].data = data;
     chart.data.datasets[0].backgroundColor = areaColor;
     chart.data.datasets[0].borderColor = lineColor;
-    // attach timesFull for tooltip title
+    // attach timesFull for tooltip title (these times represent the time the view count was recorded)
     chart.data.datasets[0].timesFull = timesFull;
     chart.update('none');
   } else {
@@ -721,7 +729,7 @@ function drawChartForSelection(period){
           backgroundColor: areaColor,
           borderColor: lineColor,
           pointRadius:3,
-          // attach times array so tooltip callback can access time including clock
+          // attach times array so tooltip callback can access time including clock (recorded time)
           timesFull: timesFull
         }]
       },
@@ -748,7 +756,7 @@ function drawChartForSelection(period){
           legend:{display:false},
           tooltip:{
             callbacks:{
-              // show localized full datetime (including time) as tooltip title
+              // show the exact datetime when the view count was recorded as tooltip title
               title: function(items){
                 if(!items || !items.length) return '';
                 const it = items[0];
