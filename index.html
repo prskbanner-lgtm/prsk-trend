@@ -56,27 +56,19 @@
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
     .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; border:1px solid rgba(15,23,42,0.04);}
-    .metric .val{font-size:18px;color:var(--text);font-weight:700}
+    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto;}
+    .metric .val{font-size:16px;color:var(--text);font-weight:700}
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
-    /* metrics column below chart: stack vertically and make sizes compact */
-    .metrics-col{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
-    .metrics-col .metric{width:100%; min-width:0; padding:8px;}
-    .metrics-col .metric .val{font-size:16px}
-    /* small point info under chart */
-    #pointInfo{margin-top:8px;font-size:13px;color:var(--muted);}
-
     /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
       .thumb{width:100px; height:56px; flex:0 0 100px;}
-      .metrics-col{flex-direction:row;gap:8px;}
-      .metrics-col .metric{flex:1;}
+      .metric{min-width:100px; font-size:13px;}
     }
   </style>
 </head>
@@ -102,7 +94,7 @@
     </header>
 
     <div class="grid">
-      <!-- LEFT COLUMN: trend information (ページタイトル removed) -->
+      <!-- LEFT COLUMN: trend information -->
       <div>
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
@@ -125,8 +117,6 @@
             </div>
           </div>
         </div>
-
-        <!-- "集計切り口" block removed as requested -->
 
       </div>
 
@@ -154,31 +144,30 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
-            <div id="pointInfo">タップした点の再生回数: —</div>
+            <!-- tapped point info -->
+            <div id="pointInfo" style="margin-top:8px;font-size:13px;color:var(--muted);">グラフをタップするとその時点の再生回数を表示します。</div>
           </div>
 
-          <!-- stacked metrics: 直近7日分 / 直近30日分 / 投稿日 -->
-          <div class="metrics-col">
-            <div class="metric card">
+          <!-- Three metrics placed inline (one line) -->
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;">
+            <div class="metric card" style="min-width:150px; padding:8px;">
               <div style="font-size:12px;color:var(--muted)">直近7日増分</div>
               <div id="viewDelta7" class="val">—</div>
             </div>
-            <div class="metric card">
+            <div class="metric card" style="min-width:150px; padding:8px;">
               <div style="font-size:12px;color:var(--muted)">直近30日増分</div>
               <div id="viewDelta30" class="val">—</div>
             </div>
-            <div class="metric card">
+            <div class="metric card" style="min-width:150px; padding:8px;">
               <div style="font-size:12px;color:var(--muted)">投稿日</div>
               <div id="publishDate" class="val">—</div>
             </div>
           </div>
         </div>
 
-        <!-- 注記 / 操作 欄は削除しました -->
-
       </div>
 
-      <!-- RIGHT COLUMN: ranking (thumbnails now smaller) -->
+      <!-- RIGHT COLUMN: ranking -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -195,7 +184,7 @@
           <div style="margin-top:12px;" class="rank-list card" id="rankList">
             読み込み中...
           </div>
-          <div class="footer-note">データは <code>data/videos.json</code> から読み込まれます。</div>
+          <!-- footer-note removed as requested -->
         </div>
       </div>
     </div>
@@ -250,21 +239,16 @@ const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
 const reloadBtn = document.getElementById('reload');
 
-/* --- Custom ordered group list as requested ---
-   The dropdown will show banners first in the specific order, then units in the requested order.
-   If scope is 'banner' or 'unit' we show only the corresponding section in the specified order.
-*/
+/* --- Custom ordered group list as requested --- */
 const BANNER_ORDER = [
   "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
 ];
 const UNIT_ORDER = ["レオニ","モモジャン","ビビバス","ワンダショ","ニーゴ"];
 
 function buildGroupOptions(){
-  // Build with requested fixed ordering. Include the "グループ: 全て" first.
   groupFilterEl.innerHTML = '<option value="all">グループ: 全て</option>';
 
   if(scopeEl.value === 'banner'){
-    // show banners in the fixed order (as plain values)
     BANNER_ORDER.forEach(b => {
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`);
     });
@@ -273,7 +257,6 @@ function buildGroupOptions(){
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
     });
   } else {
-    // full list: add a disabled header then banners, then units
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- バナー ---</option>');
     BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="banner:${escapeHtml(b)}">${escapeHtml(b)}</option>`));
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- ユニット ---</option>');
@@ -284,17 +267,12 @@ function buildGroupOptions(){
 function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
 /* --- history utilities using datetime --- */
-/*
- history: array of entries; supported legacy {date:"YYYY-MM-DD"} or new {datetime:"ISO...", views: n}
- We will treat each entry's timestamp via parseISOorDateString(entry.datetime || entry.date)
-*/
 function lastHistoryEntry(history){
   if(!history || history.length===0) return null;
   return history[history.length-1];
 }
 
 function findClosestBefore(history, targetDate){
-  // find last entry with timestamp <= targetDate
   if(!history || history.length===0) return null;
   let candidate = history[0];
   for(const rec of history){
@@ -307,14 +285,12 @@ function findClosestBefore(history, targetDate){
 }
 
 function calcDelta(history, days){
-  // compute last.views - views at (lastTime - days)
   if(!history || history.length===0) return 0;
   const lastRec = lastHistoryEntry(history);
   const lastDate = lastRec ? (lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null)) : null;
   if(!lastDate) return 0;
   const startDate = new Date(lastDate);
   startDate.setUTCDate(startDate.getUTCDate() - days);
-  // find start rec
   const startRec = findClosestBefore(history, startDate) || history[0];
   if(!startRec) return 0;
   const startViews = startRec.views || 0;
@@ -324,7 +300,6 @@ function calcDelta(history, days){
 
 /* --- render ranking --- */
 function renderRankList(){
-  // Compute global trend picks from full DATA (ignore current filters/search)
   const globalAnnotated = DATA.map(v=>{
     const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
@@ -332,19 +307,16 @@ function renderRankList(){
     return {...v, latest, d7, d30};
   });
 
-  // top by 7-day growth
   const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
   const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
   const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
 
-  // find newest by published date (fallback to latest history datetime if published missing)
   function getPublishDate(v){
     if(!v) return null;
     if(v.published){
       const d = parseISOorDateString(v.published);
       if(d && !isNaN(d)) return d;
     }
-    // fallback to last history datetime
     const last = v.history && v.history.length ? v.history[v.history.length-1] : null;
     if(last){
       if(last.datetime) return new Date(last.datetime);
@@ -365,28 +337,13 @@ function renderRankList(){
     }
   }
 
-  if(topWeekGlobal && topWeekGlobal.title){
-    document.getElementById('trendWeek').innerText = `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回`;
-  } else {
-    document.getElementById('trendWeek').innerText = '—';
-  }
-
-  if(topMonthGlobal && topMonthGlobal.title){
-    document.getElementById('trendMonth').innerText = `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回`;
-  } else {
-    document.getElementById('trendMonth').innerText = '—';
-  }
-
-  if(topTotalGlobal && topTotalGlobal.title){
-    document.getElementById('trendTotal').innerText = `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回`;
-  } else {
-    document.getElementById('trendTotal').innerText = '—';
-  }
+  document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
+  document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
+  document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
 
   if(topNewGlobal && topNewGlobal.video){
     const title = topNewGlobal.video.title || '—';
     const d = topNewGlobal.date;
-    // show YYYY-MM-DD for clarity
     const yyyyMMdd = d.toISOString().slice(0,10);
     document.getElementById('trendNew').innerText = `${title} — ${yyyyMMdd}`;
   } else {
@@ -419,7 +376,6 @@ function renderRankList(){
     return {...v, latest, d7, d30};
   });
 
-  // Sort according to selected mode. Initial/default sortMode is 'total'.
   if(mode === 'total') annotated.sort((a,b)=>b.latest - a.latest);
   else if(mode === 'week') annotated.sort((a,b)=>b.d7 - a.d7);
   else annotated.sort((a,b)=>b.d30 - a.d30);
@@ -466,7 +422,9 @@ function selectVideo(v){
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
-  document.getElementById('pointInfo').innerText = 'タップした点の再生回数: —';
+  // Clear point info when selecting a new video
+  const pi = document.getElementById('pointInfo');
+  if(pi) pi.innerText = 'グラフをタップするとその時点の再生回数を表示します。';
   drawChartForSelection('all');
 }
 
@@ -496,7 +454,6 @@ function drawChartForSelection(period){
   }
 
   const labels = points.map(p => {
-    // show local short datetime
     const d = p.t;
     return d.toLocaleString();
   });
@@ -508,71 +465,52 @@ function drawChartForSelection(period){
     data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: 'rgba(37,99,235,0.06)', borderColor:'rgba(37,99,235,0.9)', pointRadius:3 }]},
     options: {
       responsive:true, maintainAspectRatio:false,
+      interaction: { mode: 'nearest', intersect: true },
       scales: {
         x: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 } } // 小さめに
+          ticks:{ color:'#6b7c93', font: { size:10 } } 
         },
         y: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } // 小さめに
+          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } 
         }
       },
-      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: (ctx) => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } },
-      // ensure click handlers can find nearest point (we also add direct listener)
-      onClick: (evt, activeEls) => {
-        // keep for potential Chart.js internal path; we'll also use canvas listener below for consistent behavior
+      plugins: { 
+        legend:{display:false}, 
+        tooltip:{ 
+          callbacks: { 
+            label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } 
+          } 
+        } 
       }
     }
   });
 
-  // add click/tap listener on canvas to display value at tapped point
-  // remove previous to avoid duplicate (safe-guard)
+  // click / tap handler to show the tapped point's value
   const canvas = ctx.canvas;
-  // create a named handler property so we can avoid adding multiple listeners
-  if(!canvas._tapHandlerAdded){
-    canvas.addEventListener('click', function(evt){
-      if(!chart) return;
-      // Use 'nearest' mode; allow nearest even if not intersecting
-      const pointsAt = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, false);
-      if(pointsAt && pointsAt.length){
-        const p = pointsAt[0];
-        const index = p.index;
-        const datasetIndex = p.datasetIndex;
-        const value = chart.data.datasets[datasetIndex].data[index];
-        const label = chart.data.labels[index];
-        const display = `${label} — ${Intl.NumberFormat().format(value)} 回`;
-        const el = document.getElementById('pointInfo');
-        if(el) el.innerText = 'タップした点の再生回数: ' + display;
+  // remove previous handler to avoid multiples
+  canvas.onclick = function(evt){
+    if(!chart) return;
+    // Get elements at event for the nearest point (intersect true so it requires tapping a point)
+    const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+    const pi = document.getElementById('pointInfo');
+    if(pointsAtEvent && pointsAtEvent.length){
+      const p = pointsAtEvent[0];
+      const datasetIndex = p.datasetIndex;
+      const index = p.index;
+      const value = chart.data.datasets[datasetIndex].data[index];
+      const label = chart.data.labels[index];
+      if(pi){
+        pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
       }
-    });
-    // also support touchend for mobile taps
-    canvas.addEventListener('touchend', function(evt){
-      if(!chart) return;
-      // convert touch to simulated mouse event for Chart.js
-      const touch = evt.changedTouches && evt.changedTouches[0];
-      if(!touch) return;
-      const rect = canvas.getBoundingClientRect();
-      const simulatedEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      };
-      const pointsAt = chart.getElementsAtEventForMode(simulatedEvent, 'nearest', { intersect: false }, false);
-      if(pointsAt && pointsAt.length){
-        const p = pointsAt[0];
-        const index = p.index;
-        const datasetIndex = p.datasetIndex;
-        const value = chart.data.datasets[datasetIndex].data[index];
-        const label = chart.data.labels[index];
-        const display = `${label} — ${Intl.NumberFormat().format(value)} 回`;
-        const el = document.getElementById('pointInfo');
-        if(el) el.innerText = 'タップした点の再生回数: ' + display;
-      }
-    });
-    canvas._tapHandlerAdded = true;
-  }
+    } else {
+      // If user taps empty space, clear info
+      if(pi) pi.innerText = '（データポイントをタップしてください）';
+    }
+  };
 }
 
 /* --- event binding --- */
@@ -582,7 +520,7 @@ searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
 
-// btnAll/btnBanner/btnUnit were removed from DOM; bind only if present to avoid errors
+// safe binding for removed buttons
 const btnAll = document.getElementById('btnAll');
 if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
 const btnBanner = document.getElementById('btnBanner');
