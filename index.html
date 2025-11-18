@@ -77,7 +77,6 @@
       <div>
         <div class="title">YouTube 再生数ランキング & トレンド</div>
         <div class="subtitle" style="font-size:13px;color:var(--muted)">
-          GitHub Pages + GitHub Actions で 30 分ごとに更新される静的ダッシュボード
           <div id="lastUpdated" style="margin-top:6px;font-size:12px;color:var(--muted)">最終更新: 読み込み中...</div>
         </div>
       </div>
@@ -99,6 +98,10 @@
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
           <div style="margin-top:10px" class="trend-list">
+            <div class="trend-item">
+              <div class="label">新着動画</div>
+              <div id="trendNew" class="val">—</div>
+            </div>
             <div class="trend-item">
               <div class="label">直近1週間で再生数伸びトップ</div>
               <div id="trendWeek" class="val">—</div>
@@ -329,9 +332,61 @@ function renderRankList(){
   const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
   const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
 
-  document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
-  document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
-  document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
+  // find newest by published date (fallback to latest history datetime if published missing)
+  function getPublishDate(v){
+    if(!v) return null;
+    if(v.published){
+      const d = parseISOorDateString(v.published);
+      if(d && !isNaN(d)) return d;
+    }
+    // fallback to last history datetime
+    const last = v.history && v.history.length ? v.history[v.history.length-1] : null;
+    if(last){
+      if(last.datetime) return new Date(last.datetime);
+      if(last.date) return new Date(last.date + 'T00:00:00.000Z');
+    }
+    return null;
+  }
+
+  let topNewGlobal = null;
+  for(const v of globalAnnotated){
+    const pd = getPublishDate(v);
+    if(!pd) continue;
+    if(!topNewGlobal) topNewGlobal = { video: v, date: pd };
+    else {
+      if(pd.getTime() > topNewGlobal.date.getTime()){
+        topNewGlobal = { video: v, date: pd };
+      }
+    }
+  }
+
+  if(topWeekGlobal && topWeekGlobal.title){
+    document.getElementById('trendWeek').innerText = `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回`;
+  } else {
+    document.getElementById('trendWeek').innerText = '—';
+  }
+
+  if(topMonthGlobal && topMonthGlobal.title){
+    document.getElementById('trendMonth').innerText = `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回`;
+  } else {
+    document.getElementById('trendMonth').innerText = '—';
+  }
+
+  if(topTotalGlobal && topTotalGlobal.title){
+    document.getElementById('trendTotal').innerText = `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回`;
+  } else {
+    document.getElementById('trendTotal').innerText = '—';
+  }
+
+  if(topNewGlobal && topNewGlobal.video){
+    const title = topNewGlobal.video.title || '—';
+    const d = topNewGlobal.date;
+    // show YYYY-MM-DD for clarity
+    const yyyyMMdd = d.toISOString().slice(0,10);
+    document.getElementById('trendNew').innerText = `${title} — ${yyyyMMdd}`;
+  } else {
+    document.getElementById('trendNew').innerText = '—';
+  }
 
   // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
@@ -448,10 +503,18 @@ function drawChartForSelection(period){
     options: {
       responsive:true, maintainAspectRatio:false,
       scales: {
-        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93' } },
-        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', callback: v => Intl.NumberFormat().format(v) } }
+        x: { 
+          display:true, 
+          grid:{color:'rgba(15,23,42,0.03)'}, 
+          ticks:{ color:'#6b7c93', font: { size:10 } }
+        },
+        y: { 
+          display:true, 
+          grid:{color:'rgba(15,23,42,0.03)'}, 
+          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } 
+        }
       },
-      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: ctx => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } }
+      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: (ctx) => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } }
     }
   });
 }
