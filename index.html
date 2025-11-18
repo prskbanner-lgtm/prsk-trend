@@ -204,26 +204,19 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
-/* format an ISO-ish string to "YYYY-MM-DD HH:MM:SS UTC"
-   This ensures tooltips show the exact datetime when the views were recorded.
+/* format an ISO-ish string to browser-local string (toLocaleString)
+   Previously this forced UTC output; changed to local to match header's toLocaleString display.
 */
 function formatRecordedTime(iso){
   if(!iso) return '—';
-  // if it's only a date like "YYYY-MM-DD", treat as midnight UTC
+  // if it's only a date like "YYYY-MM-DD", treat as midnight UTC (legacy)
   let asIso = String(iso);
   if(/^\d{4}-\d{2}-\d{2}$/.test(asIso)) asIso = asIso + 'T00:00:00.000Z';
-  // keep only first 19 characters (YYYY-MM-DDTHH:MM:SS) then replace T with space and append UTC
   try {
-    // Some entries may already be in Date objects or slightly different; create Date to normalize
     const d = new Date(asIso);
     if(isNaN(d.getTime())) return iso;
-    const YYYY = d.getUTCFullYear();
-    const MM = String(d.getUTCMonth()+1).padStart(2,'0');
-    const DD = String(d.getUTCDate()).padStart(2,'0');
-    const hh = String(d.getUTCHours()).padStart(2,'0');
-    const mm = String(d.getUTCMinutes()).padStart(2,'0');
-    const ss = String(d.getUTCSeconds()).padStart(2,'0');
-    return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss} UTC`;
+    // use browser locale so it matches new Date(...).toLocaleString() used for header
+    return d.toLocaleString();
   } catch(e){
     return iso;
   }
@@ -717,7 +710,7 @@ function drawChartForSelection(period){
   // timesFull: display the exact datetime when the views were recorded (use orig if present)
   const timesFull = points.map(p => {
     if(p.orig){
-      // show the exact recorded datetime (normalized to "YYYY-MM-DD HH:MM:SS UTC")
+      // show the exact recorded datetime in browser-local format
       return formatRecordedTime(p.orig);
     }
     // fallback: use the point timestamp
@@ -779,7 +772,7 @@ function drawChartForSelection(period){
           legend:{display:false},
           tooltip:{
             callbacks:{
-              // show the exact datetime when the view count was recorded as tooltip title
+              // show the exact datetime when the view count was recorded as tooltip title (in local time)
               title: function(items){
                 if(!items || !items.length) return '';
                 const it = items[0];
