@@ -56,10 +56,9 @@
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
     .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto;}
+    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto; display:flex;flex-direction:column;justify-content:center;}
+    .metric .label{font-size:12px;color:var(--muted)}
     .metric .val{font-size:16px;color:var(--text);font-weight:700}
-    .metric.inline { min-width:80px; padding:6px; text-align:center; }
-    .metric.inline .label { font-size:11px; color:var(--muted); }
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
@@ -125,37 +124,15 @@
       <!-- CENTER COLUMN: graph / details -->
       <div>
         <div class="card big-card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
-            <div style="flex:1;min-width:0;">
-              <div id="selectedTitle" style="font-weight:700;font-size:16px;color:var(--text);white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">（動画を選択してください）</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div id="selectedTitle" style="font-weight:700;font-size:16px;color:var(--text)">（動画を選択してください）</div>
               <div id="selectedMeta" style="font-size:13px;color:var(--muted);margin-top:6px">—</div>
             </div>
-
-            <!-- badges + metrics area on the right -->
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-              <div id="badgesArea" style="display:flex;gap:8px;align-items:center;">
-                <div id="badgeBanner" class="badge">—</div>
-                <div id="badgeUnit" class="badge">—</div>
-              </div>
-
-              <div style="display:flex;gap:12px;align-items:center;">
-                <div style="text-align:right">
-                  <div style="font-size:12px;color:var(--muted)">最新再生数</div>
-                  <div id="selectedViews" style="font-weight:800;font-size:18px;color:var(--text)">—</div>
-                </div>
-
-                <div class="metric inline">
-                  <div class="label">7日増</div>
-                  <div id="viewDelta7" class="val">—</div>
-                </div>
-                <div class="metric inline">
-                  <div class="label">30日増</div>
-                  <div id="viewDelta30" class="val">—</div>
-                </div>
-                <div class="metric inline">
-                  <div class="label">投稿日</div>
-                  <div id="publishDate" class="val">—</div>
-                </div>
+            <div class="stats-row">
+              <!-- This area used to show 最新再生回数; changed to display unit & banner badges per request -->
+              <div id="selectedBadges" style="display:flex;gap:6px;align-items:center;">
+                <!-- badges will be injected here -->
               </div>
             </div>
           </div>
@@ -168,9 +145,29 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
+            <!-- tapped point info (initially empty; shown when tapping chart) -->
             <div id="pointInfo" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
           </div>
 
+          <!-- Four metrics placed inline (one line): 最新再生回数, 直近7日増分, 直近30日増分, 投稿日 -->
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;">
+            <div class="metric card" style="min-width:150px; padding:8px;">
+              <div class="label">最新再生数</div>
+              <div id="selectedViews" class="val">—</div>
+            </div>
+            <div class="metric card" style="min-width:150px; padding:8px;">
+              <div class="label">直近7日増分</div>
+              <div id="viewDelta7" class="val">—</div>
+            </div>
+            <div class="metric card" style="min-width:150px; padding:8px;">
+              <div class="label">直近30日増分</div>
+              <div id="viewDelta30" class="val">—</div>
+            </div>
+            <div class="metric card" style="min-width:150px; padding:8px;">
+              <div class="label">投稿日</div>
+              <div id="publishDate" class="val">—</div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -183,7 +180,7 @@
             <div style="font-size:13px;color:var(--muted)">並び替え:
               <select id="sortMode">
                 <option value="total">累計再生数（降順）</option>
-                <option value="published">投稿日（降順）</option>
+                <option value="published">投稿日（新しい順）</option>
               </select>
             </div>
           </div>
@@ -209,44 +206,42 @@ function parseISOorDateString(s){
 
 /* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
 const BANNER_COLORS = {
-  "一歌": "#33AAEE",   // #3AE -> #33AAEE
-  "咲希": "#FFDD44",   // #FD4 -> #FFDD44
-  "穂波": "#EE6666",   // #E66 -> #EE6666
-  "志歩": "#BBDD22",   // #BD2 -> #BBDD22
-  "みのり": "#FFCCAA", // #FCA -> #FFCCAA
-  "遥":   "#99CCFF",   // #9CF -> #99CCFF
-  "愛莉": "#FFAACC",   // #FAC -> #FFAACC
-  "雫":   "#99EEDD",   // #9ED -> #99EEDD
-  "こはね": "#FF6699", // #F69 -> #FF6699
-  "杏":   "#00BBDD",   // #0BD -> #00BBDD
-  "彰人": "#FF7722",   // #F72 -> #FF7722
-  "冬弥": "#0077DD",   // #07D -> #0077DD
-  "司":   "#FFBB00",   // #FB0 -> #FFBB00
-  "えむ": "#FF66BB",   // #F6B -> #FF66BB
-  "寧々": "#33DD99",   // #3D9 -> #33DD99
-  "類":   "#BB88EE",   // #B8E -> #BB88EE
-  "奏":   "#BB6688",   // #B68 -> #BB6688
-  "まふゆ": "#8888CC", // #88C -> #8888CC
-  "絵名": "#CCAA88",   // #CA8 -> #CCAA88
-  "瑞希": "#DDAACC"    // #DAC -> #DDAACC
+  "一歌": "#33AAEE",
+  "咲希": "#FFDD44",
+  "穂波": "#EE6666",
+  "志歩": "#BBDD22",
+  "みのり": "#FFCCAA",
+  "遥":   "#99CCFF",
+  "愛莉": "#FFAACC",
+  "雫":   "#99EEDD",
+  "こはね": "#FF6699",
+  "杏":   "#00BBDD",
+  "彰人": "#FF7722",
+  "冬弥": "#0077DD",
+  "司":   "#FFBB00",
+  "えむ": "#FF66BB",
+  "寧々": "#33DD99",
+  "類":   "#BB88EE",
+  "奏":   "#BB6688",
+  "まふゆ": "#8888CC",
+  "絵名": "#CCAA88",
+  "瑞希": "#DDAACC"
 };
 
-/* --- Unit color mapping (for trend borders and fallback) --- */
+/* --- Unit fallback colors (expanded) --- */
 const UNIT_COLORS = {
-  "レオニ": "#4455DD",   // #45D -> #4455DD
-  "モモジャン": "#88DD44",// #8D4 -> #88DD44
-  "ビビバス": "#EE1166",  // #E16 -> #EE1166
-  "ワンダショ": "#FF9900",// #F90 -> #FF9900
-  "ニーゴ": "#884499"     // #849 -> #884499
+  "レオニ": "#4455DD",
+  "モモジャン": "#88DD44",
+  "ビビバス": "#EE1166",
+  "ワンダショ": "#FF9900",
+  "ニーゴ": "#884499"
 };
 
 /* convert hex color (#RRGGBB) to rgba string with alpha */
 function hexToRgba(hex, alpha){
-  if(!hex) return `rgba(37,99,235,${alpha})`; // fallback
+  if(!hex) return `rgba(37,99,235,${alpha})`;
   hex = hex.replace('#','');
-  if(hex.length === 3){
-    hex = hex.split('').map(c=>c+c).join('');
-  }
+  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
@@ -291,7 +286,7 @@ const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
 const reloadBtn = document.getElementById('reload');
 
-/* --- Custom ordered group list as requested --- */
+/* --- Group ordering --- */
 const BANNER_ORDER = [
   "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
 ];
@@ -350,23 +345,8 @@ function calcDelta(history, days){
   return lastViews - startViews;
 }
 
-/* --- utility to get publish date (top-level so sorting can use it) --- */
-function getPublishDate(v){
-  if(!v) return null;
-  if(v.published){
-    const d = parseISOorDateString(v.published);
-    if(d && !isNaN(d)) return d;
-  }
-  const last = v.history && v.history.length ? v.history[v.history.length-1] : null;
-  if(last){
-    if(last.datetime) return new Date(last.datetime);
-    if(last.date) return new Date(last.date + 'T00:00:00.000Z');
-  }
-  return null;
-}
-
 /* --- render ranking & trend picks --- */
-let _lastTopPicks = { new:null, week:null, month:null, total:null }; // keep references for click handlers
+let _lastTopPicks = { new:null, week:null, month:null, total:null };
 
 function renderRankList(){
   const globalAnnotated = DATA.map(v=>{
@@ -380,6 +360,20 @@ function renderRankList(){
   const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
   const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
 
+  function getPublishDate(v){
+    if(!v) return null;
+    if(v.published){
+      const d = parseISOorDateString(v.published);
+      if(d && !isNaN(d)) return d;
+    }
+    const last = v.history && v.history.length ? v.history[v.history.length-1] : null;
+    if(last){
+      if(last.datetime) return new Date(last.datetime);
+      if(last.date) return new Date(last.date + 'T00:00:00.000Z');
+    }
+    return null;
+  }
+
   let topNewGlobal = null;
   for(const v of globalAnnotated){
     const pd = getPublishDate(v);
@@ -392,13 +386,11 @@ function renderRankList(){
     }
   }
 
-  // assign to persistent picks (normalize shape)
   _lastTopPicks.week = topWeekGlobal && topWeekGlobal.title ? topWeekGlobal : null;
   _lastTopPicks.month = topMonthGlobal && topMonthGlobal.title ? topMonthGlobal : null;
   _lastTopPicks.total = topTotalGlobal && topTotalGlobal.title ? topTotalGlobal : null;
   _lastTopPicks.new = topNewGlobal && topNewGlobal.video ? topNewGlobal.video : null;
 
-  // populate trend items text
   document.getElementById('trendWeek').innerText = _lastTopPicks.week ? `${_lastTopPicks.week.title} — ${fmt(_lastTopPicks.week.d7)} 回` : '—';
   document.getElementById('trendMonth').innerText = _lastTopPicks.month ? `${_lastTopPicks.month.title} — ${fmt(_lastTopPicks.month.d30)} 回` : '—';
   document.getElementById('trendTotal').innerText = _lastTopPicks.total ? `${_lastTopPicks.total.title} — ${fmt(_lastTopPicks.total.latest)} 回` : '—';
@@ -415,28 +407,23 @@ function renderRankList(){
   function setupTrendItem(itemId, video){
     const el = document.getElementById(itemId);
     if(!el) return;
-    // reset border to default first
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
 
     if(video){
-      // determine unit color (if unit exists in mapping)
       const unitColor = UNIT_COLORS[video.unit] || null;
       if(unitColor){
         el.style.border = `2px solid ${unitColor}`;
       } else {
-        // keep subtle default border otherwise
         el.style.border = '1px solid rgba(15,23,42,0.04)';
       }
       el.style.cursor = 'pointer';
       el.onclick = function(e){
-        // stop propagation to avoid outer handlers
         e.stopPropagation();
         selectVideo(video);
       };
     } else {
-      // no video -> default border
       el.style.border = '1px solid rgba(15,23,42,0.04)';
       el.style.cursor = 'default';
     }
@@ -473,14 +460,17 @@ function renderRankList(){
     return {...v, latest, d7, d30};
   });
 
-  // Sorting: support total (累計再生数) and published (投稿日)
-  if(mode === 'total') annotated.sort((a,b)=>b.latest - a.latest);
-  else if(mode === 'published') annotated.sort((a,b)=>{
-    const da = getPublishDate(a); const db = getPublishDate(b);
-    const ta = da ? da.getTime() : 0; const tb = db ? db.getTime() : 0;
-    return tb - ta;
-  });
-  else annotated.sort((a,b)=>b.latest - a.latest);
+  if(mode === 'total') {
+    annotated.sort((a,b)=>b.latest - a.latest);
+  } else if(mode === 'published') {
+    annotated.sort((a,b)=>{
+      const da = parseISOorDateString(a.published) || (a.history && a.history.length ? new Date(a.history[a.history.length-1].datetime || a.history[a.history.length-1].date + 'T00:00:00.000Z') : null);
+      const db = parseISOorDateString(b.published) || (b.history && b.history.length ? new Date(b.history[b.history.length-1].datetime || b.history[b.history.length-1].date + 'T00:00:00.000Z') : null);
+      const ta = da ? da.getTime() : 0;
+      const tb = db ? db.getTime() : 0;
+      return tb - ta; // newest first
+    });
+  }
 
   rankListEl.innerHTML = '';
   if(annotated.length === 0){
@@ -517,20 +507,34 @@ let chart = null;
 function selectVideo(v){
   currentSelected = v;
   document.getElementById('selectedTitle').innerText = v.title;
-  // selectedMeta keep a concise YouTube link (badges will show banner/unit)
-  document.getElementById('selectedMeta').innerHTML = `<a href="${v.url}" target="_blank" style="color:var(--accent)">YouTubeへ</a>`;
-  // badges
-  document.getElementById('badgeBanner').innerText = v.banner || '—';
-  document.getElementById('badgeUnit').innerText = v.unit || '—';
+  // keep link only in selectedMeta to avoid duplicate banner/unit display
+  document.getElementById('selectedMeta').innerHTML = `<a href="${v.url}" target="_blank" style="color:var(--accent)">${v.url ? 'YouTubeへ' : ''}</a>`;
   const lastRec = v.history && v.history.length ? v.history[v.history.length-1] : null;
   const lastViews = lastRec ? lastRec.views : (v.views || 0);
   document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回';
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
+
+  // Show badges (unit and banner) in the right-top stats area (replaces the old 最新再生数)
+  const badgesEl = document.getElementById('selectedBadges');
+  if(badgesEl){
+    badgesEl.innerHTML = '';
+    const bannerBadge = document.createElement('div');
+    bannerBadge.className = 'badge';
+    bannerBadge.innerText = v.banner || '—';
+    badgesEl.appendChild(bannerBadge);
+
+    const unitBadge = document.createElement('div');
+    unitBadge.className = 'badge';
+    unitBadge.innerText = v.unit || '—';
+    badgesEl.appendChild(unitBadge);
+  }
+
   // clear any displayed point info when selecting a new video
   const pi = document.getElementById('pointInfo');
   if(pi) pi.innerText = '';
+
   drawChartForSelection('all');
 }
 
@@ -563,13 +567,9 @@ function drawChartForSelection(period){
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
-  // choose color: if banner is '-' or falsy, use unit color mapping; else use banner color
+  // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
-  let colorHex = BANNER_COLORS[banner];
-  if(!colorHex || banner === '-' || banner.trim() === ''){
-    // fallback to unit color if available
-    colorHex = UNIT_COLORS[currentSelected.unit] || '#2563eb';
-  }
+  let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb');
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
@@ -582,42 +582,36 @@ function drawChartForSelection(period){
       interaction: { mode: 'nearest', intersect: false },
       layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
       scales: {
-        x: { 
-          display:true, 
-          grid:{color:'rgba(15,23,42,0.03)'}, 
+        x: {
+          display:true,
+          grid:{color:'rgba(15,23,42,0.03)'},
           ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
           type: 'category'
         },
-        y: { 
-          display:true, 
-          grid:{color:'rgba(15,23,42,0.03)'}, 
+        y: {
+          display:true,
+          grid:{color:'rgba(15,23,42,0.03)'},
           ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
           beginAtZero: false,
-          // tighten left margin by disabling extra offset
           offset: false
         }
       },
-      plugins: { 
-        legend:{display:false}, 
-        tooltip:{ 
-          callbacks: { 
-            label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } 
-          } 
-        } 
+      plugins: {
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; }
+          }
+        }
       }
     }
   });
 
   // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
-
-  // remove previous click handlers (if any) to avoid duplicates
   canvas.onclick = null;
-
   canvas.addEventListener('click', function(evt){
-    // prevent document click handler from immediately hiding the info
     evt.stopPropagation();
-
     if(!chart) return;
     const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
     const pi = document.getElementById('pointInfo');
@@ -628,9 +622,11 @@ function drawChartForSelection(period){
       const value = chart.data.datasets[datasetIndex].data[index];
       const label = chart.data.labels[index];
       if(pi){
-        // show only the value and date in concise form
         pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
       }
+      // also update the "最新再生数" metric to reflect the tapped point's value (keeps user informed)
+      const selViews = document.getElementById('selectedViews');
+      if(selViews) selViews.innerText = `${Intl.NumberFormat().format(value)} 回`;
     } else {
       if(pi) pi.innerText = '';
     }
@@ -644,6 +640,13 @@ document.addEventListener('click', function(evt){
   if(!chartAreaEl.contains(evt.target)){
     const pi = document.getElementById('pointInfo');
     if(pi) pi.innerText = '';
+    // restore latest value to the true latest record when clicking outside chart area
+    if(currentSelected){
+      const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
+      const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
+      const selViews = document.getElementById('selectedViews');
+      if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
+    }
   }
 });
 
@@ -654,7 +657,7 @@ searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
 
-// safe binding for removed buttons
+// safe binding for optional buttons
 const btnAll = document.getElementById('btnAll');
 if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
 const btnBanner = document.getElementById('btnBanner');
