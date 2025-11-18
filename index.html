@@ -47,7 +47,7 @@
     .meta{flex:1;min-width:0;}
     .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
     .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03);display:inline-flex;align-items:center;justify-content:center;}
+    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
     .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
@@ -248,32 +248,20 @@ function hexToRgba(hex, alpha){
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* choose readable text color (white or dark) depending on background hex */
-function readableTextColor(hex){
-  if(!hex) return '#111827';
+/* mix hex color with white (#FFFFFF) in 1:1 ratio and return full hex (#RRGGBB) */
+function mixWithWhite(hex){
+  if(!hex) return '#FFFFFF';
   hex = hex.replace('#','');
   if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
-  // relative luminance approximation
-  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return lum < 0.6 ? '#ffffff' : '#111827';
-}
-
-/* apply badge colors to a .badge element given a hex color */
-function applyBadgeColor(el, hex){
-  if(!el) return;
-  if(!hex){
-    el.style.backgroundColor = '';
-    el.style.color = '';
-    el.style.border = '1px solid rgba(15,23,42,0.03)';
-    return;
-  }
-  el.style.backgroundColor = hex;
-  el.style.color = readableTextColor(hex);
-  // subtle border using rgba of the color
-  el.style.border = '1px solid ' + hexToRgba(hex, 0.18);
+  // average with 255
+  const nr = Math.round((r + 255) / 2);
+  const ng = Math.round((g + 255) / 2);
+  const nb = Math.round((b + 255) / 2);
+  const toHex = (v) => ('0' + v.toString(16)).slice(-2).toUpperCase();
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
 }
 
 /* --- load data/videos.json --- */
@@ -507,36 +495,32 @@ function renderRankList(){
   }
 
   annotated.forEach((v, idx)=>{
+    // compute mixed badge background colors (banner and unit mixed with white 1:1)
+    const bannerColorHex = (v.banner && v.banner !== '-' && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : null;
+    const unitColorHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : null;
+
+    const bannerBg = bannerColorHex ? mixWithWhite(bannerColorHex) : mixWithWhite(unitColorHex || '#F1F5F9');
+    const unitBg = unitColorHex ? mixWithWhite(unitColorHex) : mixWithWhite(bannerColorHex || '#F1F5F9');
+
+    const bannerTextColor = '#111827'; // dark text for readability
+    const unitTextColor = '#111827';
+
     const li = document.createElement('div');
     li.className = 'video-item';
+
     li.innerHTML = `
       <div class="rank-num">${idx+1}</div>
       <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
       <div class="meta">
         <div class="title">${escapeHtml(v.title)}</div>
         <div class="sub">
-          <div class="badge banner-badge">${escapeHtml(v.banner)}</div>
-          <div class="badge unit-badge">${escapeHtml(v.unit)}</div>
+          <div class="badge" style="background:${bannerBg}; color:${bannerTextColor}; border:1px solid rgba(15,23,42,0.04)">${escapeHtml(v.banner)}</div>
+          <div class="badge" style="background:${unitBg}; color:${unitTextColor}; border:1px solid rgba(15,23,42,0.04)">${escapeHtml(v.unit)}</div>
           <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
           <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
         </div>
       </div>
     `;
-    // after DOM creation, apply colors to badges
-    const bannerEl = li.querySelector('.banner-badge');
-    const unitEl = li.querySelector('.unit-badge');
-    const bannerHex = (v.banner && v.banner !== '-' && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : null;
-    const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : null;
-    // if bannerHex exists, use it; otherwise fallback to unit color for banner badge background
-    if(bannerEl){
-      const bg = bannerHex || unitHex || null;
-      applyBadgeColor(bannerEl, bg);
-    }
-    if(unitEl){
-      const bg = unitHex || bannerHex || null;
-      applyBadgeColor(unitEl, bg);
-    }
-
     li.addEventListener('click', ()=> selectVideo(v));
     rankListEl.appendChild(li);
   });
@@ -563,20 +547,26 @@ function selectVideo(v){
   const badgesEl = document.getElementById('selectedBadges');
   if(badgesEl){
     badgesEl.innerHTML = '';
+
+    const bannerColorHex = (v.banner && v.banner !== '-' && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : null;
+    const unitColorHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : null;
+    const bannerBg = bannerColorHex ? mixWithWhite(bannerColorHex) : mixWithWhite(unitColorHex || '#F1F5F9');
+    const unitBg = unitColorHex ? mixWithWhite(unitColorHex) : mixWithWhite(bannerColorHex || '#F1F5F9');
+
     const bannerBadge = document.createElement('div');
     bannerBadge.className = 'badge';
+    bannerBadge.style.background = bannerBg;
+    bannerBadge.style.color = '#111827';
+    bannerBadge.style.border = '1px solid rgba(15,23,42,0.04)';
     bannerBadge.innerText = v.banner || '—';
-    // determine colors
-    const bannerHex = (v.banner && v.banner !== '-' && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : null;
-    const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : null;
-    // apply banner color (fallback to unit color)
-    applyBadgeColor(bannerBadge, bannerHex || unitHex || null);
     badgesEl.appendChild(bannerBadge);
 
     const unitBadge = document.createElement('div');
     unitBadge.className = 'badge';
+    unitBadge.style.background = unitBg;
+    unitBadge.style.color = '#111827';
+    unitBadge.style.border = '1px solid rgba(15,23,42,0.04)';
     unitBadge.innerText = v.unit || '—';
-    applyBadgeColor(unitBadge, unitHex || bannerHex || null);
     badgesEl.appendChild(unitBadge);
   }
 
