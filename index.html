@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root{
+      /* 白背景に合わせた配色 */
       --bg: #ffffff;
       --card: #ffffff;
       --muted: #596274;
@@ -19,6 +20,7 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
     .wrap{max-width:1200px;margin:28px auto;padding:20px;}
+    /* Header stays mostly the same, but center the search visually */
     header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px;}
     header .title{font-size:20px;color:var(--text); font-weight:700;}
     .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -29,6 +31,7 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
+    /* three-column layout (left: trend, center: main graph, right: ranking) */
     .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
@@ -36,81 +39,15 @@
     }
     select:focus, input[type="search"]:focus, button:focus{ outline: 2px solid rgba(37,99,235,0.12); outline-offset:2px; }
     button.primary{background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; font-weight:700; border:none; padding:9px 12px;}
-    .rank-list{display:flex;flex-direction:column;gap:10px; max-height:520px; overflow:auto; padding:10px; box-sizing:border-box;}
-    /* Ranking item layout to match wireframe */
-    .rank-card{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:10px;
-      border-radius:10px;
-      border:1px solid rgba(15,23,42,0.04);
-      background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));
-      cursor:pointer;
-      transition:background .12s, transform .06s;
-      min-height:72px;
-      box-sizing:border-box;
-      width:100%;
-    }
-    .rank-card:hover{ background: rgba(37,99,235,0.03); transform: translateY(-2px); }
-    .rank-side{
-      width:36px;
-      min-width:36px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:700;
-      color:var(--accent);
-      background:transparent;
-      border-radius:6px;
-      font-size:13px;
-    }
-    .rank-main{
-      flex:1;
-      display:flex;
-      flex-direction:column;
-      min-width:0;
-      gap:8px;
-    }
-    .rank-title{
-      font-size:13px;
-      font-weight:700;
-      color:var(--text);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .rank-body{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      width:100%;
-    }
-    .rank-thumb{
-      width:96px;
-      height:56px;
-      flex:0 0 96px;
-      border-radius:6px;
-      object-fit:cover;
-      background:#eee;
-      border:1px solid rgba(15,23,42,0.04);
-    }
-    .rank-stats{
-      flex:1;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      min-width:0;
-    }
-    .rank-stats .line{ display:flex; gap:8px; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); }
-    .rank-stats .big{ font-weight:800; color:var(--text); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .badge{padding:4px 8px;border-radius:999px;font-size:11px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
+    .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
     .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
+    /* thumbnails smaller as requested */
     .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
     .meta{flex:1;min-width:0;}
     .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
     .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
     .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
@@ -118,15 +55,19 @@
     .tabs{display:flex;gap:8px;margin-bottom:12px;}
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
+    .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto;}
     .metric .val{font-size:16px;color:var(--text);font-weight:700}
+    .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
+    /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00)); cursor:pointer;}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
+    /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
-      .rank-thumb{width:120px;height:72px;flex:0 0 120px;}
+      .thumb{width:100px; height:56px; flex:0 0 100px;}
       .metric{min-width:100px; font-size:13px;}
     }
   </style>
@@ -176,6 +117,7 @@
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- CENTER COLUMN: graph / details -->
@@ -202,9 +144,11 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
+            <!-- tapped point info (initially empty; shown when tapping chart) -->
             <div id="pointInfo" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
           </div>
 
+          <!-- Three metrics placed inline (one line) -->
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;">
             <div class="metric card" style="min-width:150px; padding:8px;">
               <div style="font-size:12px;color:var(--muted)">直近7日増分</div>
@@ -220,26 +164,24 @@
             </div>
           </div>
         </div>
+
       </div>
 
-      <!-- RIGHT COLUMN: ranking (sort dropdown moved here) -->
+      <!-- RIGHT COLUMN: ranking -->
       <div>
         <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
             <strong style="color:var(--text)">ランキング</strong>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="font-size:13px;color:var(--muted)">表示: <span id="rankCount" style="font-weight:700">—</span></div>
-              <!-- SORT DROPDOWN: back in ranking header -->
-              <div style="font-size:13px;color:var(--muted)">並び替え:
-                <select id="sortMode">
-                  <option value="total">累計再生数（降順）</option>
-                  <option value="published">投稿日（新しい順）</option>
-                </select>
-              </div>
+            <div style="font-size:13px;color:var(--muted)">並び替え:
+              <select id="sortMode">
+                <option value="total">累計再生数（降順）</option>
+                <option value="week">直近7日増分（降順）</option>
+                <option value="month">直近30日増分（降順）</option>
+              </select>
             </div>
           </div>
 
-          <div style="margin-top:0;" class="rank-list" id="rankList">
+          <div style="margin-top:12px;" class="rank-list card" id="rankList">
             読み込み中...
           </div>
         </div>
@@ -253,24 +195,51 @@ function fmt(n){ return n === null || n === undefined ? '—' : n.toLocaleString
 function safe(s){ return String(s||''); }
 function parseISOorDateString(s){
   if(!s) return null;
+  // accepts "YYYY-MM-DD" or full ISO
   if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
   return new Date(s);
 }
 
-/* --- Banner & Unit color maps --- */
+/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
 const BANNER_COLORS = {
-  "一歌": "#33AAEE","咲希": "#FFDD44","穂波": "#EE6666","志歩": "#BBDD22","みのり": "#FFCCAA",
-  "遥": "#99CCFF","愛莉": "#FFAACC","雫": "#99EEDD","こはね": "#FF6699","杏": "#00BBDD",
-  "彰人": "#FF7722","冬弥": "#0077DD","司": "#FFBB00","えむ": "#FF66BB","寧々": "#33DD99",
-  "類": "#BB88EE","奏": "#BB6688","まふゆ": "#8888CC","絵名": "#CCAA88","瑞希": "#DDAACC"
+  "一歌": "#33AAEE",   // #3AE -> #33AAEE
+  "咲希": "#FFDD44",   // #FD4 -> #FFDD44
+  "穂波": "#EE6666",   // #E66 -> #EE6666
+  "志歩": "#BBDD22",   // #BD2 -> #BBDD22
+  "みのり": "#FFCCAA", // #FCA -> #FFCCAA
+  "遥":   "#99CCFF",   // #9CF -> #99CCFF
+  "愛莉": "#FFAACC",   // #FAC -> #FFAACC
+  "雫":   "#99EEDD",   // #9ED -> #99EEDD
+  "こはね": "#FF6699", // #F69 -> #FF6699
+  "杏":   "#00BBDD",   // #0BD -> #00BBDD
+  "彰人": "#FF7722",   // #F72 -> #FF7722
+  "冬弥": "#0077DD",   // #07D -> #0077DD
+  "司":   "#FFBB00",   // #FB0 -> #FFBB00
+  "えむ": "#FF66BB",   // #F6B -> #FF66BB
+  "寧々": "#33DD99",   // #3D9 -> #33DD99
+  "類":   "#BB88EE",   // #B8E -> #BB88EE
+  "奏":   "#BB6688",   // #B68 -> #BB6688
+  "まふゆ": "#8888CC", // #88C -> #8888CC
+  "絵名": "#CCAA88",   // #CA8 -> #CCAA88
+  "瑞希": "#DDAACC"    // #DAC -> #DDAACC
 };
+
+/* --- Unit color mapping when banner is '-' (expanded) --- */
 const UNIT_COLORS = {
-  "レオニ": "#4455DD","モモジャン": "#88DD44","ビビバス": "#EE1166","ワンダショ": "#FF9900","ニーゴ": "#884499"
+  "レオニ": "#4455DD",   // #45D -> #4455DD
+  "モモジャン": "#88DD44",// #8D4 -> #88DD44
+  "ビビバス": "#EE1166", // #E16 -> #EE1166
+  "ワンダショ": "#FF9900",// #F90 -> #FF9900
+  "ニーゴ": "#884499"    // #849 -> #884499
 };
+
+/* convert hex color (#RRGGBB) to rgba string with alpha */
 function hexToRgba(hex, alpha){
-  if(!hex) return `rgba(37,99,235,${alpha})`;
+  if(!hex) return `rgba(37,99,235,${alpha})`; // fallback
   hex = hex.replace('#','');
-  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  if(hex.length === 3){
+    hex = hex.split('').map(c=>c+c).join('');
+  }
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
@@ -287,9 +256,14 @@ async function loadData(){
     const json = await res.json();
     DATA = json.videos || [];
     DATA_UPDATED_AT = json.updated_at || null;
+    // show last updated in header
     const lastEl = document.getElementById('lastUpdated');
-    if(DATA_UPDATED_AT){ lastEl.innerText = '最終更新: ' + new Date(DATA_UPDATED_AT).toLocaleString(); }
-    else { lastEl.innerText = '最終更新: —'; }
+    if(DATA_UPDATED_AT){
+      const d = new Date(DATA_UPDATED_AT);
+      lastEl.innerText = '最終更新: ' + d.toLocaleString();
+    } else {
+      lastEl.innerText = '最終更新: —';
+    }
 
     buildGroupOptions();
     renderRankList();
@@ -297,26 +271,36 @@ async function loadData(){
   }catch(err){
     console.error(err);
     document.getElementById('rankList').innerText = 'データ読み込みエラー: ' + err.message;
-    document.getElementById('lastUpdated').innerText = '最終更新: エラー';
+    const lastEl = document.getElementById('lastUpdated');
+    lastEl.innerText = '最終更新: エラー';
   }
 }
 
-/* --- UI state --- */
+/* --- UI state and utilities --- */
 const rankListEl = document.getElementById('rankList');
 const sortModeEl = document.getElementById('sortMode');
 const searchEl = document.getElementById('search');
 const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
+const reloadBtn = document.getElementById('reload');
 
-const BANNER_ORDER = ["一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"];
+/* --- Custom ordered group list as requested --- */
+const BANNER_ORDER = [
+  "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
+];
 const UNIT_ORDER = ["レオニ","モモジャン","ビビバス","ワンダショ","ニーゴ"];
 
 function buildGroupOptions(){
   groupFilterEl.innerHTML = '<option value="all">グループ: 全て</option>';
+
   if(scopeEl.value === 'banner'){
-    BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`));
+    BANNER_ORDER.forEach(b => {
+      groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`);
+    });
   } else if(scopeEl.value === 'unit'){
-    UNIT_ORDER.forEach(u => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`));
+    UNIT_ORDER.forEach(u => {
+      groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
+    });
   } else {
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- バナー ---</option>');
     BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="banner:${escapeHtml(b)}">${escapeHtml(b)}</option>`));
@@ -324,10 +308,15 @@ function buildGroupOptions(){
     UNIT_ORDER.forEach(u => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="unit:${escapeHtml(u)}">${escapeHtml(u)}</option>`));
   }
 }
+
 function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-/* --- history helpers --- */
-function lastHistoryEntry(history){ if(!history || history.length===0) return null; return history[history.length-1]; }
+/* --- history utilities using datetime --- */
+function lastHistoryEntry(history){
+  if(!history || history.length===0) return null;
+  return history[history.length-1];
+}
+
 function findClosestBefore(history, targetDate){
   if(!history || history.length===0) return null;
   let candidate = history[0];
@@ -339,6 +328,7 @@ function findClosestBefore(history, targetDate){
   }
   return candidate;
 }
+
 function calcDelta(history, days){
   if(!history || history.length===0) return 0;
   const lastRec = lastHistoryEntry(history);
@@ -385,9 +375,14 @@ function renderRankList(){
     const pd = getPublishDate(v);
     if(!pd) continue;
     if(!topNewGlobal) topNewGlobal = { video: v, date: pd };
-    else { if(pd.getTime() > topNewGlobal.date.getTime()) topNewGlobal = { video: v, date: pd }; }
+    else {
+      if(pd.getTime() > topNewGlobal.date.getTime()){
+        topNewGlobal = { video: v, date: pd };
+      }
+    }
   }
 
+  // set text
   document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
   document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
   document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
@@ -395,22 +390,39 @@ function renderRankList(){
   if(topNewGlobal && topNewGlobal.video){
     const title = topNewGlobal.video.title || '—';
     const d = topNewGlobal.date;
-    document.getElementById('trendNew').innerText = `${title} — ${d.toISOString().slice(0,10)}`;
+    const yyyyMMdd = d.toISOString().slice(0,10);
+    document.getElementById('trendNew').innerText = `${title} — ${yyyyMMdd}`;
   } else {
     document.getElementById('trendNew').innerText = '—';
   }
 
-  // attach click behavior on trend items
+  // attach click behavior to trend items to show that video's info
   const trendItemWeek = document.getElementById('trendItemWeek');
-  if(trendItemWeek) trendItemWeek.onclick = () => { if(topWeekGlobal) selectVideo(topWeekGlobal); };
+  if(trendItemWeek){
+    trendItemWeek.onclick = () => {
+      if(topWeekGlobal && topWeekGlobal.videoId) selectVideo(topWeekGlobal);
+    };
+  }
   const trendItemMonth = document.getElementById('trendItemMonth');
-  if(trendItemMonth) trendItemMonth.onclick = () => { if(topMonthGlobal) selectVideo(topMonthGlobal); };
+  if(trendItemMonth){
+    trendItemMonth.onclick = () => {
+      if(topMonthGlobal && topMonthGlobal.videoId) selectVideo(topMonthGlobal);
+    };
+  }
   const trendItemTotal = document.getElementById('trendItemTotal');
-  if(trendItemTotal) trendItemTotal.onclick = () => { if(topTotalGlobal) selectVideo(topTotalGlobal); };
+  if(trendItemTotal){
+    trendItemTotal.onclick = () => {
+      if(topTotalGlobal && topTotalGlobal.videoId) selectVideo(topTotalGlobal);
+    };
+  }
   const trendItemNew = document.getElementById('trendItemNew');
-  if(trendItemNew) trendItemNew.onclick = () => { if(topNewGlobal) selectVideo(topNewGlobal.video); };
+  if(trendItemNew){
+    trendItemNew.onclick = () => {
+      if(topNewGlobal && topNewGlobal.video) selectVideo(topNewGlobal.video);
+    };
+  }
 
-  // build visible list with filters/search
+  // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
   const q = searchEl.value.trim().toLowerCase();
   let list = DATA.slice();
@@ -433,51 +445,37 @@ function renderRankList(){
     const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
     const d30 = calcDelta(v.history, 30);
-    const pubDate = getPublishDate(v);
-    return {...v, latest, d7, d30, pubDate};
+    return {...v, latest, d7, d30};
   });
 
   if(mode === 'total') annotated.sort((a,b)=>b.latest - a.latest);
-  else if(mode === 'published') annotated.sort((a,b)=>{
-    const pa = a.pubDate ? a.pubDate.getTime() : 0;
-    const pb = b.pubDate ? b.pubDate.getTime() : 0;
-    return pb - pa; // newest first
-  });
+  else if(mode === 'week') annotated.sort((a,b)=>b.d7 - a.d7);
+  else annotated.sort((a,b)=>b.d30 - a.d30);
 
-  // render
   rankListEl.innerHTML = '';
-  document.getElementById('rankCount').innerText = annotated.length;
   if(annotated.length === 0){
     rankListEl.innerText = '該当する動画がありません。';
     return;
   }
 
   annotated.forEach((v, idx)=>{
-    const card = document.createElement('div');
-    card.className = 'rank-card';
-    const titleText = v.title || '—';
-    const thumb = v.thumbnail || '';
-    const banner = v.banner || '';
-    const unit = v.unit || '';
-    const latest = v.latest || 0;
-    const d7 = v.d7 || 0;
-    const published = v.published || (v.pubDate ? v.pubDate.toISOString().slice(0,10) : '—');
-
-    card.innerHTML = `
-      <div class="rank-side">${idx+1}</div>
-      <div class="rank-main">
-        <div class="rank-title" title="${escapeHtml(titleText)}">${escapeHtml(titleText)}</div>
-        <div class="rank-body">
-          <img class="rank-thumb" src="${escapeHtml(thumb)}" alt="thumb">
-          <div class="rank-stats">
-            <div class="line"><div class="big">${fmt(latest)} 回</div><div style="color:var(--muted);font-size:11px">${escapeHtml(published)}</div></div>
-            <div class="line"><div style="display:flex;gap:6px;align-items:center"><span class="badge">${escapeHtml(banner)}</span><span class="badge">${escapeHtml(unit)}</span></div><div style="color:var(--muted);font-size:12px">▲${fmt(d7)} / 7d</div></div>
-          </div>
+    const li = document.createElement('div');
+    li.className = 'video-item';
+    li.innerHTML = `
+      <div class="rank-num">${idx+1}</div>
+      <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
+      <div class="meta">
+        <div class="title">${escapeHtml(v.title)}</div>
+        <div class="sub">
+          <div class="badge">${escapeHtml(v.banner)}</div>
+          <div class="badge">${escapeHtml(v.unit)}</div>
+          <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
+          <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
         </div>
       </div>
     `;
-    card.addEventListener('click', ()=> selectVideo(v));
-    rankListEl.appendChild(card);
+    li.addEventListener('click', ()=> selectVideo(v));
+    rankListEl.appendChild(li);
   });
 }
 
@@ -496,14 +494,21 @@ function selectVideo(v){
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
-  const pi = document.getElementById('pointInfo'); if(pi) pi.innerText = '';
+  // clear any displayed point info when selecting a new video
+  const pi = document.getElementById('pointInfo');
+  if(pi) pi.innerText = '';
   drawChartForSelection('all');
 }
 
 function drawChartForSelection(period){
   if(!currentSelected) return;
   const hist = currentSelected.history || [];
-  if(hist.length === 0) { if(chart){ chart.destroy(); chart = null; } ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height); return; }
+  if(hist.length === 0) {
+    if(chart){ chart.destroy(); chart = null; }
+    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+    return;
+  }
+  // convert to entries with timestamp and views
   const pts = hist.map(h => {
     const ts = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
     return ts ? { t: ts, v: (h.views || 0) } : null;
@@ -511,19 +516,25 @@ function drawChartForSelection(period){
 
   let points = pts.slice();
   if(period === '7') {
-    const cutoff = new Date(points[points.length-1].t); cutoff.setUTCDate(cutoff.getUTCDate() - 7);
+    const cutoff = new Date(points[points.length-1].t);
+    cutoff.setUTCDate(cutoff.getUTCDate() - 7);
     points = points.filter(p => p.t >= cutoff);
   } else if(period === '30') {
-    const cutoff = new Date(points[points.length-1].t); cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+    const cutoff = new Date(points[points.length-1].t);
+    cutoff.setUTCDate(cutoff.getUTCDate() - 30);
     points = points.filter(p => p.t >= cutoff);
   }
 
+  // labels: date only (YYYY-MM-DD)
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
+  // choose color: banner preferred; if banner is '-' use unit mapping; fallback default
+  const banner = currentSelected.banner;
   let colorHex = '#2563eb';
-  if(currentSelected.banner && currentSelected.banner !== '-' && BANNER_COLORS[currentSelected.banner]) colorHex = BANNER_COLORS[currentSelected.banner];
-  else if((!currentSelected.banner || currentSelected.banner === '-') && currentSelected.unit && UNIT_COLORS[currentSelected.unit]) colorHex = UNIT_COLORS[currentSelected.unit];
+  if(banner && banner !== '-' && BANNER_COLORS[banner]) colorHex = BANNER_COLORS[banner];
+  else if((banner === '-' || !banner) && currentSelected.unit && UNIT_COLORS[currentSelected.unit]) colorHex = UNIT_COLORS[currentSelected.unit];
+
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
@@ -536,33 +547,69 @@ function drawChartForSelection(period){
       interaction: { mode: 'nearest', intersect: false },
       layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
       scales: {
-        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 }, type: 'category' },
-        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) }, beginAtZero: false, offset: false }
+        x: { 
+          display:true, 
+          grid:{color:'rgba(15,23,42,0.03)'}, 
+          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
+          type: 'category'
+        },
+        y: { 
+          display:true, 
+          grid:{color:'rgba(15,23,42,0.03)'}, 
+          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
+          beginAtZero: false,
+          offset: false
+        }
       },
-      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } } } }
+      plugins: { 
+        legend:{display:false}, 
+        tooltip:{ 
+          callbacks: { 
+            label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } 
+          } 
+        } 
+      }
     }
   });
 
+  // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
+
+  // remove previous click handlers (if any) to avoid duplicates
   canvas.onclick = null;
+
   canvas.addEventListener('click', function(evt){
+    // prevent document click handler from immediately hiding the info
     evt.stopPropagation();
+
     if(!chart) return;
+    // Use nearest mode with intersect: false to get the closest point in the chart area
     const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
     const pi = document.getElementById('pointInfo');
     if(pointsAtEvent && pointsAtEvent.length){
-      const p = pointsAtEvent[0], datasetIndex = p.datasetIndex, index = p.index;
+      const p = pointsAtEvent[0];
+      const datasetIndex = p.datasetIndex;
+      const index = p.index;
       const value = chart.data.datasets[datasetIndex].data[index];
       const label = chart.data.labels[index];
-      if(pi) pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
-    } else { if(pi) pi.innerText = ''; }
+      if(pi){
+        // show only the value and date in concise form
+        pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
+      }
+    } else {
+      if(pi) pi.innerText = '';
+    }
   });
 }
 
+// clicking anywhere outside the chart area should hide the displayed info
 document.addEventListener('click', function(evt){
   const chartAreaEl = document.querySelector('.chart-area');
   if(!chartAreaEl) return;
-  if(!chartAreaEl.contains(evt.target)){ const pi = document.getElementById('pointInfo'); if(pi) pi.innerText = ''; }
+  if(!chartAreaEl.contains(evt.target)){
+    const pi = document.getElementById('pointInfo');
+    if(pi) pi.innerText = '';
+  }
 });
 
 /* --- event binding --- */
@@ -571,6 +618,14 @@ sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
+
+// safe binding for removed buttons
+const btnAll = document.getElementById('btnAll');
+if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
+const btnBanner = document.getElementById('btnBanner');
+if(btnBanner) btnBanner.addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
+const btnUnit = document.getElementById('btnUnit');
+if(btnUnit) btnUnit.addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
 
 document.querySelectorAll('.tab-mode').forEach(btn=>{
   btn.addEventListener('click', ()=>{
