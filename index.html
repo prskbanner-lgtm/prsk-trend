@@ -12,7 +12,6 @@
       --muted: #596274;
       --text: #111827;
       --accent:#2563eb;
-      --glass: rgba(15,23,42,0.03);
       --card-radius:12px;
       font-family: Inter, system-ui, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
       color: var(--text);
@@ -29,57 +28,40 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
-    .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
+
+    /* three-column layout (left: trend, center: main graph, right: ranking) */
+    .grid{display:grid;grid-template-columns: 240px 1fr 340px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
       font-size:13px;
     }
     select:focus, input[type="search"]:focus, button:focus{ outline: 2px solid rgba(37,99,235,0.12); outline-offset:2px; }
     button.primary{background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; font-weight:700; border:none; padding:9px 12px;}
-    .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
-    /* ----- ランキング項目を全体的に小さくして収める ----- */
+    .rank-list{display:flex;flex-direction:column;gap:12px; max-height:520px; overflow:auto; padding-right:6px;}
     .video-item{
-      display:flex;
-      gap:8px;                   /* 間隔を小さく */
-      align-items:flex-start;
-      padding:8px;               /* 内側の余白を小さく */
-      border-radius:8px;
+      display:grid;
+      grid-template-columns: 40px 140px 1fr 120px;
+      grid-template-rows: auto auto;
+      grid-template-areas:
+        "rank thumb title side"
+        "rank thumb details side";
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
       cursor:pointer;
       transition:background .12s, transform .06s;
-      border: 1px solid rgba(15,23,42,0.03);
-      background: linear-gradient(180deg, rgba(255,255,255,0.0), rgba(255,255,255,0.0));
-      min-height: 64px;         /* 高さの下限を抑える */
+      border:1px solid rgba(15,23,42,0.03);
     }
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
-    .rank-num{
-      width:28px;               /* 小さく */
-      min-width:28px;
-      height:28px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:13px;
-      color:var(--accent);
-      font-weight:800;
-      border-radius:6px;
-      border:1px solid rgba(37,99,235,0.12);
-      background:#fff;
-      flex-shrink:0;
-    }
-    /* サムネイルを小さめに */
-    .thumb{
-      width:120px;              /* 小さめにして収める */
-      height:72px;
-      border-radius:6px;
-      background:#eee;
-      flex:0 0 120px;
-      object-fit:cover;
-      border:1px solid rgba(15,23,42,0.04);
-    }
-    .meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
-    .meta .title{font-size:13px;color:var(--text);font-weight:700;line-height:1.15;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    .meta .sub{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center;}
-    .badge{padding:3px 7px;border-radius:8px;font-size:11px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
+    .rank { grid-area: rank; display:flex; align-items:center; justify-content:center; }
+    .thumb{ grid-area: thumb; width:140px; height:88px; border-radius:8px; background:#eee; object-fit:cover; border:1px solid rgba(15,23,42,0.04); }
+    .vtitle{ grid-area: title; font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .side{ grid-area: side; display:flex; align-items:flex-start; justify-content:flex-end; }
+    .details{ grid-area: details; padding:10px 12px; border-radius:8px; border:1px solid rgba(15,23,42,0.04); background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00)); display:flex; align-items:center; gap:12px; }
+    .meta-sub { font-size:13px; color:var(--muted); display:flex; gap:12px; align-items:center; width:100%; }
+    .badge{padding:6px 10px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
+    .rank-num{font-size:13px;color:var(--accent);font-weight:800}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
     .chart-area{height:320px;}
@@ -94,25 +76,11 @@
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
-
-    /* 再生回数を表示する横長ボックス */
-    .view-bar{
-      border-radius:8px;
-      border:1px solid rgba(15,23,42,0.04);
-      padding:6px 8px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
-      font-size:13px;
-      color:var(--text);
-    }
-    .view-bar .count{font-weight:800;}
-    .view-bar .delta{font-size:12px;color:var(--muted);margin-left:10px}
-
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
-      .thumb{width:100px; height:56px; flex:0 0 100px;}
+      .video-item{ grid-template-columns: 40px 100px 1fr; grid-template-areas: "rank thumb title" "rank thumb details"; }
+      .thumb{width:100px;height:56px;}
+      .side{ display:none; }
     }
   </style>
 </head>
@@ -121,9 +89,7 @@
     <header>
       <div>
         <div class="title">YouTube 再生数ランキング & トレンド</div>
-        <div class="subtitle" style="font-size:13px;color:var(--muted); margin-top:6px;">
-          <div id="lastUpdated" style="font-size:12px;color:var(--muted)">最終更新: 読み込み中...</div>
-        </div>
+        <!-- subtitle removed as requested -->
       </div>
       <div class="controls">
         <input id="search" type="search" placeholder="タイトル / バナー / ユニット で検索">
@@ -138,6 +104,7 @@
     </header>
 
     <div class="grid">
+      <!-- LEFT COLUMN: trend information -->
       <div>
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
@@ -156,8 +123,10 @@
             </div>
           </div>
         </div>
+
       </div>
 
+      <!-- CENTER COLUMN: graph / details -->
       <div>
         <div class="card big-card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -209,6 +178,7 @@
         </div>
       </div>
 
+      <!-- RIGHT COLUMN: ranking -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -278,6 +248,7 @@ const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
 const reloadBtn = document.getElementById('reload');
 
+/* --- ordering lists --- */
 const BANNER_ORDER = [
   "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
 ];
@@ -304,6 +275,7 @@ function buildGroupOptions(){
 
 function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
+/* --- history helpers --- */
 function lastHistoryEntry(history){
   if(!history || history.length===0) return null;
   return history[history.length-1];
@@ -337,17 +309,16 @@ function calcDelta(history, days){
 
 /* --- render ranking --- */
 function renderRankList(){
+  // Compute and show trend picks (global)
   const globalAnnotated = DATA.map(v=>{
     const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
     const d30 = calcDelta(v.history, 30);
     return {...v, latest, d7, d30};
   });
-
   const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
   const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
   const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
-
   document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
   document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
   document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
@@ -391,24 +362,15 @@ function renderRankList(){
     const li = document.createElement('div');
     li.className = 'video-item';
     li.innerHTML = `
-      <div class="rank-num">${idx+1}</div>
+      <div class="rank"><div class="rank-num">${idx+1}</div></div>
       <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
-      <div class="meta">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-          <div style="flex:1" class="title">${escapeHtml(v.title)}</div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div class="badge">${escapeHtml(v.banner||'')}</div>
-            <div class="badge">${escapeHtml(v.unit||'')}</div>
-          </div>
-        </div>
-        <div class="view-bar">
-          <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:12px;color:var(--muted)">最新再生数</div>
-            <div class="count">${fmt(v.latest)} 回</div>
-          </div>
-          <div style="display:flex;align-items:center;">
-            <div class="delta">▲${fmt(v.d7)} / 7d</div>
-          </div>
+      <div class="vtitle">${escapeHtml(v.title)}</div>
+      <div class="side"><div class="badge">${escapeHtml(v.banner)} ${escapeHtml(v.unit)?'・':''}${escapeHtml(v.unit)}</div></div>
+      <div class="details">
+        <div class="meta-sub">
+          <div style="font-weight:700;color:var(--text)">${fmt(v.latest)} 回</div>
+          <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
+          <div style="margin-left:auto;color:var(--muted);font-size:12px">${v.published || '—'}</div>
         </div>
       </div>
     `;
@@ -459,10 +421,7 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  const labels = points.map(p => {
-    const d = p.t;
-    return d.toLocaleString();
-  });
+  const labels = points.map(p => p.t.toLocaleString());
   const data = points.map(p => p.v);
 
   if(chart) chart.destroy();
@@ -472,21 +431,10 @@ function drawChartForSelection(period){
     options: {
       responsive:true, maintainAspectRatio:false,
       scales: {
-        x: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', font: { size: 11 } }
-        },
-        y: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', callback: v => Intl.NumberFormat().format(v), font: { size: 11 } }
-        }
+        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:11 } } },
+        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:11 }, callback: v => Intl.NumberFormat().format(v) } }
       },
-      plugins: {
-        legend:{display:false},
-        tooltip:{ callbacks: { label: ctx => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } }
-      }
+      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: ctx => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } }
     }
   });
 }
@@ -497,13 +445,6 @@ sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
-
-const btnAll = document.getElementById('btnAll');
-if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
-const btnBanner = document.getElementById('btnBanner');
-if(btnBanner) btnBanner.addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
-const btnUnit = document.getElementById('btnUnit');
-if(btnUnit) btnUnit.addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
 
 document.querySelectorAll('.tab-mode').forEach(btn=>{
   btn.addEventListener('click', ()=>{
