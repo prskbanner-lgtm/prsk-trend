@@ -184,7 +184,6 @@
           <div style="margin-top:12px;" class="rank-list card" id="rankList">
             読み込み中...
           </div>
-          <!-- footer-note removed as requested -->
         </div>
       </div>
     </div>
@@ -422,7 +421,7 @@ function selectVideo(v){
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
-  // Clear point info when selecting a new video
+  // Clear point info when selecting new video (keep the initial guidance text)
   const pi = document.getElementById('pointInfo');
   if(pi) pi.innerText = 'グラフをタップするとその時点の再生回数を表示します。';
   drawChartForSelection('all');
@@ -465,7 +464,7 @@ function drawChartForSelection(period){
     data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: 'rgba(37,99,235,0.06)', borderColor:'rgba(37,99,235,0.9)', pointRadius:3 }]},
     options: {
       responsive:true, maintainAspectRatio:false,
-      interaction: { mode: 'nearest', intersect: true },
+      interaction: { mode: 'nearest', intersect: false },
       scales: {
         x: { 
           display:true, 
@@ -489,13 +488,13 @@ function drawChartForSelection(period){
     }
   });
 
-  // click / tap handler to show the tapped point's value
+  // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
   // remove previous handler to avoid multiples
   canvas.onclick = function(evt){
     if(!chart) return;
-    // Get elements at event for the nearest point (intersect true so it requires tapping a point)
-    const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+    // Use nearest mode with intersect: false to get the closest point in the chart area
+    const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
     const pi = document.getElementById('pointInfo');
     if(pointsAtEvent && pointsAtEvent.length){
       const p = pointsAtEvent[0];
@@ -507,8 +506,8 @@ function drawChartForSelection(period){
         pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
       }
     } else {
-      // If user taps empty space, clear info
-      if(pi) pi.innerText = '（データポイントをタップしてください）';
+      // If somehow no point found (very unlikely with intersect:false), clear the info text
+      if(pi) pi.innerText = '';
     }
   };
 }
