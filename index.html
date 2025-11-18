@@ -31,7 +31,7 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
-    /* three-column layout (left: trend / page title, center: main graph, right: ranking) */
+    /* three-column layout (left: trend, center: main graph, right: ranking) */
     .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
@@ -42,7 +42,8 @@
     .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
     .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
-    .thumb{width:84px;height:48px;border-radius:8px;background:#eee;flex:0 0 84px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
+    /* thumbnails smaller as requested */
+    .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
     .meta{flex:1;min-width:0;}
     .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
     .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
@@ -58,9 +59,7 @@
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; min-width:150px; border:1px solid rgba(15,23,42,0.04);}
     .metric .val{font-size:18px;color:var(--text);font-weight:700}
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
-    /* little page title card (left top) */
-    .small-title-card{padding:10px;text-align:center;font-weight:700;border-radius:10px;margin-bottom:12px;}
-    /* trend list vertical */
+    /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
@@ -95,12 +94,8 @@
     </header>
 
     <div class="grid">
-      <!-- LEFT COLUMN: small page title + trend information -->
+      <!-- LEFT COLUMN: trend information (ページタイトル removed) -->
       <div>
-        <div class="card small-title-card card">
-          ページタイトル
-        </div>
-
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
           <div style="margin-top:10px" class="trend-list">
@@ -119,18 +114,8 @@
           </div>
         </div>
 
-        <div class="card" style="margin-top:12px;">
-          <strong style="color:var(--text)">集計切り口</strong>
-          <div style="margin-top:8px;" class="filter-row">
-            <button id="btnAll" class="tabBtn">全体</button>
-            <button id="btnBanner" class="tabBtn">バナー別</button>
-            <button id="btnUnit" class="tabBtn">ユニット別</button>
-          </div>
-          <div style="margin-top:10px;color:var(--muted);font-size:13px">
-            ・動画の一覧・バナー・ユニットは <code>videos_list.json</code> で管理します。<br>
-            ・ワークフローが 30 分ごとに <code>data/videos.json</code> を更新します。
-          </div>
-        </div>
+        <!-- "集計切り口" block removed as requested -->
+
       </div>
 
       <!-- CENTER COLUMN: graph / details -->
@@ -185,7 +170,7 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: ranking (並び替えは UI の選択に従います。初期は累計降順) -->
+      <!-- RIGHT COLUMN: ranking (thumbnails now smaller) -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -477,9 +462,15 @@ sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
-document.getElementById('btnAll').addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
-document.getElementById('btnBanner').addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
-document.getElementById('btnUnit').addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
+
+// btnAll/btnBanner/btnUnit were removed from DOM; bind only if present to avoid errors
+const btnAll = document.getElementById('btnAll');
+if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
+const btnBanner = document.getElementById('btnBanner');
+if(btnBanner) btnBanner.addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
+const btnUnit = document.getElementById('btnUnit');
+if(btnUnit) btnUnit.addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
+
 document.querySelectorAll('.tab-mode').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tab-mode').forEach(b=>b.classList.remove('active'));
