@@ -248,7 +248,7 @@ function hexToRgba(hex, alpha){
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* mix provided hex color with white (#FFFFFF) in ratio 1:2 (1 color + 2 white) and return hex */
+/* mix provided hex color with white (#FFFFFF) in ratio color:white = 1:2 (legacy) */
 function mixWithWhite(hex){
   if(!hex) hex = '#2563eb';
   hex = hex.replace('#','');
@@ -260,6 +260,21 @@ function mixWithWhite(hex){
   const mr = Math.round((r + 2*255)/3);
   const mg = Math.round((g + 2*255)/3);
   const mb = Math.round((b + 2*255)/3);
+  return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
+}
+
+/* mix provided hex color with white in arbitrary ratio (colorWeight : whiteWeight) */
+function mixWithWhiteRatio(hex, colorWeight = 4, whiteWeight = 1){
+  if(!hex) hex = '#2563eb';
+  hex = hex.replace('#','');
+  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const r = parseInt(hex.slice(0,2),16);
+  const g = parseInt(hex.slice(2,4),16);
+  const b = parseInt(hex.slice(4,6),16);
+  const total = colorWeight + whiteWeight;
+  const mr = Math.round((r * colorWeight + 255 * whiteWeight) / total);
+  const mg = Math.round((g * colorWeight + 255 * whiteWeight) / total);
+  const mb = Math.round((b * colorWeight + 255 * whiteWeight) / total);
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
 }
 
@@ -432,20 +447,28 @@ function renderRankList(){
     document.getElementById('trendNew').innerText = '—';
   }
 
-  // attach click handlers and unit-color borders to trend items
+  // attach click handlers and unit-color borders/backgrounds to trend items
   function setupTrendItem(itemId, video){
     const el = document.getElementById(itemId);
     if(!el) return;
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
+    // reset background to default (in case previously set)
+    el.style.background = '';
+    el.style.backgroundImage = '';
 
     if(video){
       const unitColor = UNIT_COLORS[video.unit] || null;
       if(unitColor){
+        // border uses unit color
         el.style.border = `2px solid ${unitColor}`;
+        // background: mix unit color with white in ratio 4:1 (color:white = 4:1)
+        const mixed = mixWithWhiteRatio(unitColor, 4, 1);
+        el.style.background = mixed;
       } else {
         el.style.border = '1px solid rgba(15,23,42,0.04)';
+        // leave default background
       }
       el.style.cursor = 'pointer';
       el.onclick = function(e){
