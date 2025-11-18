@@ -263,20 +263,18 @@ function mixWithWhite(hex){
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
 }
 
-/* mix provided hex color with white (#FFFFFF) in ratio unit:white (e.g. 2:1) and return hex */
-function mixWithWhiteRatio(hex, unitRatio, whiteRatio){
+/* mix provided hex color with white in arbitrary ratio: colorWeight: whiteWeight -> returns hex */
+function mixWithWhiteRatio(hex, colorWeight, whiteWeight){
   if(!hex) hex = '#2563eb';
-  unitRatio = Math.max(0, unitRatio || 1);
-  whiteRatio = Math.max(0, whiteRatio || 1);
-  const total = unitRatio + whiteRatio;
   hex = hex.replace('#','');
   if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
-  const mr = Math.round((r * unitRatio + 255 * whiteRatio) / total);
-  const mg = Math.round((g * unitRatio + 255 * whiteRatio) / total);
-  const mb = Math.round((b * unitRatio + 255 * whiteRatio) / total);
+  const total = colorWeight + whiteWeight;
+  const mr = Math.round((r * colorWeight + 255 * whiteWeight) / total);
+  const mg = Math.round((g * colorWeight + 255 * whiteWeight) / total);
+  const mb = Math.round((b * colorWeight + 255 * whiteWeight) / total);
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
 }
 
@@ -456,17 +454,19 @@ function renderRankList(){
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
-    // reset background to default gradient
-    el.style.background = 'linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00))';
 
+    // default background fallback (light)
+    el.style.backgroundColor = '';
     if(video){
       const unitColor = UNIT_COLORS[video.unit] || null;
       if(unitColor){
         el.style.border = `2px solid ${unitColor}`;
-        // set background to unitColor mixed with white in 2:1 (unit:white = 2:1)
-        el.style.background = mixWithWhiteRatio(unitColor, 2, 1);
+        // background: mix unit color with white in ratio 3:1 (unit heavier)
+        const bg = mixWithWhiteRatio(unitColor, 3, 1);
+        el.style.backgroundColor = bg;
       } else {
         el.style.border = '1px solid rgba(15,23,42,0.04)';
+        el.style.backgroundColor = '';
       }
       el.style.cursor = 'pointer';
       el.onclick = function(e){
@@ -476,6 +476,7 @@ function renderRankList(){
     } else {
       el.style.border = '1px solid rgba(15,23,42,0.04)';
       el.style.cursor = 'default';
+      el.style.backgroundColor = '';
     }
   }
 
