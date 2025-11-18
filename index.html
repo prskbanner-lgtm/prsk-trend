@@ -36,8 +36,8 @@
     }
     select:focus, input[type="search"]:focus, button:focus{ outline: 2px solid rgba(37,99,235,0.12); outline-offset:2px; }
     button.primary{background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; font-weight:700; border:none; padding:9px 12px;}
-    .rank-list{display:flex;flex-direction:column;gap:10px; max-height:520px; overflow:auto; padding-right:6px;}
-    /* New ranking card layout to match provided wireframe */
+    .rank-list{display:flex;flex-direction:column;gap:10px; max-height:520px; overflow:auto; padding:10px; box-sizing:border-box;}
+    /* Ranking item layout to match wireframe */
     .rank-card{
       display:flex;
       gap:10px;
@@ -50,6 +50,7 @@
       transition:background .12s, transform .06s;
       min-height:72px;
       box-sizing:border-box;
+      width:100%;
     }
     .rank-card:hover{ background: rgba(37,99,235,0.03); transform: translateY(-2px); }
     .rank-side{
@@ -103,11 +104,7 @@
     }
     .rank-stats .line{ display:flex; gap:8px; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); }
     .rank-stats .big{ font-weight:800; color:var(--text); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    /* small badges in stats */
     .badge{padding:4px 8px;border-radius:999px;font-size:11px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
-    /* ensure no overflow */
-    .rank-list .rank-card{box-sizing:border-box;}
-    /* other UI */
     .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
     .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
@@ -151,10 +148,6 @@
           <option value="unit">ユニット別</option>
         </select>
         <select id="groupFilter"><option value="all">グループ: 全て</option></select>
-        <select id="sortMode">
-          <option value="total">累計再生数（降順）</option>
-          <option value="published">投稿日（新しい順）</option>
-        </select>
         <button id="reload" class="primary">データを再読み込み</button>
       </div>
     </header>
@@ -229,15 +222,24 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: ranking (new layout) -->
+      <!-- RIGHT COLUMN: ranking (sort dropdown moved here) -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <strong style="color:var(--text)">ランキング</strong>
-            <div style="font-size:13px;color:var(--muted)">表示: <span id="rankCount" style="font-weight:700">—</span></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="font-size:13px;color:var(--muted)">表示: <span id="rankCount" style="font-weight:700">—</span></div>
+              <!-- SORT DROPDOWN: back in ranking header -->
+              <div style="font-size:13px;color:var(--muted)">並び替え:
+                <select id="sortMode">
+                  <option value="total">累計再生数（降順）</option>
+                  <option value="published">投稿日（新しい順）</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div style="margin-top:0;" class="rank-list card" id="rankList">
+          <div style="margin-top:0;" class="rank-list" id="rankList">
             読み込み中...
           </div>
         </div>
@@ -255,7 +257,7 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
-/* --- Banner & Unit color maps (kept from previous) --- */
+/* --- Banner & Unit color maps --- */
 const BANNER_COLORS = {
   "一歌": "#33AAEE","咲希": "#FFDD44","穂波": "#EE6666","志歩": "#BBDD22","みのり": "#FFCCAA",
   "遥": "#99CCFF","愛莉": "#FFAACC","雫": "#99EEDD","こはね": "#FF6699","杏": "#00BBDD",
@@ -453,7 +455,6 @@ function renderRankList(){
   annotated.forEach((v, idx)=>{
     const card = document.createElement('div');
     card.className = 'rank-card';
-    // choose thumb and titles
     const titleText = v.title || '—';
     const thumb = v.thumbnail || '';
     const banner = v.banner || '';
@@ -475,13 +476,12 @@ function renderRankList(){
         </div>
       </div>
     `;
-    // click selects video (works with either the annotated entry which includes original fields)
     card.addEventListener('click', ()=> selectVideo(v));
     rankListEl.appendChild(card);
   });
 }
 
-/* --- chart & selection (unchanged behavior) --- */
+/* --- chart & selection --- */
 let currentSelected = null;
 const ctx = document.getElementById('trendChart').getContext('2d');
 let chart = null;
