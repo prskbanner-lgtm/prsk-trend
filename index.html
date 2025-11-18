@@ -91,7 +91,7 @@
           <option value="unit">ユニット別</option>
         </select>
         <select id="groupFilter"><option value="all">グループ: 全て</option></select>
-        <button id="reload" class="primary">データを再読み込み</button>
+        <button id="clearGroups" class="primary">グループ分けクリア</button>
       </div>
     </header>
 
@@ -299,7 +299,7 @@ const sortModeEl = document.getElementById('sortMode');
 const searchEl = document.getElementById('search');
 const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
-const reloadBtn = document.getElementById('reload');
+const clearBtn = document.getElementById('clearGroups');
 
 /* --- Group ordering --- */
 const BANNER_ORDER = [
@@ -732,7 +732,15 @@ document.addEventListener('click', function(evt){
 });
 
 /* --- event binding --- */
-document.getElementById('reload').addEventListener('click', loadData);
+// replaced reload button by clearGroups button (clears group filters)
+if(clearBtn) clearBtn.addEventListener('click', function(){
+  scopeEl.value = 'all';
+  buildGroupOptions();
+  try { groupFilterEl.value = 'all'; } catch(e){}
+  renderRankList();
+  rankListEl.scrollTop = 0;
+});
+
 sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
