@@ -7,20 +7,17 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root{
-      /* 白背景に合わせた配色 */
       --bg: #ffffff;
       --card: #ffffff;
       --muted: #596274;
       --text: #111827;
       --accent:#2563eb;
-      --glass: rgba(15,23,42,0.03);
       --card-radius:12px;
       font-family: Inter, system-ui, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
       color: var(--text);
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
     .wrap{max-width:1200px;margin:28px auto;padding:20px;}
-    /* Header stays mostly the same, but center the search visually */
     header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px;}
     header .title{font-size:20px;color:var(--text); font-weight:700;}
     .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -31,24 +28,40 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
+
     /* three-column layout (left: trend, center: main graph, right: ranking) */
-    .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
+    .grid{display:grid;grid-template-columns: 240px 1fr 340px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
       font-size:13px;
     }
     select:focus, input[type="search"]:focus, button:focus{ outline: 2px solid rgba(37,99,235,0.12); outline-offset:2px; }
     button.primary{background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; font-weight:700; border:none; padding:9px 12px;}
-    .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
-    .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
+    .rank-list{display:flex;flex-direction:column;gap:12px; max-height:520px; overflow:auto; padding-right:6px;}
+    .video-item{
+      display:grid;
+      grid-template-columns: 40px 140px 1fr 120px;
+      grid-template-rows: auto auto;
+      grid-template-areas:
+        "rank thumb title side"
+        "rank thumb details side";
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
+      cursor:pointer;
+      transition:background .12s, transform .06s;
+      border:1px solid rgba(15,23,42,0.03);
+    }
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
-    /* thumbnails smaller as requested */
-    .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
-    .meta{flex:1;min-width:0;}
-    .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
-    .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
-    .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
+    .rank { grid-area: rank; display:flex; align-items:center; justify-content:center; }
+    .thumb{ grid-area: thumb; width:140px; height:88px; border-radius:8px; background:#eee; object-fit:cover; border:1px solid rgba(15,23,42,0.04); }
+    .vtitle{ grid-area: title; font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .side{ grid-area: side; display:flex; align-items:flex-start; justify-content:flex-end; }
+    .details{ grid-area: details; padding:10px 12px; border-radius:8px; border:1px solid rgba(15,23,42,0.04); background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00)); display:flex; align-items:center; gap:12px; }
+    .meta-sub { font-size:13px; color:var(--muted); display:flex; gap:12px; align-items:center; width:100%; }
+    .badge{padding:6px 10px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
+    .rank-num{font-size:13px;color:var(--accent);font-weight:800}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
     .chart-area{height:320px;}
@@ -59,15 +72,15 @@
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; min-width:150px; border:1px solid rgba(15,23,42,0.04);}
     .metric .val{font-size:18px;color:var(--text);font-weight:700}
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
-    /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
-    /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
-      .thumb{width:100px; height:56px; flex:0 0 100px;}
+      .video-item{ grid-template-columns: 40px 100px 1fr; grid-template-areas: "rank thumb title" "rank thumb details"; }
+      .thumb{width:100px;height:56px;}
+      .side{ display:none; }
     }
   </style>
 </head>
@@ -76,10 +89,7 @@
     <header>
       <div>
         <div class="title">YouTube 再生数ランキング & トレンド</div>
-        <div class="subtitle" style="font-size:13px;color:var(--muted)">
-          GitHub Pages + GitHub Actions で 30 分ごとに更新される静的ダッシュボード
-          <div id="lastUpdated" style="margin-top:6px;font-size:12px;color:var(--muted)">最終更新: 読み込み中...</div>
-        </div>
+        <!-- subtitle removed as requested -->
       </div>
       <div class="controls">
         <input id="search" type="search" placeholder="タイトル / バナー / ユニット で検索">
@@ -94,7 +104,7 @@
     </header>
 
     <div class="grid">
-      <!-- LEFT COLUMN: trend information (ページタイトル removed) -->
+      <!-- LEFT COLUMN: trend information -->
       <div>
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
@@ -113,8 +123,6 @@
             </div>
           </div>
         </div>
-
-        <!-- "集計切り口" block removed as requested -->
 
       </div>
 
@@ -170,7 +178,7 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: ranking (thumbnails now smaller) -->
+      <!-- RIGHT COLUMN: ranking -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -199,7 +207,6 @@ function fmt(n){ return n === null || n === undefined ? '—' : n.toLocaleString
 function safe(s){ return String(s||''); }
 function parseISOorDateString(s){
   if(!s) return null;
-  // accepts "YYYY-MM-DD" or full ISO
   if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
   return new Date(s);
 }
@@ -214,7 +221,6 @@ async function loadData(){
     const json = await res.json();
     DATA = json.videos || [];
     DATA_UPDATED_AT = json.updated_at || null;
-    // show last updated in header
     const lastEl = document.getElementById('lastUpdated');
     if(DATA_UPDATED_AT){
       const d = new Date(DATA_UPDATED_AT);
@@ -242,21 +248,16 @@ const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
 const reloadBtn = document.getElementById('reload');
 
-/* --- Custom ordered group list as requested ---
-   The dropdown will show banners first in the specific order, then units in the requested order.
-   If scope is 'banner' or 'unit' we show only the corresponding section in the specified order.
-*/
+/* --- ordering lists --- */
 const BANNER_ORDER = [
   "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
 ];
 const UNIT_ORDER = ["レオニ","モモジャン","ビビバス","ワンダショ","ニーゴ"];
 
 function buildGroupOptions(){
-  // Build with requested fixed ordering. Include the "グループ: 全て" first.
   groupFilterEl.innerHTML = '<option value="all">グループ: 全て</option>';
 
   if(scopeEl.value === 'banner'){
-    // show banners in the fixed order (as plain values)
     BANNER_ORDER.forEach(b => {
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`);
     });
@@ -265,7 +266,6 @@ function buildGroupOptions(){
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
     });
   } else {
-    // full list: add a disabled header then banners, then units
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- バナー ---</option>');
     BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="banner:${escapeHtml(b)}">${escapeHtml(b)}</option>`));
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- ユニット ---</option>');
@@ -275,18 +275,13 @@ function buildGroupOptions(){
 
 function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-/* --- history utilities using datetime --- */
-/*
- history: array of entries; supported legacy {date:"YYYY-MM-DD"} or new {datetime:"ISO...", views: n}
- We will treat each entry's timestamp via parseISOorDateString(entry.datetime || entry.date)
-*/
+/* --- history helpers --- */
 function lastHistoryEntry(history){
   if(!history || history.length===0) return null;
   return history[history.length-1];
 }
 
 function findClosestBefore(history, targetDate){
-  // find last entry with timestamp <= targetDate
   if(!history || history.length===0) return null;
   let candidate = history[0];
   for(const rec of history){
@@ -299,14 +294,12 @@ function findClosestBefore(history, targetDate){
 }
 
 function calcDelta(history, days){
-  // compute last.views - views at (lastTime - days)
   if(!history || history.length===0) return 0;
   const lastRec = lastHistoryEntry(history);
   const lastDate = lastRec ? (lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null)) : null;
   if(!lastDate) return 0;
   const startDate = new Date(lastDate);
   startDate.setUTCDate(startDate.getUTCDate() - days);
-  // find start rec
   const startRec = findClosestBefore(history, startDate) || history[0];
   if(!startRec) return 0;
   const startViews = startRec.views || 0;
@@ -316,24 +309,20 @@ function calcDelta(history, days){
 
 /* --- render ranking --- */
 function renderRankList(){
-  // Compute global trend picks from full DATA (ignore current filters/search)
+  // Compute and show trend picks (global)
   const globalAnnotated = DATA.map(v=>{
     const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
     const d30 = calcDelta(v.history, 30);
     return {...v, latest, d7, d30};
   });
-
-  // top by 7-day growth
   const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
   const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
   const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
-
   document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
   document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
   document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
 
-  // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
   const q = searchEl.value.trim().toLowerCase();
   let list = DATA.slice();
@@ -359,7 +348,6 @@ function renderRankList(){
     return {...v, latest, d7, d30};
   });
 
-  // Sort according to selected mode. Initial/default sortMode is 'total'.
   if(mode === 'total') annotated.sort((a,b)=>b.latest - a.latest);
   else if(mode === 'week') annotated.sort((a,b)=>b.d7 - a.d7);
   else annotated.sort((a,b)=>b.d30 - a.d30);
@@ -374,15 +362,15 @@ function renderRankList(){
     const li = document.createElement('div');
     li.className = 'video-item';
     li.innerHTML = `
-      <div class="rank-num">${idx+1}</div>
+      <div class="rank"><div class="rank-num">${idx+1}</div></div>
       <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
-      <div class="meta">
-        <div class="title">${escapeHtml(v.title)}</div>
-        <div class="sub">
-          <div class="badge">${escapeHtml(v.banner)}</div>
-          <div class="badge">${escapeHtml(v.unit)}</div>
-          <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
+      <div class="vtitle">${escapeHtml(v.title)}</div>
+      <div class="side"><div class="badge">${escapeHtml(v.banner)} ${escapeHtml(v.unit)?'・':''}${escapeHtml(v.unit)}</div></div>
+      <div class="details">
+        <div class="meta-sub">
+          <div style="font-weight:700;color:var(--text)">${fmt(v.latest)} 回</div>
           <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
+          <div style="margin-left:auto;color:var(--muted);font-size:12px">${v.published || '—'}</div>
         </div>
       </div>
     `;
@@ -417,7 +405,6 @@ function drawChartForSelection(period){
     ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
     return;
   }
-  // convert to entries with timestamp and views
   const pts = hist.map(h => {
     const ts = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
     return ts ? { t: ts, v: (h.views || 0) } : null;
@@ -434,11 +421,7 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  const labels = points.map(p => {
-    // show local short datetime
-    const d = p.t;
-    return d.toLocaleString();
-  });
+  const labels = points.map(p => p.t.toLocaleString());
   const data = points.map(p => p.v);
 
   if(chart) chart.destroy();
@@ -448,8 +431,8 @@ function drawChartForSelection(period){
     options: {
       responsive:true, maintainAspectRatio:false,
       scales: {
-        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93' } },
-        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', callback: v => Intl.NumberFormat().format(v) } }
+        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:11 } } },
+        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:11 }, callback: v => Intl.NumberFormat().format(v) } }
       },
       plugins: { legend:{display:false}, tooltip:{ callbacks: { label: ctx => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } }
     }
@@ -462,14 +445,6 @@ sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
-
-// btnAll/btnBanner/btnUnit were removed from DOM; bind only if present to avoid errors
-const btnAll = document.getElementById('btnAll');
-if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
-const btnBanner = document.getElementById('btnBanner');
-if(btnBanner) btnBanner.addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
-const btnUnit = document.getElementById('btnUnit');
-if(btnUnit) btnUnit.addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
 
 document.querySelectorAll('.tab-mode').forEach(btn=>{
   btn.addEventListener('click', ()=>{
