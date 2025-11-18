@@ -20,6 +20,7 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
     .wrap{max-width:1200px;margin:28px auto;padding:20px;}
+    /* Header stays mostly the same, but center the search visually */
     header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px;}
     header .title{font-size:20px;color:var(--text); font-weight:700;}
     .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -30,7 +31,8 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
-    .grid{display:grid;grid-template-columns: 340px 1fr;gap:16px;}
+    /* three-column layout (left: trend / page title, center: main graph, right: ranking) */
+    .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
       font-size:13px;
@@ -56,6 +58,13 @@
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; min-width:150px; border:1px solid rgba(15,23,42,0.04);}
     .metric .val{font-size:18px;color:var(--text);font-weight:700}
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
+    /* little page title card (left top) */
+    .small-title-card{padding:10px;text-align:center;font-weight:700;border-radius:10px;margin-bottom:12px;}
+    /* trend list vertical */
+    .trend-list{display:flex;flex-direction:column;gap:12px;}
+    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
+    .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
+    .trend-item .val{font-weight:700;color:var(--text);}
     /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
@@ -86,38 +95,28 @@
     </header>
 
     <div class="grid">
+      <!-- LEFT COLUMN: small page title + trend information -->
       <div>
+        <div class="card small-title-card card">
+          ページタイトル
+        </div>
+
         <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <strong style="color:var(--text)">ランキング</strong>
-            <div style="font-size:13px;color:var(--muted)">並び替え:
-              <select id="sortMode">
-                <option value="total">累計再生数（降順）</option>
-                <option value="week">直近7日増分（降順）</option>
-                <option value="month">直近30日増分（降順）</option>
-              </select>
+          <strong style="color:var(--text)">トレンド情報</strong>
+          <div style="margin-top:10px" class="trend-list">
+            <div class="trend-item">
+              <div class="label">直近1週間で再生数伸びトップ</div>
+              <div id="trendWeek" class="val">—</div>
+            </div>
+            <div class="trend-item">
+              <div class="label">直近1ヶ月で再生数伸びトップ</div>
+              <div id="trendMonth" class="val">—</div>
+            </div>
+            <div class="trend-item">
+              <div class="label">累計再生数トップ</div>
+              <div id="trendTotal" class="val">—</div>
             </div>
           </div>
-
-          <div class="top-metrics" style="margin-top:10px;">
-            <div class="metric card">
-              <div style="font-size:12px;color:var(--muted)">総再生数トップ</div>
-              <div id="topTotal" class="val">—</div>
-            </div>
-            <div class="metric card">
-              <div style="font-size:12px;color:var(--muted)">1週間伸びトップ</div>
-              <div id="topWeek" class="val">—</div>
-            </div>
-            <div class="metric card">
-              <div style="font-size:12px;color:var(--muted)">1ヶ月伸びトップ</div>
-              <div id="topMonth" class="val">—</div>
-            </div>
-          </div>
-
-          <div style="margin-top:12px;" class="rank-list card" id="rankList">
-            読み込み中...
-          </div>
-          <div class="footer-note">※ サムネイルをクリックすると右側でグラフ表示します。データは <code>data/videos.json</code> から読み込まれます。</div>
         </div>
 
         <div class="card" style="margin-top:12px;">
@@ -134,6 +133,7 @@
         </div>
       </div>
 
+      <!-- CENTER COLUMN: graph / details -->
       <div>
         <div class="card big-card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -182,6 +182,27 @@
             ・ワークフローが 30 分ごとに実行され、履歴は 30 分刻み（UTC）で保存されます。<br>
             ・初回はワークフローを手動実行して <code>data/videos.json</code> を作成してください。
           </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: ranking (並び替えは UI の選択に従います。初期は累計降順) -->
+      <div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <strong style="color:var(--text)">ランキング</strong>
+            <div style="font-size:13px;color:var(--muted)">並び替え:
+              <select id="sortMode">
+                <option value="total">累計再生数（降順）</option>
+                <option value="week">直近7日増分（降順）</option>
+                <option value="month">直近30日増分（降順）</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;" class="rank-list card" id="rankList">
+            読み込み中...
+          </div>
+          <div class="footer-note">※ サムネイルをクリックすると右側でグラフ表示します。データは <code>data/videos.json</code> から読み込まれます。</div>
         </div>
       </div>
     </div>
@@ -310,6 +331,24 @@ function calcDelta(history, days){
 
 /* --- render ranking --- */
 function renderRankList(){
+  // Compute global trend picks from full DATA (ignore current filters/search)
+  const globalAnnotated = DATA.map(v=>{
+    const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
+    const d7 = calcDelta(v.history, 7);
+    const d30 = calcDelta(v.history, 30);
+    return {...v, latest, d7, d30};
+  });
+
+  // top by 7-day growth
+  const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
+  const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
+  const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
+
+  document.getElementById('trendWeek').innerText = topWeekGlobal && topWeekGlobal.title ? `${topWeekGlobal.title} — ${fmt(topWeekGlobal.d7)} 回` : '—';
+  document.getElementById('trendMonth').innerText = topMonthGlobal && topMonthGlobal.title ? `${topMonthGlobal.title} — ${fmt(topMonthGlobal.d30)} 回` : '—';
+  document.getElementById('trendTotal').innerText = topTotalGlobal && topTotalGlobal.title ? `${topTotalGlobal.title} — ${fmt(topTotalGlobal.latest)} 回` : '—';
+
+  // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
   const q = searchEl.value.trim().toLowerCase();
   let list = DATA.slice();
@@ -335,17 +374,17 @@ function renderRankList(){
     return {...v, latest, d7, d30};
   });
 
+  // Sort according to selected mode. Initial/default sortMode is 'total'.
   if(mode === 'total') annotated.sort((a,b)=>b.latest - a.latest);
   else if(mode === 'week') annotated.sort((a,b)=>b.d7 - a.d7);
   else annotated.sort((a,b)=>b.d30 - a.d30);
 
-  document.getElementById('topTotal').innerText = annotated[0] ? `${annotated[0].title} — ${fmt(annotated[0].latest)} 回` : '—';
-  const topWeek = annotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
-  const topMonth = annotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
-  document.getElementById('topWeek').innerText = (topWeek && topWeek.title) ? `${topWeek.title} — ${fmt(topWeek.d7)} 回` : '—';
-  document.getElementById('topMonth').innerText = (topMonth && topMonth.title) ? `${topMonth.title} — ${fmt(topMonth.d30)} 回` : '—';
-
   rankListEl.innerHTML = '';
+  if(annotated.length === 0){
+    rankListEl.innerText = '該当する動画がありません。';
+    return;
+  }
+
   annotated.forEach((v, idx)=>{
     const li = document.createElement('div');
     li.className = 'video-item';
