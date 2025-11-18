@@ -263,18 +263,18 @@ function mixWithWhite(hex){
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
 }
 
-/* mix provided hex color with white in arbitrary ratio: colorWeight: whiteWeight -> returns hex */
-function mixWithWhiteRatio(hex, colorWeight, whiteWeight){
+/* mix provided hex color with white (#FFFFFF) in ratio 3:1 (3 color + 1 white) and return hex */
+function mixWithWhiteRatio3to1(hex){
   if(!hex) hex = '#2563eb';
   hex = hex.replace('#','');
   if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
-  const total = colorWeight + whiteWeight;
-  const mr = Math.round((r * colorWeight + 255 * whiteWeight) / total);
-  const mg = Math.round((g * colorWeight + 255 * whiteWeight) / total);
-  const mb = Math.round((b * colorWeight + 255 * whiteWeight) / total);
+  // mix: (color * 3 + white * 1) / 4  -> white is 255
+  const mr = Math.round((3*r + 1*255)/4);
+  const mg = Math.round((3*g + 1*255)/4);
+  const mb = Math.round((3*b + 1*255)/4);
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
 }
 
@@ -454,19 +454,18 @@ function renderRankList(){
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
+    // reset background to default base card bg (override inline if previously set)
+    el.style.background = '';
 
-    // default background fallback (light)
-    el.style.backgroundColor = '';
     if(video){
       const unitColor = UNIT_COLORS[video.unit] || null;
       if(unitColor){
         el.style.border = `2px solid ${unitColor}`;
-        // background: mix unit color with white in ratio 3:1 (unit heavier)
-        const bg = mixWithWhiteRatio(unitColor, 3, 1);
-        el.style.backgroundColor = bg;
+        // set background mixed with white in ratio 3:1
+        el.style.background = mixWithWhiteRatio3to1(unitColor);
       } else {
         el.style.border = '1px solid rgba(15,23,42,0.04)';
-        el.style.backgroundColor = '';
+        el.style.background = '';
       }
       el.style.cursor = 'pointer';
       el.onclick = function(e){
@@ -476,7 +475,6 @@ function renderRankList(){
     } else {
       el.style.border = '1px solid rgba(15,23,42,0.04)';
       el.style.cursor = 'default';
-      el.style.backgroundColor = '';
     }
   }
 
