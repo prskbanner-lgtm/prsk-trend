@@ -63,7 +63,8 @@
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
+    /* default background removed so JS can set backgroundColor reliably */
+    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04); background: transparent;}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
     /* responsive */
@@ -248,22 +249,7 @@ function hexToRgba(hex, alpha){
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* mix provided hex color with white (#FFFFFF) in ratio 1:2 (1 color + 2 white) and return hex */
-function mixWithWhite(hex){
-  if(!hex) hex = '#2563eb';
-  hex = hex.replace('#','');
-  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
-  const r = parseInt(hex.slice(0,2),16);
-  const g = parseInt(hex.slice(2,4),16);
-  const b = parseInt(hex.slice(4,6),16);
-  // mix: (color * 1 + white * 2) / 3 -> white components are 255
-  const mr = Math.round((r + 2*255)/3);
-  const mg = Math.round((g + 2*255)/3);
-  const mb = Math.round((b + 2*255)/3);
-  return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
-}
-
-/* mix provided hex color with white using custom weights (colorWeight : whiteWeight) and return hex */
+/* mix provided hex color with white (#FFFFFF) in ratio colorWeight : whiteWeight and return hex */
 function mixWithWhiteRatio(hex, colorWeight = 4, whiteWeight = 1){
   if(!hex) hex = '#2563eb';
   hex = hex.replace('#','');
@@ -276,6 +262,11 @@ function mixWithWhiteRatio(hex, colorWeight = 4, whiteWeight = 1){
   const mg = Math.round((colorWeight * g + whiteWeight * 255) / total);
   const mb = Math.round((colorWeight * b + whiteWeight * 255) / total);
   return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
+}
+
+/* mix provided hex color with white (#FFFFFF) in ratio 1:2 (helper used elsewhere) */
+function mixWithWhite(hex){
+  return mixWithWhiteRatio(hex, 1, 2);
 }
 
 /* --- load data/videos.json --- */
@@ -454,23 +445,22 @@ function renderRankList(){
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
-    // reset background to default neutral if no video
-    el.style.background = '';
+    // reset backgroundColor and text color to defaults
+    el.style.backgroundColor = '';
     el.querySelectorAll('.label, .val').forEach(ch => { if(ch) ch.style.color = ''; });
 
     if(video){
-      const unitColor = UNIT_COLORS[video.unit] || null;
-      if(unitColor){
-        el.style.border = `2px solid ${unitColor}`;
-        // mix unit color with white in ratio 4:1 (unit:white = 4:1)
-        const bg = mixWithWhiteRatio(unitColor, 4, 1);
-        el.style.background = bg;
-        // ensure text contrasts (use dark text)
-        el.querySelectorAll('.label, .val').forEach(ch => { if(ch) ch.style.color = '#111827'; });
-      } else {
-        el.style.border = '1px solid rgba(15,23,42,0.04)';
-        el.style.background = '';
-      }
+      // select unit color if available, otherwise fallback to a neutral color
+      const unitColor = (video.unit && UNIT_COLORS[video.unit]) ? UNIT_COLORS[video.unit] : (video.banner && BANNER_COLORS[video.banner]) ? BANNER_COLORS[video.banner] : '#2563eb';
+      // border uses unit color if available, otherwise a light border
+      const borderColor = (video.unit && UNIT_COLORS[video.unit]) ? UNIT_COLORS[video.unit] : 'rgba(15,23,42,0.04)';
+      el.style.border = `2px solid ${borderColor}`;
+      // mix unit/banner color with white in ratio 4:1 (unit:white = 4:1)
+      const bg = mixWithWhiteRatio(unitColor, 4, 1);
+      el.style.backgroundColor = bg;
+      // ensure text contrasts (use dark text)
+      el.querySelectorAll('.label, .val').forEach(ch => { if(ch) ch.style.color = '#111827'; });
+
       el.style.cursor = 'pointer';
       el.onclick = function(e){
         e.stopPropagation();
