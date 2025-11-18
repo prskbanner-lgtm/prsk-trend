@@ -3,7 +3,7 @@
 // - 必須: 環境変数 YOUTUBE_API_KEY を GitHub Actions Secrets に設定
 // - 入力: videos_list.json (各エントリに url, banner, unit)
 // - 出力: data/videos.json (各動画に videoId, url, title, thumbnail, published, banner, unit, history の配列)
-// - 履歴は { datetime: "2025-11-17T12:30:00.000Z", views: 12345 } の形で保存（30分刻み）
+// - 履歴は { datetime: "2025-11-17T12:30:00.000Z", views: 12345 } の形で保存（以前は 30分刻みだったが、本スクリプトは取得時刻をそのまま保存します）
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -24,14 +24,12 @@ async function fetchJson(url) {
   return await res.json();
 }
 
-function nowRoundedTo30MinISO(date = new Date()) {
-  const d = new Date(date);
-  const m = d.getUTCMinutes();
-  if (m >= 30) d.setUTCMinutes(30);
-  else d.setUTCMinutes(0);
-  d.setUTCSeconds(0);
-  d.setUTCMilliseconds(0);
-  return d.toISOString();
+/* --- 変更点 ---
+   ここで「丸めた時刻」を作る関数ではなく、**取得時の正確な ISO 時刻**を返すようにします。
+   これにより history に保存される datetime は実際にスクリプトが動いた瞬間の ISO になります。
+*/
+function nowISO(date = new Date()) {
+  return new Date(date).toISOString();
 }
 
 function parseHistoryEntryDatetime(e) {
@@ -139,8 +137,8 @@ function extractVideoIdFromUrl(urlStr) {
     const batchSize = 50;
     const results = [];
 
-    // current rounded datetime in ISO (UTC) to use as key (30-min rounded)
-    const currentRounded = nowRoundedTo30MinISO(new Date());
+    // current (exact) datetime in ISO (UTC) to use as key — 取り得る時刻を丸めずそのまま保存
+    const currentIso = nowISO(new Date());
 
     for (let i = 0; i < entries.length; i += batchSize) {
       const chunk = entries.slice(i, i + batchSize);
@@ -191,19 +189,15 @@ function extractVideoIdFromUrl(urlStr) {
         let lastIso = lastEntry ? isoFromEntry(lastEntry) : null;
 
         if (!lastIso) {
-          // no previous history -> push new rounded entry
-          history.push({ datetime: currentRounded, views: views });
+          // no previous history -> push new entry with exact current ISO
+          history.push({ datetime: currentIso, views: views });
         } else {
-          // compare rounded iso strings: if last entry is at same rounded time, update; otherwise push
-          // convert lastIso to Date and round to 30min to be safe
-          let lastDate = new Date(lastIso);
-          // round lastDate to 30min
-          const roundedLast = nowRoundedTo30MinISO(lastDate);
-          if (roundedLast === currentRounded) {
-            // update last entry's views (works for both datetime and date legacy, we modify to datetime)
-            history[history.length - 1] = { datetime: currentRounded, views: views };
+          // If last entry has exactly the same ISO timestamp, update it.
+          // Otherwise, append a new entry with the exact current ISO.
+          if (lastIso === currentIso) {
+            history[history.length - 1] = { datetime: currentIso, views: views };
           } else {
-            history.push({ datetime: currentRounded, views: views });
+            history.push({ datetime: currentIso, views: views });
           }
         }
 
