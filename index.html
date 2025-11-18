@@ -144,8 +144,8 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
-            <!-- tapped point info -->
-            <div id="pointInfo" style="margin-top:8px;font-size:13px;color:var(--muted);">グラフをタップするとその時点の再生回数を表示します。</div>
+            <!-- tapped point info (initially empty; shown when tapping chart) -->
+            <div id="pointInfo" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
           </div>
 
           <!-- Three metrics placed inline (one line) -->
@@ -421,9 +421,9 @@ function selectVideo(v){
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
-  // Clear point info when selecting new video (keep the initial guidance text)
+  // clear any displayed point info when selecting a new video
   const pi = document.getElementById('pointInfo');
-  if(pi) pi.innerText = 'グラフをタップするとその時点の再生回数を表示します。';
+  if(pi) pi.innerText = '';
   drawChartForSelection('all');
 }
 
@@ -452,10 +452,8 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  const labels = points.map(p => {
-    const d = p.t;
-    return d.toLocaleString();
-  });
+  // labels: date only (YYYY-MM-DD)
+  const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
   if(chart) chart.destroy();
@@ -465,16 +463,18 @@ function drawChartForSelection(period){
     options: {
       responsive:true, maintainAspectRatio:false,
       interaction: { mode: 'nearest', intersect: false },
+      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
       scales: {
         x: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 } } 
+          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 } 
         },
         y: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } 
+          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 0, callback: v => Intl.NumberFormat().format(v) },
+          beginAtZero: false
         }
       },
       plugins: { 
@@ -490,8 +490,14 @@ function drawChartForSelection(period){
 
   // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
-  // remove previous handler to avoid multiples
-  canvas.onclick = function(evt){
+
+  // ensure previous handlers removed
+  canvas.onclick = null;
+
+  canvas.addEventListener('click', function(evt){
+    // prevent document click handler from immediately hiding the info
+    evt.stopPropagation();
+
     if(!chart) return;
     // Use nearest mode with intersect: false to get the closest point in the chart area
     const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
@@ -506,11 +512,20 @@ function drawChartForSelection(period){
         pi.innerText = `${label} — ${Intl.NumberFormat().format(value)} 回`;
       }
     } else {
-      // If somehow no point found (very unlikely with intersect:false), clear the info text
       if(pi) pi.innerText = '';
     }
-  };
+  });
 }
+
+// clicking anywhere outside the chart area should hide the displayed info
+document.addEventListener('click', function(evt){
+  const chartAreaEl = document.querySelector('.chart-area');
+  if(!chartAreaEl) return;
+  if(!chartAreaEl.contains(evt.target)){
+    const pi = document.getElementById('pointInfo');
+    if(pi) pi.innerText = '';
+  }
+});
 
 /* --- event binding --- */
 document.getElementById('reload').addEventListener('click', loadData);
