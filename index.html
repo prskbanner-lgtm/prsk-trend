@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root{
-      /* 白背景に合わせた配色 */
       --bg: #ffffff;
       --card: #ffffff;
       --muted: #596274;
@@ -20,7 +19,6 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
     .wrap{max-width:1200px;margin:28px auto;padding:20px;}
-    /* Header stays mostly the same, but center the search visually */
     header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px;}
     header .title{font-size:20px;color:var(--text); font-weight:700;}
     .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -31,7 +29,6 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
-    /* three-column layout (left: trend, center: main graph, right: ranking) */
     .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
@@ -42,50 +39,49 @@
     .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
     .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
     .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
-    /* thumbnails smaller as requested */
     .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
     .meta{flex:1;min-width:0;}
     .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
     .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03);cursor:pointer;}
+    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03);cursor:pointer}
     .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
-    .chart-area{height:320px; position:relative;} /* relative so overlay can be positioned inside */
-    .chart-overlay{
-      position:absolute;
-      pointer-events:none; /* do not block clicks */
-      background: rgba(255,255,255,0.95);
-      border: 1px solid rgba(15,23,42,0.08);
-      padding:6px 8px;
-      border-radius:6px;
-      font-size:13px;
-      color:var(--text);
-      box-shadow: 0 6px 18px rgba(15,23,42,0.06);
-      white-space:nowrap;
-      transform: translate(-50%, -100%);
-      z-index: 20;
-      display:none;
-    }
+    .chart-area{height:320px; position:relative;} /* position relative for overlay */
     .tabs{display:flex;gap:8px;margin-bottom:12px;}
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
-    .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto; display:flex;flex-direction:column;justify-content:center;}
     .metric .label{font-size:12px;color:var(--muted)}
     .metric .val{font-size:16px;color:var(--text);font-weight:700}
-    .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
-    /* trend list: remove border lines as requested */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00)); /* border removed */ }
+    /* removed default border for trend items as requested */
+    .trend-item{padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
-    /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
       .thumb{width:100px; height:56px; flex:0 0 100px;}
       .metric{min-width:100px; font-size:13px;}
     }
+
+    /* overlay for showing clicked point info inside chart area */
+    #overlayInfo {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      background: rgba(0,0,0,0.78);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      transform: translate(-50%, -120%);
+      z-index: 5;
+    }
+
+    /* hide the lower textual pointInfo area per request */
+    #pointInfo { display:none; }
   </style>
 </head>
 <body>
@@ -110,7 +106,7 @@
     </header>
 
     <div class="grid">
-      <!-- LEFT COLUMN: trend information -->
+      <!-- LEFT COLUMN: trend information (no borders) -->
       <div>
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
@@ -133,7 +129,6 @@
             </div>
           </div>
         </div>
-
       </div>
 
       <!-- CENTER COLUMN: graph / details -->
@@ -145,10 +140,8 @@
               <div id="selectedMeta" style="font-size:13px;color:var(--muted);margin-top:6px">—</div>
             </div>
             <div class="stats-row">
-              <!-- This area used to show 最新再生回数; changed to display unit & banner badges per request -->
-              <div id="selectedBadges" style="display:flex;gap:6px;align-items:center;">
-                <!-- badges will be injected here -->
-              </div>
+              <!-- now shows unit & banner badges -->
+              <div id="selectedBadges" style="display:flex;gap:6px;align-items:center;"></div>
             </div>
           </div>
 
@@ -160,11 +153,11 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
-            <!-- overlay shown inside chart area instead of below; initially hidden -->
-            <div id="chartOverlay" class="chart-overlay" aria-hidden="true"></div>
+            <div id="overlayInfo"></div>
+            <div id="pointInfo"></div> <!-- hidden via CSS on purpose -->
           </div>
 
-          <!-- Four metrics placed inline (one line): 最新再生回数, 直近7日増分, 直近30日増分, 投稿日 -->
+          <!-- metrics inline -->
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;">
             <div class="metric card" style="min-width:150px; padding:8px;">
               <div class="label">最新再生数</div>
@@ -214,45 +207,21 @@ function fmt(n){ return n === null || n === undefined ? '—' : n.toLocaleString
 function safe(s){ return String(s||''); }
 function parseISOorDateString(s){
   if(!s) return null;
-  // accepts "YYYY-MM-DD" or full ISO
   if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
   return new Date(s);
 }
 
-/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
+/* --- Banner & Unit colors --- */
 const BANNER_COLORS = {
-  "一歌": "#33AAEE",
-  "咲希": "#FFDD44",
-  "穂波": "#EE6666",
-  "志歩": "#BBDD22",
-  "みのり": "#FFCCAA",
-  "遥":   "#99CCFF",
-  "愛莉": "#FFAACC",
-  "雫":   "#99EEDD",
-  "こはね": "#FF6699",
-  "杏":   "#00BBDD",
-  "彰人": "#FF7722",
-  "冬弥": "#0077DD",
-  "司":   "#FFBB00",
-  "えむ": "#FF66BB",
-  "寧々": "#33DD99",
-  "類":   "#BB88EE",
-  "奏":   "#BB6688",
-  "まふゆ": "#8888CC",
-  "絵名": "#CCAA88",
-  "瑞希": "#DDAACC"
+  "一歌": "#33AAEE","咲希": "#FFDD44","穂波": "#EE6666","志歩": "#BBDD22","みのり": "#FFCCAA",
+  "遥": "#99CCFF","愛莉": "#FFAACC","雫": "#99EEDD","こはね": "#FF6699","杏": "#00BBDD",
+  "彰人": "#FF7722","冬弥": "#0077DD","司": "#FFBB00","えむ": "#FF66BB","寧々": "#33DD99",
+  "類": "#BB88EE","奏": "#BB6688","まふゆ": "#8888CC","絵名": "#CCAA88","瑞希": "#DDAACC"
 };
-
-/* --- Unit fallback colors (expanded) --- */
 const UNIT_COLORS = {
-  "レオニ": "#4455DD",
-  "モモジャン": "#88DD44",
-  "ビビバス": "#EE1166",
-  "ワンダショ": "#FF9900",
-  "ニーゴ": "#884499"
+  "レオニ": "#4455DD","モモジャン": "#88DD44","ビビバス": "#EE1166","ワンダショ": "#FF9900","ニーゴ": "#884499"
 };
 
-/* convert hex color (#RRGGBB) to rgba string with alpha */
 function hexToRgba(hex, alpha){
   if(!hex) return `rgba(37,99,235,${alpha})`;
   hex = hex.replace('#','');
@@ -271,7 +240,6 @@ function mixWithWhite(hex){
   const r = parseInt(hex.slice(0,2),16);
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
-  // mix: (color * 1 + white * 2) / 3 -> white components are 255
   const mr = Math.round((r + 2*255)/3);
   const mg = Math.round((g + 2*255)/3);
   const mb = Math.round((b + 2*255)/3);
@@ -288,7 +256,6 @@ async function loadData(){
     const json = await res.json();
     DATA = json.videos || [];
     DATA_UPDATED_AT = json.updated_at || null;
-    // show last updated in header
     const lastEl = document.getElementById('lastUpdated');
     if(DATA_UPDATED_AT){
       const d = new Date(DATA_UPDATED_AT);
@@ -308,7 +275,7 @@ async function loadData(){
   }
 }
 
-/* --- UI state and utilities --- */
+/* --- UI state --- */
 const rankListEl = document.getElementById('rankList');
 const sortModeEl = document.getElementById('sortMode');
 const searchEl = document.getElementById('search');
@@ -317,22 +284,15 @@ const groupFilterEl = document.getElementById('groupFilter');
 const reloadBtn = document.getElementById('reload');
 
 /* --- Group ordering --- */
-const BANNER_ORDER = [
-  "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
-];
+const BANNER_ORDER = ["一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"];
 const UNIT_ORDER = ["レオニ","モモジャン","ビビバス","ワンダショ","ニーゴ"];
 
 function buildGroupOptions(){
   groupFilterEl.innerHTML = '<option value="all">グループ: 全て</option>';
-
   if(scopeEl.value === 'banner'){
-    BANNER_ORDER.forEach(b => {
-      groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`);
-    });
+    BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`));
   } else if(scopeEl.value === 'unit'){
-    UNIT_ORDER.forEach(u => {
-      groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
-    });
+    UNIT_ORDER.forEach(u => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`));
   } else {
     groupFilterEl.insertAdjacentHTML('beforeend', '<option disabled>--- バナー ---</option>');
     BANNER_ORDER.forEach(b => groupFilterEl.insertAdjacentHTML('beforeend', `<option value="banner:${escapeHtml(b)}">${escapeHtml(b)}</option>`));
@@ -343,12 +303,11 @@ function buildGroupOptions(){
 
 function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-/* --- history utilities using datetime --- */
+/* --- history utilities --- */
 function lastHistoryEntry(history){
   if(!history || history.length===0) return null;
   return history[history.length-1];
 }
-
 function findClosestBefore(history, targetDate){
   if(!history || history.length===0) return null;
   let candidate = history[0];
@@ -360,7 +319,6 @@ function findClosestBefore(history, targetDate){
   }
   return candidate;
 }
-
 function calcDelta(history, days){
   if(!history || history.length===0) return 0;
   const lastRec = lastHistoryEntry(history);
@@ -433,21 +391,13 @@ function renderRankList(){
     document.getElementById('trendNew').innerText = '—';
   }
 
-  // attach click handlers to trend items (no border)
+  // Trend items: remove borders (CSS already removed). Make clickable to select video.
   function setupTrendItem(itemId, video){
     const el = document.getElementById(itemId);
     if(!el) return;
-    el.style.border = 'none'; // ensure no border
     el.style.cursor = video ? 'pointer' : 'default';
-    el.onclick = null;
-    if(video){
-      el.onclick = function(e){
-        e.stopPropagation();
-        selectVideo(video);
-      };
-    }
+    el.onclick = video ? function(e){ e.stopPropagation(); selectVideo(video); } : null;
   }
-
   setupTrendItem('trendItemWeek', _lastTopPicks.week);
   setupTrendItem('trendItemMonth', _lastTopPicks.month);
   setupTrendItem('trendItemTotal', _lastTopPicks.total);
@@ -487,7 +437,7 @@ function renderRankList(){
       const db = parseISOorDateString(b.published) || (b.history && b.history.length ? new Date(b.history[b.history.length-1].datetime || b.history[b.history.length-1].date + 'T00:00:00.000Z') : null);
       const ta = da ? da.getTime() : 0;
       const tb = db ? db.getTime() : 0;
-      return tb - ta; // newest first
+      return tb - ta;
     });
   }
 
@@ -506,43 +456,47 @@ function renderRankList(){
       <div class="meta">
         <div class="title">${escapeHtml(v.title)}</div>
         <div class="sub">
-          <div class="badge banner-badge">${escapeHtml(v.banner)}</div>
-          <div class="badge unit-badge">${escapeHtml(v.unit)}</div>
+          <div class="badge" data-type="banner">${escapeHtml(v.banner)}</div>
+          <div class="badge" data-type="unit">${escapeHtml(v.unit)}</div>
           <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
           <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
         </div>
       </div>
     `;
-    // after element created, color the badges by mixing with white 1:2
-    const bannerEl = li.querySelector('.banner-badge');
-    const unitEl = li.querySelector('.unit-badge');
-    if(bannerEl){
+
+    // style badges: mix with white 1:2 and attach click handlers to jump to classification
+    const badgeEls = li.querySelectorAll('.badge');
+    if(badgeEls && badgeEls.length >= 1){
       const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#2563eb';
       const blended = mixWithWhite(bannerHex);
-      bannerEl.style.backgroundColor = blended;
-      bannerEl.style.color = '#111827';
-      bannerEl.style.border = '1px solid rgba(15,23,42,0.04)';
-      // clicking tag jumps to that classification
-      bannerEl.addEventListener('click', (e)=>{
+      badgeEls[0].style.backgroundColor = blended;
+      badgeEls[0].style.color = '#111827';
+      badgeEls[0].style.border = '1px solid rgba(15,23,42,0.04)';
+      badgeEls[0].addEventListener('click', function(e){
         e.stopPropagation();
-        scopeEl.value = 'all';
+        // jump to banner filter
+        scopeEl.value = 'banner';
         buildGroupOptions();
-        groupFilterEl.value = 'banner:' + v.banner;
+        groupFilterEl.value = v.banner || 'all';
         renderRankList();
+        // scroll to ranking area
+        document.getElementById('rankList').scrollIntoView({behavior:'smooth'});
       });
     }
-    if(unitEl){
+    if(badgeEls && badgeEls.length >= 2){
       const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#2563eb';
       const blendedU = mixWithWhite(unitHex);
-      unitEl.style.backgroundColor = blendedU;
-      unitEl.style.color = '#111827';
-      unitEl.style.border = '1px solid rgba(15,23,42,0.04)';
-      unitEl.addEventListener('click', (e)=>{
+      badgeEls[1].style.backgroundColor = blendedU;
+      badgeEls[1].style.color = '#111827';
+      badgeEls[1].style.border = '1px solid rgba(15,23,42,0.04)';
+      badgeEls[1].addEventListener('click', function(e){
         e.stopPropagation();
-        scopeEl.value = 'all';
+        // jump to unit filter
+        scopeEl.value = 'unit';
         buildGroupOptions();
-        groupFilterEl.value = 'unit:' + v.unit;
+        groupFilterEl.value = v.unit || 'all';
         renderRankList();
+        document.getElementById('rankList').scrollIntoView({behavior:'smooth'});
       });
     }
 
@@ -555,21 +509,23 @@ function renderRankList(){
 let currentSelected = null;
 const ctx = document.getElementById('trendChart').getContext('2d');
 let chart = null;
-let CURRENT_POINTS = []; // stores visible points for the current chart (with {t,v})
+let currentChartPoints = []; // store current points with full datetime objects for overlay
 
 function selectVideo(v){
   currentSelected = v;
   document.getElementById('selectedTitle').innerText = v.title;
-  // keep link only in selectedMeta to avoid duplicate banner/unit display
   document.getElementById('selectedMeta').innerHTML = `<a href="${v.url}" target="_blank" style="color:var(--accent)">${v.url ? 'YouTubeへ' : ''}</a>`;
+
+  // latest API value: use last history entry if present (this comes from data/videos.json written by fetch script)
   const lastRec = v.history && v.history.length ? v.history[v.history.length-1] : null;
   const lastViews = lastRec ? lastRec.views : (v.views || 0);
   document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回';
+
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
 
-  // Show badges (unit and banner) in the right-top stats area (replaces the old 最新再生数)
+  // show badges in top-right (clickable to jump filters)
   const badgesEl = document.getElementById('selectedBadges');
   if(badgesEl){
     badgesEl.innerHTML = '';
@@ -581,13 +537,13 @@ function selectVideo(v){
     bannerBadge.style.backgroundColor = mixWithWhite(bannerHex);
     bannerBadge.style.color = '#111827';
     bannerBadge.style.border = '1px solid rgba(15,23,42,0.04)';
-    // clicking tag jumps to that classification
-    bannerBadge.addEventListener('click', (e)=>{
+    bannerBadge.addEventListener('click', function(e){
       e.stopPropagation();
-      scopeEl.value = 'all';
+      scopeEl.value = 'banner';
       buildGroupOptions();
-      groupFilterEl.value = 'banner:' + v.banner;
+      groupFilterEl.value = v.banner || 'all';
       renderRankList();
+      document.getElementById('rankList').scrollIntoView({behavior:'smooth'});
     });
     badgesEl.appendChild(bannerBadge);
 
@@ -598,33 +554,34 @@ function selectVideo(v){
     unitBadge.style.backgroundColor = mixWithWhite(unitHex);
     unitBadge.style.color = '#111827';
     unitBadge.style.border = '1px solid rgba(15,23,42,0.04)';
-    unitBadge.addEventListener('click', (e)=>{
+    unitBadge.addEventListener('click', function(e){
       e.stopPropagation();
-      scopeEl.value = 'all';
+      scopeEl.value = 'unit';
       buildGroupOptions();
-      groupFilterEl.value = 'unit:' + v.unit;
+      groupFilterEl.value = v.unit || 'all';
       renderRankList();
+      document.getElementById('rankList').scrollIntoView({behavior:'smooth'});
     });
     badgesEl.appendChild(unitBadge);
   }
 
-  // clear overlay when selecting a new video
-  hideChartOverlay();
+  // clear overlay
+  hideOverlay();
 
   drawChartForSelection('all');
 }
 
+// draw chart and set up click-overlay
 function drawChartForSelection(period){
   if(!currentSelected) return;
   const hist = currentSelected.history || [];
   if(hist.length === 0) {
     if(chart){ chart.destroy(); chart = null; }
     ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
-    CURRENT_POINTS = [];
-    hideChartOverlay();
+    currentChartPoints = [];
     return;
   }
-  // convert to entries with timestamp and views
+
   const pts = hist.map(h => {
     const ts = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
     return ts ? { t: ts, v: (h.views || 0) } : null;
@@ -641,14 +598,11 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  // store for click handling
-  CURRENT_POINTS = points;
+  currentChartPoints = points; // store for overlay datetime lookups
 
-  // labels: date only (YYYY-MM-DD) shown on x-axis
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
-  // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
   let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb');
   const areaColor = hexToRgba(colorHex, 0.06);
@@ -663,89 +617,85 @@ function drawChartForSelection(period){
       interaction: { mode: 'nearest', intersect: false },
       layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
       scales: {
-        x: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
-          type: 'category'
-        },
-        y: {
-          display:true,
-          grid:{color:'rgba(15,23,42,0.03)'},
-          ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
-          beginAtZero: false,
-          offset: false
-        }
+        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 }, type: 'category' },
+        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) }, beginAtZero: false, offset: false }
       },
-      plugins: {
-        legend:{display:false},
-        tooltip:{
-          enabled:false // we use our own overlay
-        }
-      }
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } } } }
     }
   });
 
-  // click / tap handler to show overlay inside chart area with date+time and views
   const canvas = ctx.canvas;
-  // remove prior handlers to avoid duplicates
-  canvas.onclick = null;
+  // remove previous listeners by replacing the canvas (safer) or removing handlers; here remove via clone to avoid stacking listeners
+  const newCanvas = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(newCanvas, canvas);
+  // update ctx and chart reference to new canvas's context
+  const newCtx = newCanvas.getContext('2d');
+  // reassign chart to use new canvas context by destroying and redrawing
+  if(chart) chart.destroy();
+  chart = new Chart(newCtx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: areaColor, borderColor: lineColor, pointRadius:3 }]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction: { mode: 'nearest', intersect: false },
+      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+      scales: {
+        x: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 }, type: 'category' },
+        y: { display:true, grid:{color:'rgba(15,23,42,0.03)'}, ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) }, beginAtZero: false, offset: false }
+      },
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: function(context){ return `${Intl.NumberFormat().format(context.parsed.y)} 回`; } } } }
+    }
+  });
 
-  canvas.addEventListener('click', function(evt){
-    evt.stopPropagation(); // prevent outer click from immediately hiding
+  // click handler for new canvas: show overlay inside chart area with date+time and views (do NOT change the "最新再生数" metric)
+  newCanvas.addEventListener('click', function(evt){
+    evt.stopPropagation();
     if(!chart) return;
-    // get nearest element even if not exact hit
+    // nearest mode, intersect false to choose closest point even if not directly on it
     const pointsAtEvent = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
     if(pointsAtEvent && pointsAtEvent.length){
       const p = pointsAtEvent[0];
       const index = p.index;
-      const pointMeta = chart.getDatasetMeta(p.datasetIndex).data[index];
-      const x = pointMeta.x;
-      const y = pointMeta.y;
-      const pointData = CURRENT_POINTS[index];
-      if(pointData){
-        // format date+time
-        const dtStr = pointData.t.toLocaleString();
-        const valStr = Intl.NumberFormat().format(pointData.v) + ' 回';
-        showChartOverlayAt(x, y, `${dtStr} — ${valStr}`);
-        // also update latest metric display to tapped value (keeps user informed)
-        const selViews = document.getElementById('selectedViews');
-        if(selViews) selViews.innerText = `${Intl.NumberFormat().format(pointData.v)} 回`;
+      const val = chart.data.datasets[p.datasetIndex].data[index];
+      // lookup full datetime from currentChartPoints
+      const pt = currentChartPoints[index];
+      const dt = pt && pt.t ? new Date(pt.t) : null;
+      const dateStr = dt ? dt.toLocaleDateString() : chart.data.labels[index];
+      const timeStr = dt ? dt.toLocaleTimeString() : '';
+      const overlay = document.getElementById('overlayInfo');
+      if(overlay){
+        overlay.style.display = 'block';
+        // position overlay near click but keep it inside chart-area
+        const canvasRect = newCanvas.getBoundingClientRect();
+        const parentRect = newCanvas.parentElement.getBoundingClientRect();
+        let x = evt.clientX - parentRect.left;
+        let y = evt.clientY - parentRect.top;
+        // clamp x/y to be within parent
+        const pad = 8;
+        x = Math.max(pad, Math.min(parentRect.width - pad, x));
+        y = Math.max(pad, Math.min(parentRect.height - pad, y));
+        overlay.style.left = `${x}px`;
+        overlay.style.top = `${y}px`;
+        overlay.innerText = `${dateStr} ${timeStr} — ${Intl.NumberFormat().format(val)} 回`;
       }
     } else {
-      // if no point found, hide overlay
-      hideChartOverlay();
+      hideOverlay();
     }
   });
 }
 
-function showChartOverlayAt(x, y, text){
-  const overlay = document.getElementById('chartOverlay');
-  if(!overlay) return;
-  overlay.style.display = 'block';
-  overlay.innerText = text;
-  // position relative to chart-area (which is position:relative)
-  // x,y are canvas pixel coordinates relative to canvas
-  // place overlay at (x, y) inside chart-area; use translate to center horizontally and above the point
-  overlay.style.left = x + 'px';
-  overlay.style.top = y + 'px';
-  overlay.setAttribute('aria-hidden','false');
+function hideOverlay(){
+  const overlay = document.getElementById('overlayInfo');
+  if(overlay) overlay.style.display = 'none';
 }
 
-function hideChartOverlay(){
-  const overlay = document.getElementById('chartOverlay');
-  if(!overlay) return;
-  overlay.style.display = 'none';
-  overlay.setAttribute('aria-hidden','true');
-}
-
-// clicking anywhere outside the chart area should hide the overlay and restore latest metric
+/* clicking outside chart-area should hide overlay and restore latest API value (selectedViews) */
 document.addEventListener('click', function(evt){
   const chartAreaEl = document.querySelector('.chart-area');
   if(!chartAreaEl) return;
   if(!chartAreaEl.contains(evt.target)){
-    hideChartOverlay();
-    // restore latest value to the true latest record when clicking outside chart area
+    hideOverlay();
+    // restore latest API value
     if(currentSelected){
       const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
       const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
@@ -757,12 +707,11 @@ document.addEventListener('click', function(evt){
 
 /* --- event binding --- */
 document.getElementById('reload').addEventListener('click', loadData);
-sortModeEl.addEventListener('change', renderRankList);
+sortModeEl.addEventListener('change', ()=>{ renderRankList(); });
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
 
-// safe binding for optional buttons
 const btnAll = document.getElementById('btnAll');
 if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
 const btnBanner = document.getElementById('btnBanner');
