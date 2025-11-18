@@ -48,6 +48,7 @@
     .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
     .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
+    .badge.clickable{cursor:pointer;}
     .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
@@ -509,7 +510,7 @@ function renderRankList(){
         </div>
       </div>
     `;
-    // after element created, color the badges by mixing with white 1:2
+    // after element created, color the badges by mixing with white 1:2 and attach click handlers
     const badgeEls = li.querySelectorAll('.badge');
     if(badgeEls && badgeEls.length >= 1){
       const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#2563eb';
@@ -517,6 +518,18 @@ function renderRankList(){
       badgeEls[0].style.backgroundColor = blended;
       badgeEls[0].style.color = '#111827';
       badgeEls[0].style.border = '1px solid rgba(15,23,42,0.04)';
+      badgeEls[0].classList.add('clickable');
+      // click -> jump to banner filter
+      badgeEls[0].addEventListener('click', function(e){
+        e.stopPropagation();
+        scopeEl.value = 'all';
+        buildGroupOptions();
+        // set to banner:<name> option if it exists
+        try { groupFilterEl.value = `banner:${v.banner}`; } catch(e){}
+        renderRankList();
+        // scroll rank list to top for visibility
+        rankListEl.scrollTop = 0;
+      });
     }
     if(badgeEls && badgeEls.length >= 2){
       const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#2563eb';
@@ -524,6 +537,16 @@ function renderRankList(){
       badgeEls[1].style.backgroundColor = blendedU;
       badgeEls[1].style.color = '#111827';
       badgeEls[1].style.border = '1px solid rgba(15,23,42,0.04)';
+      badgeEls[1].classList.add('clickable');
+      // click -> jump to unit filter
+      badgeEls[1].addEventListener('click', function(e){
+        e.stopPropagation();
+        scopeEl.value = 'all';
+        buildGroupOptions();
+        try { groupFilterEl.value = `unit:${v.unit}`; } catch(e){}
+        renderRankList();
+        rankListEl.scrollTop = 0;
+      });
     }
 
     li.addEventListener('click', ()=> selectVideo(v));
@@ -554,21 +577,39 @@ function selectVideo(v){
     badgesEl.innerHTML = '';
 
     const bannerBadge = document.createElement('div');
-    bannerBadge.className = 'badge';
+    bannerBadge.className = 'badge clickable';
     bannerBadge.innerText = v.banner || '—';
     const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#2563eb';
     bannerBadge.style.backgroundColor = mixWithWhite(bannerHex);
     bannerBadge.style.color = '#111827';
     bannerBadge.style.border = '1px solid rgba(15,23,42,0.04)';
+    // badge click -> jump to banner classification
+    bannerBadge.addEventListener('click', function(e){
+      e.stopPropagation();
+      scopeEl.value = 'all';
+      buildGroupOptions();
+      try { groupFilterEl.value = `banner:${v.banner}`; } catch(e){}
+      renderRankList();
+      rankListEl.scrollTop = 0;
+    });
     badgesEl.appendChild(bannerBadge);
 
     const unitBadge = document.createElement('div');
-    unitBadge.className = 'badge';
+    unitBadge.className = 'badge clickable';
     unitBadge.innerText = v.unit || '—';
     const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#2563eb';
     unitBadge.style.backgroundColor = mixWithWhite(unitHex);
     unitBadge.style.color = '#111827';
     unitBadge.style.border = '1px solid rgba(15,23,42,0.04)';
+    // badge click -> jump to unit classification
+    unitBadge.addEventListener('click', function(e){
+      e.stopPropagation();
+      scopeEl.value = 'all';
+      buildGroupOptions();
+      try { groupFilterEl.value = `unit:${v.unit}`; } catch(e){}
+      renderRankList();
+      rankListEl.scrollTop = 0;
+    });
     badgesEl.appendChild(unitBadge);
   }
 
