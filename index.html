@@ -200,6 +200,61 @@ function parseISOorDateString(s){
   return new Date(s);
 }
 
+/* --- banner color map (user-specified) --- */
+const BANNER_COLOR_MAP = {
+  "一歌": "#3AE",
+  "咲希": "#FD4",
+  "穂波": "#E66",
+  "志歩": "#BD2",
+  "みのり": "#FCA",
+  "遥": "#9CF",
+  "愛莉": "#FAC",
+  "雫": "#9ED",
+  "こはね": "#F69",
+  "杏": "#0BD",
+  "彰人": "#F72",
+  "冬弥": "#07D",
+  "司": "#FB0",
+  "えむ": "#F6B",
+  "寧々": "#3D9",
+  "類": "#B8E",
+  "奏": "#B68",
+  "まふゆ": "#88C",
+  "絵名": "#CA8",
+  "瑞希": "#DAC"
+};
+
+/* convert hex (3 or 6 digits, with or without #) to {r,g,b} */
+function hexToRgb(hex) {
+  if(!hex) return {r:37,g:99,b:235}; // fallback (same as --accent)
+  hex = String(hex).trim().replace('#','');
+  if(hex.length === 3){
+    const r = parseInt(hex[0]+hex[0], 16);
+    const g = parseInt(hex[1]+hex[1], 16);
+    const b = parseInt(hex[2]+hex[2], 16);
+    return {r,g,b};
+  }
+  if(hex.length === 6){
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return {r,g,b};
+  }
+  // fallback parse attempt
+  try {
+    const r = parseInt(hex.slice(0,2),16) || 37;
+    const g = parseInt(hex.slice(2,4),16) || 99;
+    const b = parseInt(hex.slice(4,6),16) || 235;
+    return {r,g,b};
+  } catch(e){
+    return {r:37,g:99,b:235};
+  }
+}
+function hexToRgba(hex, alpha=1){
+  const c = hexToRgb(hex);
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+}
+
 /* --- load data/videos.json --- */
 let DATA = [];
 let DATA_UPDATED_AT = null;
@@ -456,10 +511,16 @@ function drawChartForSelection(period){
   const labels = points.map(p => p.t.toISOString().slice(0,10));
   const data = points.map(p => p.v);
 
+  // determine color by banner
+  const banner = currentSelected.banner || '';
+  const colorHex = BANNER_COLOR_MAP[banner] || '#2563eb';
+  const lineColor = hexToRgba(colorHex, 0.92); // fairly opaque for line
+  const fillColor = hexToRgba(colorHex, 0.08); // faint fill under line
+
   if(chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: 'rgba(37,99,235,0.06)', borderColor:'rgba(37,99,235,0.9)', pointRadius:3 }]},
+    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: fillColor, borderColor: lineColor, pointRadius:3 }]},
     options: {
       responsive:true, maintainAspectRatio:false,
       interaction: { mode: 'nearest', intersect: false },
@@ -491,10 +552,13 @@ function drawChartForSelection(period){
   // click / tap handler to show the nearest point's value even if the tap isn't exactly on the point
   const canvas = ctx.canvas;
 
-  // ensure previous handlers removed
+  // ensure previous handlers removed to avoid duplicate listeners
   canvas.onclick = null;
-
-  canvas.addEventListener('click', function(evt){
+  canvas.replaceWith(canvas.cloneNode(true));
+  // re-select context after replacing node
+  const newCanvas = document.getElementById('trendChart').getContext('2d').canvas;
+  // Need to update ctx variable reference for subsequent operations — but keep using chart from closure
+  newCanvas.addEventListener('click', function(evt){
     // prevent document click handler from immediately hiding the info
     evt.stopPropagation();
 
