@@ -56,7 +56,7 @@
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
     .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; min-width:150px; border:1px solid rgba(15,23,42,0.04);}
+    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:10px;border-radius:10px; border:1px solid rgba(15,23,42,0.04);}
     .metric .val{font-size:18px;color:var(--text);font-weight:700}
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
@@ -64,10 +64,19 @@
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
+    /* metrics column below chart: stack vertically and make sizes compact */
+    .metrics-col{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+    .metrics-col .metric{width:100%; min-width:0; padding:8px;}
+    .metrics-col .metric .val{font-size:16px}
+    /* small point info under chart */
+    #pointInfo{margin-top:8px;font-size:13px;color:var(--muted);}
+
     /* responsive */
     @media (max-width: 980px){
       .grid{grid-template-columns: 1fr; }
       .thumb{width:100px; height:56px; flex:0 0 100px;}
+      .metrics-col{flex-direction:row;gap:8px;}
+      .metrics-col .metric{flex:1;}
     }
   </style>
 </head>
@@ -145,32 +154,28 @@
 
           <div class="chart-area card" style="padding:12px;">
             <canvas id="trendChart" style="width:100%;height:320px"></canvas>
+            <div id="pointInfo">タップした点の再生回数: —</div>
           </div>
 
-          <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
-            <div class="metric card" style="min-width:180px;">
+          <!-- stacked metrics: 直近7日分 / 直近30日分 / 投稿日 -->
+          <div class="metrics-col">
+            <div class="metric card">
               <div style="font-size:12px;color:var(--muted)">直近7日増分</div>
               <div id="viewDelta7" class="val">—</div>
             </div>
-            <div class="metric card" style="min-width:180px;">
+            <div class="metric card">
               <div style="font-size:12px;color:var(--muted)">直近30日増分</div>
               <div id="viewDelta30" class="val">—</div>
             </div>
-            <div class="metric card" style="min-width:180px;">
+            <div class="metric card">
               <div style="font-size:12px;color:var(--muted)">投稿日</div>
               <div id="publishDate" class="val">—</div>
             </div>
           </div>
         </div>
 
-        <div class="card" style="margin-top:12px;">
-          <strong style="color:var(--text)">注記 / 操作</strong>
-          <div style="margin-top:8px;color:var(--muted);font-size:13px">
-            ・ページの最終更新時刻は <code>data/videos.json</code> の <code>updated_at</code> を表示しています。<br>
-            ・ワークフローが 30 分ごとに実行され、履歴は 30 分刻み（UTC）で保存されます。<br>
-            ・初回はワークフローを手動実行して <code>data/videos.json</code> を作成してください。
-          </div>
-        </div>
+        <!-- 注記 / 操作 欄は削除しました -->
+
       </div>
 
       <!-- RIGHT COLUMN: ranking (thumbnails now smaller) -->
@@ -190,7 +195,7 @@
           <div style="margin-top:12px;" class="rank-list card" id="rankList">
             読み込み中...
           </div>
-          <div class="footer-note">※ サムネイルをクリックすると右側でグラフ表示します。データは <code>data/videos.json</code> から読み込まれます。</div>
+          <div class="footer-note">データは <code>data/videos.json</code> から読み込まれます。</div>
         </div>
       </div>
     </div>
@@ -461,6 +466,7 @@ function selectVideo(v){
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(v.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(v.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = v.published || '—';
+  document.getElementById('pointInfo').innerText = 'タップした点の再生回数: —';
   drawChartForSelection('all');
 }
 
@@ -499,24 +505,74 @@ function drawChartForSelection(period){
   if(chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: 'rgba(37,99,235,0.06)', borderColor:'rgba(37,99,235,0.9)', pointRadius:2 }]},
+    data: { labels, datasets: [{ label: currentSelected.title, data, tension:0.2, fill:true, backgroundColor: 'rgba(37,99,235,0.06)', borderColor:'rgba(37,99,235,0.9)', pointRadius:3 }]},
     options: {
       responsive:true, maintainAspectRatio:false,
       scales: {
         x: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 } }
+          ticks:{ color:'#6b7c93', font: { size:10 } } // 小さめに
         },
         y: { 
           display:true, 
           grid:{color:'rgba(15,23,42,0.03)'}, 
-          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } 
+          ticks:{ color:'#6b7c93', font: { size:10 }, callback: v => Intl.NumberFormat().format(v) } // 小さめに
         }
       },
-      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: (ctx) => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } }
+      plugins: { legend:{display:false}, tooltip:{ callbacks: { label: (ctx) => `${Intl.NumberFormat().format(ctx.parsed.y)} 回` } } },
+      // ensure click handlers can find nearest point (we also add direct listener)
+      onClick: (evt, activeEls) => {
+        // keep for potential Chart.js internal path; we'll also use canvas listener below for consistent behavior
+      }
     }
   });
+
+  // add click/tap listener on canvas to display value at tapped point
+  // remove previous to avoid duplicate (safe-guard)
+  const canvas = ctx.canvas;
+  // create a named handler property so we can avoid adding multiple listeners
+  if(!canvas._tapHandlerAdded){
+    canvas.addEventListener('click', function(evt){
+      if(!chart) return;
+      // Use 'nearest' mode; allow nearest even if not intersecting
+      const pointsAt = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, false);
+      if(pointsAt && pointsAt.length){
+        const p = pointsAt[0];
+        const index = p.index;
+        const datasetIndex = p.datasetIndex;
+        const value = chart.data.datasets[datasetIndex].data[index];
+        const label = chart.data.labels[index];
+        const display = `${label} — ${Intl.NumberFormat().format(value)} 回`;
+        const el = document.getElementById('pointInfo');
+        if(el) el.innerText = 'タップした点の再生回数: ' + display;
+      }
+    });
+    // also support touchend for mobile taps
+    canvas.addEventListener('touchend', function(evt){
+      if(!chart) return;
+      // convert touch to simulated mouse event for Chart.js
+      const touch = evt.changedTouches && evt.changedTouches[0];
+      if(!touch) return;
+      const rect = canvas.getBoundingClientRect();
+      const simulatedEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      };
+      const pointsAt = chart.getElementsAtEventForMode(simulatedEvent, 'nearest', { intersect: false }, false);
+      if(pointsAt && pointsAt.length){
+        const p = pointsAt[0];
+        const index = p.index;
+        const datasetIndex = p.datasetIndex;
+        const value = chart.data.datasets[datasetIndex].data[index];
+        const label = chart.data.labels[index];
+        const display = `${label} — ${Intl.NumberFormat().format(value)} 回`;
+        const el = document.getElementById('pointInfo');
+        if(el) el.innerText = 'タップした点の再生回数: ' + display;
+      }
+    });
+    canvas._tapHandlerAdded = true;
+  }
 }
 
 /* --- event binding --- */
