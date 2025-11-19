@@ -938,9 +938,9 @@ function drawChartForSelection(period){
   // make sure startTime is not after now
   if(startTime > now) startTime = new Date(now.getTime());
 
-  // we will generate timestamps at each :00 and :30 between startTime (rounded up to half-hour) and now.
-  let t0 = ceilToHalfHour(startTime);
-  // If the ceil pushed beyond now (rare), floor to previous half hour
+  // --- FIX: use floorToHalfHour(startTime) so earlier half-hour (e.g. 18:30) is included ---
+  let t0 = floorToHalfHour(startTime);
+  // If t0 ended up > now (unlikely) floor to previous half hour of now
   if(t0 > now) t0 = floorToHalfHour(now);
 
   const ticks = [];
