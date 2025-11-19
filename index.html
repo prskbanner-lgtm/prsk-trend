@@ -72,17 +72,6 @@
       .thumb{width:100px; height:56px; flex:0 0 100px;}
       .metric{min-width:100px; font-size:13px;}
     }
-    /* small tag for predicted values in list */
-    .pred-tag {
-      display:inline-block;
-      margin-left:6px;
-      font-size:11px;
-      color:#b45309;
-      background:rgba(245,158,11,0.08);
-      padding:2px 6px;
-      border-radius:999px;
-      border:1px solid rgba(245,158,11,0.12);
-    }
   </style>
 </head>
 <body>
@@ -318,11 +307,6 @@ async function loadData(){
     const json = await res.json();
     DATA = json.videos || [];
     DATA_UPDATED_AT = json.updated_at || null;
-    // cache to localStorage as fallback
-    try {
-      localStorage.setItem('cached_videos', JSON.stringify({ updated_at: DATA_UPDATED_AT || new Date().toISOString(), videos: DATA }, null, 0));
-    } catch(e){ /* ignore */ }
-
     // show last updated in header
     const lastEl = document.getElementById('lastUpdated');
     if(DATA_UPDATED_AT){
@@ -351,125 +335,9 @@ async function loadData(){
 
   }catch(err){
     console.error(err);
-    // attempt to use cached copy from localStorage and predict new entries
-    const cachedRaw = localStorage.getItem('cached_videos');
-    if(cachedRaw){
-      try{
-        const cached = JSON.parse(cachedRaw);
-        DATA = cached.videos || [];
-        DATA_UPDATED_AT = cached.updated_at || null;
-        // indicate cached + predicted in header
-        const lastEl = document.getElementById('lastUpdated');
-        lastEl.innerText = '最終更新: キャッシュ (' + (DATA_UPDATED_AT ? new Date(DATA_UPDATED_AT).toLocaleString() : '不明') + ') — サーバー取得エラーのため推定値を生成';
-        // create predicted entries appended to each video's history for "now"
-        forecastMissingValues(DATA);
-        buildGroupOptions();
-        renderRankList();
-        if(currentSelected && currentSelected.videoId){
-          const fresh = DATA.find(x=>x.videoId === currentSelected.videoId);
-          if(fresh) selectVideo(fresh);
-          else selectDefault();
-        } else {
-          selectDefault();
-        }
-        return;
-      }catch(e){
-        console.error('キャッシュの読み込みエラー:', e);
-      }
-    }
-
     document.getElementById('rankList').innerText = 'データ読み込みエラー: ' + err.message;
     const lastEl = document.getElementById('lastUpdated');
     lastEl.innerText = '最終更新: エラー';
-  }
-}
-
-/* --- Predict / Forecast helpers (client-side) --- */
-/* parse a history entry to Date (accept {datetime} or {date}) */
-function parseHistoryEntryDate(entry){
-  if(!entry) return null;
-  if(entry.datetime) {
-    const d = new Date(entry.datetime);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  if(entry.date) {
-    const d = new Date(entry.date + 'T00:00:00.000Z');
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
-}
-
-/* produce an ISO string for 'now' */
-function nowISO(date = new Date()){
-  return new Date(date).toISOString();
-}
-
-/* Forecast one step ahead (to now) for each video's history and append a predicted entry.
-   Strategy:
-   - use last up to N points (default 5) to compute per-second growth rate (linear).
-   - extrapolate from last true entry to now.
-   - ensure predicted views >= last known views.
-   - mark { predicted: true } on new entry.
-*/
-function forecastMissingValues(data){
-  try{
-    const now = new Date();
-    for(const v of data){
-      if(!v || !Array.isArray(v.history) || v.history.length === 0) continue;
-      // get last recorded entry (could be legacy date or datetime)
-      const hist = v.history;
-      const lastEntry = hist[hist.length - 1];
-      const lastDate = parseHistoryEntryDate(lastEntry);
-      if(!lastDate) continue;
-
-      // if last entry is already very recent (within 30 seconds), skip forecasting this video
-      const dtLastMs = now.getTime() - lastDate.getTime();
-      if(dtLastMs <= 30 * 1000) {
-        // still append nothing
-        continue;
-      }
-
-      // take a window of up to M points for rate estimation
-      const M = Math.min(5, hist.length);
-      const window = hist.slice(-M);
-      // get first/last in window that have parseable dates
-      let firstIdx = 0;
-      while(firstIdx < window.length && !parseHistoryEntryDate(window[firstIdx])) firstIdx++;
-      if(firstIdx >= window.length) continue;
-      const first = window[firstIdx];
-      const lastWin = window[window.length - 1];
-      const tFirst = parseHistoryEntryDate(first);
-      const tLastWin = parseHistoryEntryDate(lastWin);
-      if(!tFirst || !tLastWin) continue;
-      const vFirst = first.views || 0;
-      const vLastWin = lastWin.views || 0;
-      const secondsWindow = (tLastWin.getTime() - tFirst.getTime()) / 1000;
-      let ratePerSec = 0;
-      if(secondsWindow > 0) ratePerSec = (vLastWin - vFirst) / secondsWindow;
-
-      const secondsToNow = (now.getTime() - tLastWin.getTime()) / 1000;
-      let predictedViews = Math.round(vLastWin + ratePerSec * secondsToNow);
-
-      // fallback heuristics:
-      if(!isFinite(predictedViews) || predictedViews < 0) predictedViews = vLastWin;
-      // ensure non-decreasing
-      if(predictedViews < vLastWin) predictedViews = vLastWin;
-
-      // If there's effectively zero growth and time since last is large,
-      // make a small positive assumption (1-10 views depending on gap)
-      if(predictedViews === vLastWin && secondsToNow > 60*60) {
-        // 1 view per 15 minutes as tiny baseline
-        const extra = Math.max(1, Math.round(secondsToNow / (15*60)));
-        predictedViews = vLastWin + extra;
-      }
-
-      // append predicted entry
-      hist.push({ datetime: nowISO(now), views: predictedViews, predicted: true });
-      // trim if needed (the rest of app trims when writing etc.; keep reasonable here)
-      if(hist.length > 5000) hist.splice(0, hist.length - 5000);
-    }
-  }catch(e){
-    console.error('forecastMissingValues error', e);
   }
 }
 
@@ -545,12 +413,10 @@ let _lastTopPicks = { new:null, week:null, month:null, total:null };
 
 function renderRankList(){
   const globalAnnotated = DATA.map(v=>{
-    const latestRec = v.history && v.history.length ? v.history[v.history.length-1] : null;
-    const latest = latestRec ? (latestRec.views || 0) : (v.views || 0);
+    const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
     const d30 = calcDelta(v.history, 30);
-    const latestPredicted = latestRec && latestRec.predicted === true;
-    return {...v, latest, d7, d30, latestPredicted};
+    return {...v, latest, d7, d30};
   });
 
   const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
@@ -656,12 +522,10 @@ function renderRankList(){
   });
 
   const annotated = list.map(v=>{
-    const latestRec = v.history && v.history.length ? v.history[v.history.length-1] : null;
-    const latest = latestRec ? (latestRec.views || 0) : (v.views || 0);
+    const latest = v.history && v.history.length ? (v.history[v.history.length-1].views || 0) : (v.views || 0);
     const d7 = calcDelta(v.history, 7);
     const d30 = calcDelta(v.history, 30);
-    const latestPredicted = latestRec && latestRec.predicted === true;
-    return {...v, latest, d7, d30, latestPredicted};
+    return {...v, latest, d7, d30};
   });
 
   if(mode === 'total') {
@@ -685,8 +549,6 @@ function renderRankList(){
   annotated.forEach((v, idx)=>{
     const li = document.createElement('div');
     li.className = 'video-item';
-    // mark if latest is predicted
-    const predictedMark = (v.latestPredicted ? `<span class="pred-tag">推定</span>` : '');
     li.innerHTML = `
       <div class="rank-num">${idx+1}</div>
       <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
@@ -695,7 +557,7 @@ function renderRankList(){
         <div class="sub">
           <div class="badge">${escapeHtml(v.banner)}</div>
           <div class="badge">${escapeHtml(v.unit)}</div>
-          <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回 ${predictedMark}</div>
+          <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
           <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
         </div>
       </div>
@@ -764,8 +626,7 @@ function selectVideo(v){
   // show the latest API-fetched value (should be the last history entry's views)
   const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
   const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
-  const lastPred = lastRec && lastRec.predicted === true;
-  document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回' + (lastPred ? ' （推定）' : '');
+  document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回';
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(currentSelected.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(currentSelected.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = currentSelected.published || '—';
@@ -818,24 +679,20 @@ function selectVideo(v){
 
 function drawChartForSelection(period){
   if(!currentSelected) return;
-  const hist = Array.isArray(currentSelected.history) ? currentSelected.history.slice() : [];
+  const hist = currentSelected.history || [];
   if(hist.length === 0) {
     if(chart){ chart.destroy(); chart = null; }
     ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
     return;
   }
   // convert to entries with timestamp, views and original datetime string (if available)
-  const ptsAll = hist.map(h => {
+  const pts = hist.map(h => {
     const origIso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
     const ts = origIso ? new Date(origIso) : null;
-    return ts ? { t: ts, v: (h.views || 0), orig: origIso, predicted: !!h.predicted } : null;
+    return ts ? { t: ts, v: (h.views || 0), orig: origIso } : null;
   }).filter(Boolean);
 
-  // sort by time ascending to ensure proper ordering
-  ptsAll.sort((a,b)=> a.t.getTime() - b.t.getTime());
-
-  // apply period filter (relative to last timestamp present)
-  let points = ptsAll.slice();
+  let points = pts.slice();
   if(period === '7') {
     const cutoff = new Date(points[points.length-1].t);
     cutoff.setUTCDate(cutoff.getUTCDate() - 7);
@@ -846,8 +703,10 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  // labels: date only (YYYY-MM-DD) for axis ticks (we build full labels for each point)
+  // labels: date only (YYYY-MM-DD) for axis ticks
   const labels = points.map(p => p.t.toISOString().slice(0,10));
+  // data values
+  const data = points.map(p => p.v);
   // timesFull: display the exact datetime when the views were recorded (use orig if present)
   const timesFull = points.map(p => {
     if(p.orig){
@@ -858,27 +717,20 @@ function drawChartForSelection(period){
     return formatRecordedTime(p.t.toISOString());
   });
 
-  // Build two aligned datasets: real data (non-predicted) and predicted data
-  const dataReal = points.map(p => p.predicted ? null : p.v);
-  const dataPred = points.map(p => p.predicted ? p.v : null);
-
   // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
   let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb');
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
-  const predLineColor = hexToRgba(colorHex, 0.9); // predicted uses same hue but emphasized (dashed)
 
   if(chart){
     // update existing chart data & styling to reflect latest values without recreating tooltip behavior
     chart.data.labels = labels;
-    chart.data.datasets[0].data = dataReal;
+    chart.data.datasets[0].data = data;
     chart.data.datasets[0].backgroundColor = areaColor;
     chart.data.datasets[0].borderColor = lineColor;
+    // attach timesFull for tooltip title (these times represent the time the view count was recorded)
     chart.data.datasets[0].timesFull = timesFull;
-    chart.data.datasets[1].data = dataPred;
-    chart.data.datasets[1].borderColor = predLineColor;
-    chart.data.datasets[1].timesFull = timesFull;
     chart.update('none');
   } else {
     chart = new Chart(ctx, {
@@ -886,31 +738,14 @@ function drawChartForSelection(period){
       data: {
         labels,
         datasets: [{
-          label: currentSelected.title + ' (実測)',
-          data: dataReal,
+          label: currentSelected.title,
+          data,
           tension:0.2,
           fill:true,
           backgroundColor: areaColor,
           borderColor: lineColor,
           pointRadius:3,
-          timesFull: timesFull
-        },
-        {
-          label: currentSelected.title + ' (推定)',
-          data: dataPred,
-          tension:0.2,
-          fill:false,
-          borderColor: predLineColor,
-          borderDash: [6,6],
-          pointRadius:4,
-          pointStyle: 'rectRot',
-          // make predicted points visibly different
-          pointBackgroundColor: function(context){
-            // context.parsed.y is the value
-            return context.dataset.data[context.dataIndex] !== null ? '#f59e0b' : 'rgba(0,0,0,0)';
-          },
-          pointBorderColor: predLineColor,
-          pointHoverRadius:6,
+          // attach times array so tooltip callback can access time including clock (recorded time)
           timesFull: timesFull
         }]
       },
@@ -941,18 +776,14 @@ function drawChartForSelection(period){
               title: function(items){
                 if(!items || !items.length) return '';
                 const it = items[0];
-                // datasets now each have timesFull aligned with labels
                 const ds = chart.data.datasets[it.datasetIndex];
                 if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
                 // fallback to label (date)
                 return chart.data.labels[it.dataIndex] || '';
               },
-              // show views as label, and mark predicted
+              // show views as label
               label: function(context){
-                const v = context.parsed.y;
-                if(v === null || v === undefined) return '';
-                const isPred = context.datasetIndex === 1; // predicted dataset index
-                return `${Intl.NumberFormat().format(v)} 回${isPred ? ' （推定）' : ''}`;
+                return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
               }
             }
           }
@@ -965,7 +796,7 @@ function drawChartForSelection(period){
   const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
   const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
   const selViews = document.getElementById('selectedViews');
-  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回${lastRec && lastRec.predicted ? ' （推定）' : ''}`;
+  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
 }
 
 /* --- clicking outside the chart restores latest API value into the metric --- */
@@ -978,7 +809,7 @@ document.addEventListener('click', function(evt){
       const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
       const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
       const selViews = document.getElementById('selectedViews');
-      if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回${lastRec && lastRec.predicted ? ' （推定）' : ''}`;
+      if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
     }
   }
 });
@@ -1031,3 +862,4 @@ loadData();
 </script>
 </body>
 </html>
+
