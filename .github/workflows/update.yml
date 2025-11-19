@@ -2,8 +2,8 @@ name: update-youtube-data
 
 on:
   schedule:
-    # 30分ごとに実行（UTC）。例：00:00, 00:30, 01:00, 01:30 ...
-    - cron: '*/30 * * * *'
+    # 20分ごとに実行（UTC）。例：00:00, 00:20, 00:40, 01:00 ...
+    - cron: '*/20 * * * *'
   workflow_dispatch: {}
 
 permissions:
