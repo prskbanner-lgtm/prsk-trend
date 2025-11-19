@@ -394,15 +394,35 @@ function findClosestBefore(history, targetDate){
   return candidate;
 }
 
+/* --- calcDelta 修正 ---
+   要求:
+   - 直近の記録(last) の時刻から days 日引いた「同じ時刻」の履歴が存在すればその差を使う
+   - 存在しなければ、history の最も古いデータとの差を使う
+*/
 function calcDelta(history, days){
   if(!history || history.length===0) return 0;
   const lastRec = lastHistoryEntry(history);
   const lastDate = lastRec ? (lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null)) : null;
   if(!lastDate) return 0;
-  const startDate = new Date(lastDate);
-  startDate.setUTCDate(startDate.getUTCDate() - days);
-  const startRec = findClosestBefore(history, startDate) || history[0];
-  if(!startRec) return 0;
+
+  // 7日前（days日前）のターゲット時刻（同じ時刻）
+  const startDate = new Date(lastDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+  // 探す基準は「分単位で一致」させる（同じ YYYY-MM-DD HH:MM であれば OK）
+  const targetMin = Math.floor(startDate.getTime() / 60000);
+
+  let matched = null;
+  for(const rec of history){
+    const t = rec.datetime ? new Date(rec.datetime) : (rec.date ? new Date(rec.date + 'T00:00:00.000Z') : null);
+    if(!t) continue;
+    const recMin = Math.floor(t.getTime() / 60000);
+    if(recMin === targetMin){
+      matched = rec;
+      break;
+    }
+  }
+
+  const startRec = matched ? matched : history[0]; // 存在しなければ最も古いデータを使う
   const startViews = startRec.views || 0;
   const lastViews = lastRec.views || 0;
   return lastViews - startViews;
