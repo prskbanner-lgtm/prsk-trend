@@ -4,6 +4,10 @@
 // - 入力: videos_list.json (各エントリに url, banner, unit)
 // - 出力: data/videos.json (各動画に videoId, url, title, thumbnail, published, banner, unit, history の配列)
 // - 履歴は { datetime: "2025-11-17T12:30:00.000Z", views: 12345 } の形で保存（以前は 30分刻みだったが、本スクリプトは取得時刻をそのまま保存します）
+// --- 変更点 ---
+// - サーバーや API 取得が失敗した場合や GitHub Actions が動かなかったときに、既存の履歴から「推定（predicted）」エントリを生成して data/videos.json に保存するようにしました。
+// - 実測エントリは predicted フラグなし、推定エントリは { predicted: true } が付与されます。
+// - GitHub Actions がスケジュール（30分毎）で動く想定なので、穴が空いている場合は 30 分刻みで線形補間（または傾向外挿）して推定値を差し込みます。
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -26,7 +30,7 @@ async function fetchJson(url) {
 
 /* --- 変更点 ---
    ここで「丸めた時刻」を作る関数ではなく、**取得時の正確な ISO 時刻**を返すようにします。
-   これにより history に保存される datetime は実際にスクリプトが動いた瞬間の ISO になります。
+   また将来的に推定挿入するためのユーティリティを用意します。
 */
 function nowISO(date = new Date()) {
   return new Date(date).toISOString();
@@ -86,84 +90,66 @@ function extractVideoIdFromUrl(urlStr) {
   }
 }
 
+/* generate intermediate timestamps between two Date objects at intervalMinutes spacing */
+function generateIntermediateTimes(fromDate, toDate, intervalMinutes = 30) {
+  const res = [];
+  const start = new Date(fromDate.getTime());
+  let t = new Date(start.getTime() + intervalMinutes * 60 * 1000);
+  while (t < toDate) {
+    res.push(new Date(t.getTime()));
+    t = new Date(t.getTime() + intervalMinutes * 60 * 1000);
+  }
+  return res;
+}
+
+/* linear interpolation/extrapolation for views between two points (a,b)
+   aTime, bTime: Date, aViews,bViews: number
+   for times between them, return predicted views.
+*/
+function interpolateViews(aTime, aViews, bTime, bViews, atTime) {
+  const totalMs = bTime.getTime() - aTime.getTime();
+  if (totalMs === 0) return bViews;
+  const frac = (atTime.getTime() - aTime.getTime()) / totalMs;
+  return Math.round(aViews + (bViews - aViews) * frac);
+}
+
+/* estimate trend rate (views per minute) from last N history entries (prefer actual entries)
+   returns viewsPerMinute (can be fractional). If insufficient data, returns 0.
+*/
+function estimateRatePerMinute(history, lookback = 6) {
+  if (!Array.isArray(history) || history.length < 2) return 0;
+  // pick last up to lookback actual entries (prefer entries with datetime)
+  const arr = history.slice().filter(h => !h.predicted).slice(-lookback);
+  if (arr.length < 2) {
+    // fallback to including predicted if no actuals
+    const arr2 = history.slice().slice(-lookback);
+    if (arr2.length < 2) return 0;
+    let deltaV = 0, deltaM = 0;
+    for (let i = 1; i < arr2.length; i++) {
+      const a = arr2[i-1], b = arr2[i];
+      const ta = parseHistoryEntryDatetime(a), tb = parseHistoryEntryDatetime(b);
+      if (!ta || !tb) continue;
+      deltaV += (b.views - a.views);
+      deltaM += (tb.getTime() - ta.getTime()) / 60000;
+    }
+    if (deltaM <= 0) return 0;
+    return deltaV / deltaM;
+  }
+  let deltaV = 0, deltaM = 0;
+  for (let i = 1; i < arr.length; i++) {
+    const a = arr[i-1], b = arr[i];
+    const ta = parseHistoryEntryDatetime(a), tb = parseHistoryEntryDatetime(b);
+    if (!ta || !tb) continue;
+    deltaV += (b.views - a.views);
+    deltaM += (tb.getTime() - ta.getTime()) / 60000;
+  }
+  if (deltaM <= 0) return 0;
+  return deltaV / deltaM;
+}
+
 (function isoNow() {
   // noop placeholder for linter friendliness
 })();
-
-/* --- Server-side forecasting helper ---
-   ブラウザ側と同様のロジックで、既存履歴から "now" における推定再生数を作る関数。
-   失敗時やデータ欠落時にこれを使って予測点を history に追加し、結果ファイルに書き出すことで
-   ブラウザのローカルキャッシュが消えても予測値が残るようにします。
-*/
-function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
-  // prevHistory: array (may be empty). Return a new array (copy) with predicted entry appended when appropriate.
-  const hist = Array.isArray(prevHistory) ? prevHistory.slice() : [];
-  if (hist.length === 0) {
-    // no prior data: can't predict meaningfully, do nothing (could push zero if desired)
-    return hist;
-  }
-
-  // parse last entry date
-  const lastEntry = hist[hist.length - 1];
-  const lastDate = parseHistoryEntryDatetime(lastEntry);
-  if (!lastDate) return hist;
-
-  const now = nowDate;
-  const dtLastMs = now.getTime() - lastDate.getTime();
-
-  // if last was recorded within 30 seconds, consider it up-to-date; do not append duplicate predicted point
-  if (dtLastMs <= 30 * 1000) {
-    // if last entry has no datetime format, still skip
-    return hist;
-  }
-
-  // Look back up to M points (max 5) to estimate rate
-  const M = Math.min(5, hist.length);
-  const window = hist.slice(-M);
-
-  // find first and last parseable points in the window
-  let firstIdx = 0;
-  while (firstIdx < window.length && !parseHistoryEntryDatetime(window[firstIdx])) firstIdx++;
-  if (firstIdx >= window.length) return hist;
-
-  const first = window[firstIdx];
-  const lastWin = window[window.length - 1];
-
-  const tFirst = parseHistoryEntryDatetime(first);
-  const tLastWin = parseHistoryEntryDatetime(lastWin);
-  if (!tFirst || !tLastWin) return hist;
-
-  const vFirst = first.views || 0;
-  const vLastWin = lastWin.views || 0;
-  const secondsWindow = (tLastWin.getTime() - tFirst.getTime()) / 1000;
-
-  let ratePerSec = 0;
-  if (secondsWindow > 0) ratePerSec = (vLastWin - vFirst) / secondsWindow;
-
-  const secondsToNow = (now.getTime() - tLastWin.getTime()) / 1000;
-  let predictedViews = Math.round(vLastWin + ratePerSec * secondsToNow);
-
-  if (!isFinite(predictedViews) || predictedViews < 0) predictedViews = vLastWin;
-  if (predictedViews < vLastWin) predictedViews = vLastWin;
-
-  // fallback small positive assumption if no growth but large time gap
-  if (predictedViews === vLastWin && secondsToNow > 60 * 60) {
-    const extra = Math.max(1, Math.round(secondsToNow / (15 * 60))); // 1 view per 15 minutes baseline
-    predictedViews = vLastWin + extra;
-  }
-
-  const isoNowStr = nowISO(now);
-  // Avoid duplicating if last record already has same ISO (rare)
-  const lastIso = isoFromEntry(lastEntry);
-  if (lastIso === isoNowStr) {
-    // replace last entry with predicted-marked one
-    hist[hist.length - 1] = { datetime: isoNowStr, views: predictedViews, predicted: true };
-  } else {
-    hist.push({ datetime: isoNowStr, views: predictedViews, predicted: true });
-  }
-
-  return trimHistory(hist, 5000);
-}
 
 (async () => {
   try {
@@ -214,6 +200,7 @@ function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
 
     // current (exact) datetime in ISO (UTC) to use as key — 取り得る時刻を丸めずそのまま保存
     const currentIso = nowISO(new Date());
+    const currentDate = new Date(currentIso);
 
     for (let i = 0; i < entries.length; i += batchSize) {
       const chunk = entries.slice(i, i + batchSize);
@@ -225,12 +212,43 @@ function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
         json = await fetchJson(urlApi);
       } catch (err) {
         console.error('YouTube API 取得エラー:', err.message);
-        // on error: fallback to existing data for this chunk, but ALSO append server-side predicted entries
+        // on error: fallback to existing data for this chunk, BUT generate predicted entries up to now
         for (const meta of chunk) {
           const prev = existingMap.get(meta.videoId);
-          const prevHistory = prev && prev.history ? prev.history.slice() : [];
-          // compute predicted history based on prevHistory and append a predicted point (so prediction is persisted to data/videos.json)
-          const newHistory = prevHistory && prevHistory.length ? forecastHistoryAppend(prevHistory, new Date()) : prevHistory;
+          const prevHistory = prev && prev.history ? (Array.isArray(prev.history) ? prev.history.slice() : []) : [];
+          // estimate rate and extrapolate from last actual to now in 30-min steps
+          let history = prevHistory.slice();
+          let lastEntry = history.length ? history[history.length - 1] : null;
+          let lastTime = lastEntry ? parseHistoryEntryDatetime(lastEntry) : null;
+          let lastViews = lastEntry ? lastEntry.views || 0 : 0;
+          const ratePerMin = estimateRatePerMinute(history, 6); // views per minute
+          if (!lastTime) {
+            // no history - cannot predict; leave empty
+            results.push({
+              videoId: meta.videoId,
+              url: meta.url,
+              title: prev?.title || 'Unknown title',
+              thumbnail: prev?.thumbnail || '',
+              published: prev?.published || '',
+              banner: meta.banner || prev?.banner || '',
+              unit: meta.unit || prev?.unit || '',
+              history: trimHistory(history)
+            });
+            continue;
+          }
+          // generate intermediate times between lastTime and currentDate at 30-min intervals (exclusive of lastTime, exclusive of now)
+          const intermediates = generateIntermediateTimes(lastTime, currentDate, 30);
+          for (const t of intermediates) {
+            // extrapolate: views = lastViews + ratePerMin * minutesFromLast
+            const minsFromLast = (t.getTime() - lastTime.getTime()) / 60000;
+            const estViews = Math.max(0, Math.round(lastViews + ratePerMin * minsFromLast));
+            history.push({ datetime: t.toISOString(), views: estViews, predicted: true });
+          }
+          // also append a final predicted point at currentIso
+          const minsTotal = (currentDate.getTime() - lastTime.getTime()) / 60000;
+          const estNow = Math.max(0, Math.round(lastViews + ratePerMin * minsTotal));
+          history.push({ datetime: currentIso, views: estNow, predicted: true });
+
           results.push({
             videoId: meta.videoId,
             url: meta.url,
@@ -239,7 +257,7 @@ function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
             published: prev?.published || '',
             banner: meta.banner || prev?.banner || '',
             unit: meta.unit || prev?.unit || '',
-            history: trimHistory(newHistory)
+            history: trimHistory(history)
           });
         }
         continue;
@@ -265,13 +283,38 @@ function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
         let lastEntry = history.length ? history[history.length - 1] : null;
         let lastIso = lastEntry ? isoFromEntry(lastEntry) : null;
 
+        // If we have a previous actual timestamp, and there's a gap to now, insert predicted intermediate entries
+        if (lastIso) {
+          const lastTime = new Date(lastIso);
+          const currentTime = currentDate;
+          const diffMin = (currentTime.getTime() - lastTime.getTime()) / 60000;
+          // threshold: if more than 45 minutes since last entry, we assume an Actions miss / network error occurred sometime
+          if (diffMin > 45) {
+            // generate intermediates at 30-min intervals (to reflect previous schedule)
+            const intermediates = generateIntermediateTimes(lastTime, currentTime, 30); // excludes lastTime, excludes currentTime
+            // If there is at least one intermediate, create predicted entries by interpolation between last known and current observed (views)
+            // If we have real current views (from API), we can interpolate between last and current.
+            if (intermediates.length > 0) {
+              // compute interpolation target values between lastEntry.views and views
+              for (const t of intermediates) {
+                // If we have a prev.views and current views, linearly interpolate
+                const predVal = interpolateViews(lastTime, lastEntry.views || 0, currentTime, views, t);
+                history.push({ datetime: t.toISOString(), views: predVal, predicted: true });
+              }
+            } else {
+              // no intermediates but still gap (e.g., gap <30 but >45) -> we can still append a predicted point at some midpoint if desired.
+            }
+          }
+        } else {
+          // no previous history -> nothing to interpolate
+        }
+
+        // Now append or update the final current-time entry (actual)
         if (!lastIso) {
-          // no previous history -> push new entry with exact current ISO
           history.push({ datetime: currentIso, views: views });
         } else {
-          // If last entry has exactly the same ISO timestamp, update it.
-          // Otherwise, append a new entry with the exact current ISO.
           if (lastIso === currentIso) {
+            // same timestamp: update last entry
             history[history.length - 1] = { datetime: currentIso, views: views };
           } else {
             history.push({ datetime: currentIso, views: views });
@@ -293,8 +336,6 @@ function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
       }
     }
 
-    // If no fetch errors occurred, results contain the fresh values.
-    // If some chunks failed, those entries have server-side predicted points appended above.
     const out = { updated_at: new Date().toISOString(), videos: results };
     await fs.writeFile(OUT_PATH, JSON.stringify(out, null, 2), 'utf8');
     console.log('更新完了: data/videos.json を書き出しました。');
