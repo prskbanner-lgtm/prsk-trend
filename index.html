@@ -604,6 +604,170 @@ function renderRankList(){
   });
 }
 
+/* --- Improved prediction utilities --- */
+
+/**
+ * Weighted median helper
+ */
+function weightedMedian(values, weights) {
+  // values: array, weights: same length
+  const zipped = values.map((v,i)=>({v:v,w:weights[i]})).sort((a,b)=>a.v-b.v);
+  const total = weights.reduce((a,b)=>a+b,0);
+  let cum = 0;
+  for(const z of zipped){
+    cum += z.w;
+    if(cum >= total/2) return z.v;
+  }
+  return zipped.length ? zipped[zipped.length-1].v : 0;
+}
+
+/**
+ * Robust weighted linear regression and prediction
+ * history: array of { datetime: ISO or date, views: number }
+ * targets: array of Date objects for which to predict
+ *
+ * returns array of predicted values aligned to targets,
+ * and additional metadata { slope, intercept, usedPoints, isRobust }
+ */
+function robustWeightedLinearPredict(history, targets){
+  if(!Array.isArray(history) || history.length === 0) {
+    return { preds: targets.map(_=>null), meta: { slope:0, intercept:0, usedPoints:0 } };
+  }
+
+  // build points from history (convert to Date)
+  const pts = history.map(h => {
+    const iso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
+    const t = iso ? new Date(iso) : null;
+    return (t && !isNaN(t.getTime())) ? { t, v: (h.views || 0) } : null;
+  }).filter(Boolean);
+
+  if(pts.length === 0){
+    return { preds: targets.map(_=>null), meta: { slope:0, intercept:0, usedPoints:0 } };
+  }
+
+  // limit lookback to recent window: 14 days max to avoid stale seasonality
+  const lastTime = pts[pts.length-1].t;
+  const lookbackMs = 14 * 24 * 3600 * 1000; // 14 days
+  let recentPts = pts.filter(p => (lastTime.getTime() - p.t.getTime()) <= lookbackMs);
+
+  // also cap number of points to, say, 500 for performance
+  if(recentPts.length > 500) recentPts = recentPts.slice(-500);
+
+  // if still <2 points, fallback: use last known value (no growth)
+  if(recentPts.length < 2) {
+    const lastV = recentPts[recentPts.length-1].v || 0;
+    return { preds: targets.map(_=> lastV), meta: { slope: 0, intercept: lastV, usedPoints: recentPts.length } };
+  }
+
+  // compute x as minutes relative to lastTime (so last point x=0 or near 0)
+  const xs = recentPts.map(p => (p.t.getTime() - lastTime.getTime()) / 60000.0); // negative or zero
+  const ys = recentPts.map(p => p.v);
+
+  // weights: exponential decay by age (half-life = 60 minutes)
+  const halfLifeMinutes = 60;
+  const lambda = Math.log(2) / halfLifeMinutes; // decay rate per minute
+  const weights = recentPts.map((p, i) => {
+    const ageMin = (lastTime.getTime() - recentPts[i].t.getTime()) / 60000.0;
+    return Math.exp(-lambda * ageMin);
+  });
+
+  function weightedLinearFit(xs, ys, weights){
+    const W = weights.reduce((a,b)=>a+b,0);
+    if(W <= 0) return null;
+    const xw = xs.reduce((s,xi,i)=> s + weights[i]*xi, 0) / W;
+    const yw = ys.reduce((s,yi,i)=> s + weights[i]*yi, 0) / W;
+    let num = 0, den = 0;
+    for(let i=0;i<xs.length;i++){
+      const dx = xs[i] - xw;
+      const dy = ys[i] - yw;
+      num += weights[i] * dx * dy;
+      den += weights[i] * dx * dx;
+    }
+    const slope = den === 0 ? 0 : num / den; // views per minute
+    const intercept = yw - slope * xw;
+    return { slope, intercept };
+  }
+
+  // initial fit
+  let fit = weightedLinearFit(xs, ys, weights);
+  if(!fit) {
+    const lastV = ys[ys.length-1];
+    return { preds: targets.map(_=> lastV), meta: { slope: 0, intercept: lastV, usedPoints: recentPts.length } };
+  }
+
+  // compute residuals and MAD, then remove outliers beyond threshold and refit
+  const predsInitial = xs.map(x => fit.intercept + fit.slope * x);
+  const residuals = ys.map((y,i)=> y - predsInitial[i]);
+  const absRes = residuals.map(r => Math.abs(r));
+  // MAD (median absolute deviation) robust std estimate
+  const medRes = weightedMedian(absRes, weights);
+  const mad = medRes;
+  // scale factor 1.4826 => approx std for normal distribution
+  const sigmaEst = mad * 1.4826;
+  // remove points with |residual| > k * sigmaEst (k=3) but only if sigmaEst > 0
+  let filteredIdx = [];
+  if(sigmaEst > 0){
+    for(let i=0;i<residuals.length;i++){
+      if(Math.abs(residuals[i]) <= 3 * sigmaEst) filteredIdx.push(i);
+    }
+  } else {
+    // nothing to filter if no variation
+    filteredIdx = recentPts.map((_,i)=>i);
+  }
+
+  // if filtered too aggressively (less than 2 points), keep more points (use original)
+  if(filteredIdx.length < 2) filteredIdx = recentPts.map((_,i)=>i);
+
+  // prepare filtered arrays
+  const xsF = filteredIdx.map(i=>xs[i]);
+  const ysF = filteredIdx.map(i=>ys[i]);
+  const wsF = filteredIdx.map(i=>weights[i]);
+
+  // refit on filtered data
+  const fitRobust = weightedLinearFit(xsF, ysF, wsF) || fit;
+
+  // ensure slope non-negative (views cannot decrease). If slope negative but small, set to 0.
+  let slope = fitRobust.slope;
+  if(slope < 0) slope = 0;
+
+  // compute a baseline recent median per-minute rate to prevent absurdly large slopes
+  // derive adjacent diffs over short windows (last up to 6 hours)
+  const sixHoursMs = 6 * 3600 * 1000;
+  const shortPts = recentPts.filter(p => lastTime.getTime() - p.t.getTime() <= sixHoursMs);
+  const shortRates = [];
+  for(let i=1;i<shortPts.length;i++){
+    const dv = (shortPts[i].v - shortPts[i-1].v);
+    const dtMin = (shortPts[i].t.getTime() - shortPts[i-1].t.getTime()) / 60000.0;
+    if(dtMin > 0) shortRates.push(dv / dtMin);
+  }
+  const medianShortRate = shortRates.length ? weightedMedian(shortRates, shortRates.map(_=>1)) : (slope || 0);
+  // set upper cap for slope: max(medianShortRate*20, medianShortRate+1) but at least slope
+  const upperCap = Math.max(Math.abs(medianShortRate) * 20, Math.abs(medianShortRate) + 1, slope);
+  if(slope > upperCap) slope = upperCap;
+
+  // intercept: compute predicted value at x=0 (lastTime)
+  // Since xs are relative to lastTime, x=0 corresponds to lastTime; compute intercept accordingly
+  // Recompute intercept via weighted mean to be stable
+  const Wf = wsF.reduce((a,b)=>a+b,0);
+  const xwF = xsF.reduce((s,xi,i)=> s + wsF[i]*xi, 0) / Wf;
+  const ywF = ysF.reduce((s,yi,i)=> s + wsF[i]*yi, 0) / Wf;
+  const intercept = ywF - slope * xwF;
+
+  // produce preds for targets
+  const preds = targets.map(tgt => {
+    const dMin = (tgt.getTime() - lastTime.getTime()) / 60000.0; // could be positive
+    let yPred = intercept + slope * dMin;
+    // enforce not less than last observed value
+    const lastObs = ys[ys.length-1];
+    if(yPred < lastObs) yPred = lastObs;
+    // avoid tiny negatives
+    yPred = Math.max(0, Math.round(yPred));
+    return yPred;
+  });
+
+  return { preds, meta: { slope, intercept, usedPoints: recentPts.length, filteredPoints: xsF.length } };
+}
+
 /* --- chart & selection --- */
 let currentSelected = null;
 const ctx = document.getElementById('trendChart').getContext('2d');
@@ -677,53 +841,6 @@ function selectVideo(v){
   drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
-/* --- 推定ロジック helpers ---
-   - 直近 N 点から views/分 を算出（単純な平均傾き）
-   - 範囲内の毎時00分/30分に推定点を生成（既存の実測点が近接していればそれを優先）
-*/
-function estimateRatePerMinute(points, considerCount = 6){
-  // points: array of {t: Date, v: number} sorted ascending
-  if(!points || points.length < 2) return 0;
-  const n = Math.min(considerCount, points.length);
-  const recent = points.slice(points.length - n);
-  const first = recent[0];
-  const last = recent[recent.length - 1];
-  const deltaViews = (last.v || 0) - (first.v || 0);
-  const deltaMinutes = (last.t.getTime() - first.t.getTime()) / 60000;
-  if(!deltaMinutes || !isFinite(deltaMinutes)) return 0;
-  return deltaViews / deltaMinutes; // views per minute (can be fractional)
-}
-
-function generateHourlyHalfHourTimes(startDate, endDate){
-  // produce Date objects for every hh:00 and hh:30 between startDate and endDate inclusive
-  const out = [];
-  if(!startDate || !endDate || startDate.getTime() > endDate.getTime()) return out;
-  // normalize to the nearest earlier half-hour
-  const cur = new Date(startDate);
-  cur.setSeconds(0,0);
-  const m = cur.getMinutes();
-  if(m < 30){
-    cur.setMinutes(0);
-  } else {
-    cur.setMinutes(30);
-  }
-  // ensure cur <= startDate
-  if(cur.getTime() > startDate.getTime()){
-    // step back one half-hour
-    cur.setMinutes(cur.getMinutes() - 30);
-  }
-  while(cur.getTime() <= endDate.getTime()){
-    out.push(new Date(cur));
-    cur.setMinutes(cur.getMinutes() + 30);
-  }
-  return out;
-}
-
-/* --- drawChartForSelection 改修 ---
-   - 履歴の実測点に加え、表示範囲内の毎時00分/30分の推測点を生成してプロット
-   - 推測点は tooltip で "(推測)" と明示
-   - ラベルは "YYYY-MM-DD HH:mm" 形式（時間あり）に変更
-*/
 function drawChartForSelection(period){
   if(!currentSelected) return;
   const hist = currentSelected.history || [];
@@ -736,10 +853,16 @@ function drawChartForSelection(period){
   const pts = hist.map(h => {
     const origIso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
     const ts = origIso ? new Date(origIso) : null;
-    return ts ? { t: ts, v: (h.views || 0), orig: origIso, estimated: false } : null;
+    return ts ? { t: ts, v: (h.views || 0), orig: origIso, isPred: false } : null;
   }).filter(Boolean);
 
   let points = pts.slice();
+  if(points.length === 0){
+    if(chart){ chart.destroy(); chart = null; }
+    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+    return;
+  }
+
   if(period === '7') {
     const cutoff = new Date(points[points.length-1].t);
     cutoff.setUTCDate(cutoff.getUTCDate() - 7);
@@ -750,75 +873,54 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  // if after filtering we have no points, handle gracefully
-  if(points.length === 0){
-    if(chart){ chart.destroy(); chart = null; }
-    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
-    return;
+  // Prepare prediction targets: most recent :00, most recent :30, and now
+  const now = new Date();
+  let t00 = new Date(now); t00.setMinutes(0,0,0); if(t00 > now) t00.setHours(t00.getHours() - 1);
+  let t30 = new Date(now); t30.setMinutes(30,0,0); if(t30 > now) t30.setHours(t30.getHours() - 1);
+  const candidateTargets = [t00, t30, now];
+  // unique by ISO
+  const seenIso = new Set();
+  const targets = [];
+  candidateTargets.forEach(tt => { const iso = tt.toISOString(); if(!seenIso.has(iso)) { seenIso.add(iso); targets.push(tt); } });
+
+  // Use robustWeightedLinearPredict to obtain predictions
+  const historyForPredict = points.map(p => ({ datetime: p.orig || p.t.toISOString(), views: p.v }));
+  const { preds, meta } = robustWeightedLinearPredict(historyForPredict, targets);
+
+  // create predicted entries for any target that doesn't exactly match an existing recorded time
+  const lastReal = points[points.length-1];
+  const lastTime = lastReal.t;
+  const lastViews = lastReal.v;
+
+  const predEntries = [];
+  for(let i=0;i<targets.length;i++){
+    const target = targets[i];
+    // skip if an exact recorded time exists
+    const exists = points.some(p => p.t.toISOString() === target.toISOString());
+    if(exists) continue;
+    const predVal = (preds && preds[i] !== null) ? preds[i] : lastViews;
+    predEntries.push({ t: target, v: predVal, orig: target.toISOString(), isPred: true });
   }
 
-  // compute estimated growth rate (views per minute) from recent points
-  const ratePerMin = estimateRatePerMinute(points, 6); // 最近最大6点で計算
+  // merge and sort by time
+  const combined = points.concat(predEntries).sort((a,b)=> a.t.getTime() - b.t.getTime());
 
-  // build inferred times between first and last displayed point
-  const firstTime = points[0].t;
-  const lastTime = points[points.length - 1].t;
-  const inferredTimes = generateHourlyHalfHourTimes(firstTime, lastTime);
+  // prepare arrays aligned to combined for Chart.js (category axis using ISO strings)
+  const labels = combined.map(p => p.t.toISOString()); // keep full ISO so each point is unique
+  const mainData = combined.map(p => p.isPred ? null : p.v);
+  const predData = combined.map(p => p.isPred ? p.v : null);
 
-  // helper: check if an actual point exists very near a target time (within 30s)
-  function findActualNear(target){
-    for(const p of points){
-      if(Math.abs(p.t.getTime() - target.getTime()) <= 30 * 1000) return p;
-    }
-    return null;
-  }
-
-  // produce inferred points
-  const inferred = [];
-  for(const t of inferredTimes){
-    const actual = findActualNear(t);
-    if(actual) continue; // skip if actual exists (prefer measured)
-    // find last actual before t (if none, use first actual)
-    let lastActual = null;
-    for(let i = points.length - 1; i >= 0; i--){
-      if(points[i].t.getTime() <= t.getTime()){
-        lastActual = points[i];
-        break;
-      }
-    }
-    if(!lastActual){
-      lastActual = points[0];
-    }
-    const minutesDiff = (t.getTime() - lastActual.t.getTime()) / 60000;
-    const estValue = Math.max(0, Math.round((lastActual.v || 0) + ratePerMin * minutesDiff));
-    inferred.push({ t: new Date(t), v: estValue, orig: null, estimated: true, baseFrom: lastActual.t.toISOString() });
-  }
-
-  // merge actual + inferred points and sort ascending
-  const merged = points.concat(inferred).sort((a,b)=>a.t - b.t);
-
-  // prepare labels and data arrays; labels will be precise to minute
-  const labels = merged.map(p => {
-    const pad = n => String(n).padStart(2, '0');
-    const d = p.t;
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  });
-  const dataValues = merged.map(p => p.v);
-  // timesFull: use recorded/orig times if present, otherwise show generated time with "(推測)"
-  const timesFull = merged.map(p => {
+  // timesFull arrays for tooltips: historical entries show recorded local time,
+  // predicted entries show local time with "（推測）" suffix
+  const mainTimesFull = combined.map(p => {
+    if(p.isPred) return '';
     if(p.orig) return formatRecordedTime(p.orig);
-    if(p.estimated){
-      // label estimated points as 推測 and include baseFrom for transparency
-      const d = p.t;
-      return `${d.toLocaleString()} （推測）`;
-    }
     return formatRecordedTime(p.t.toISOString());
   });
-
-  // per-point styles: make estimated points visually different
-  const pointBackgroundColors = merged.map(p => p.estimated ? 'rgba(120,120,120,0.14)' : hexToRgba(((currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb')), 1));
-  const pointBorderColors = merged.map(p => p.estimated ? 'rgba(80,80,80,0.9)' : ( (currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb') ));
-  const pointRadii = merged.map(p => p.estimated ? 3 : 4);
+  const predTimesFull = combined.map(p => {
+    if(!p.isPred) return '';
+    return formatRecordedTime(p.t.toISOString()) + ' （推測）';
+  });
 
   // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
@@ -826,36 +928,75 @@ function drawChartForSelection(period){
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
+  // --- create/update chart ---
   if(chart){
-    // update existing chart data & styling to reflect latest values without recreating tooltip behavior
+    // update labels & datasets
     chart.data.labels = labels;
-    chart.data.datasets[0].data = dataValues;
+
+    // ensure dataset 0 (history) exists
+    if(!chart.data.datasets[0]) chart.data.datasets[0] = {};
+    chart.data.datasets[0].data = mainData;
     chart.data.datasets[0].backgroundColor = areaColor;
     chart.data.datasets[0].borderColor = lineColor;
-    chart.data.datasets[0].pointBackgroundColor = pointBackgroundColors;
-    chart.data.datasets[0].pointBorderColor = pointBorderColors;
-    chart.data.datasets[0].pointRadius = pointRadii;
-    // attach timesFull for tooltip title (these times represent the time the view count was recorded)
-    chart.data.datasets[0].timesFull = timesFull;
+    chart.data.datasets[0].label = currentSelected.title;
+    chart.data.datasets[0].timesFull = mainTimesFull;
+
+    // dataset 1: predicted points (only points, no connecting line)
+    const predDataset = {
+      label: '推測値（00/30/現在）',
+      data: predData,
+      tension:0.2,
+      fill:false,
+      showLine: false,
+      pointRadius:5,
+      pointStyle: 'rectRot',
+      backgroundColor: lineColor,
+      borderColor: lineColor,
+      timesFull: predTimesFull
+    };
+    if(chart.data.datasets.length < 2){
+      chart.data.datasets[1] = predDataset;
+    } else {
+      chart.data.datasets[1].data = predDataset.data;
+      chart.data.datasets[1].pointRadius = predDataset.pointRadius;
+      chart.data.datasets[1].pointStyle = predDataset.pointStyle;
+      chart.data.datasets[1].backgroundColor = predDataset.backgroundColor;
+      chart.data.datasets[1].borderColor = predDataset.borderColor;
+      chart.data.datasets[1].timesFull = predDataset.timesFull;
+      chart.data.datasets[1].label = predDataset.label;
+      chart.data.datasets[1].showLine = predDataset.showLine;
+    }
+
     chart.update('none');
   } else {
     chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels,
-        datasets: [{
-          label: currentSelected.title,
-          data: dataValues,
-          tension:0.2,
-          fill:true,
-          backgroundColor: areaColor,
-          borderColor: lineColor,
-          pointRadius: pointRadii,
-          pointBackgroundColor: pointBackgroundColors,
-          pointBorderColor: pointBorderColors,
-          // attach times array so tooltip callback can access time including clock (recorded time)
-          timesFull: timesFull
-        }]
+        datasets: [
+          {
+            label: currentSelected.title,
+            data: mainData,
+            tension:0.2,
+            fill:true,
+            backgroundColor: areaColor,
+            borderColor: lineColor,
+            pointRadius:3,
+            timesFull: mainTimesFull
+          },
+          {
+            label: '推測値（00/30/現在）',
+            data: predData,
+            tension:0.2,
+            fill:false,
+            showLine: false,
+            pointRadius:5,
+            pointStyle: 'rectRot',
+            backgroundColor: lineColor,
+            borderColor: lineColor,
+            timesFull: predTimesFull
+          }
+        ]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
@@ -889,16 +1030,9 @@ function drawChartForSelection(period){
                 // fallback to label (date)
                 return chart.data.labels[it.dataIndex] || '';
               },
-              // show views as label, and mark 推測
+              // show views as label
               label: function(context){
-                const base = `${Intl.NumberFormat().format(context.parsed.y)} 回`;
-                const ds = chart.data.datasets[context.datasetIndex];
-                const idx = context.dataIndex;
-                // if timesFull indicates 推測 (contains '推測'), append marker
-                if(ds && Array.isArray(ds.timesFull) && typeof ds.timesFull[idx] === 'string' && ds.timesFull[idx].includes('（推測）')) {
-                 return base + ' （推測）';
-                }
-                return base;
+                return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
               }
             }
           }
@@ -974,14 +1108,6 @@ function selectDefault(){
 
 /* --- initial load --- */
 loadData();
-
-// --- 追加: クライアント側で data/videos.json を自動再読み込み（20分ごと）
-// サーバ側（GitHub Actions / 他）が 20 分ごとに data を更新する想定で、表示も追従するため。
-const RELOAD_INTERVAL_MINUTES = 20;
-setInterval(() => {
-  loadData();
-}, RELOAD_INTERVAL_MINUTES * 60 * 1000);
-
 </script>
 </body>
 </html>
