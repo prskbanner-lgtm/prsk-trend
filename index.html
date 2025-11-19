@@ -102,6 +102,7 @@
           <option value="unit">ユニット別</option>
         </select>
         <select id="groupFilter"><option value="all">グループ: 全て</option></select>
+        <button id="clearCache" type="button">キャッシュクリア</button>
         <button id="clearGroups" class="primary">グループ分けクリア</button>
       </div>
     </header>
@@ -997,6 +998,35 @@ sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
 scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
+
+// clear cache button handler (localStorage cached_videos)
+const clearCacheBtn = document.getElementById('clearCache');
+if(clearCacheBtn) clearCacheBtn.addEventListener('click', function(){
+  try{
+    if(!confirm('キャッシュ（localStorage）をクリアします。よろしいですか？')) return;
+  }catch(e){
+    // proceed if confirm not available
+  }
+  try{
+    localStorage.removeItem('cached_videos');
+  }catch(e){
+    console.error('localStorage remove error', e);
+  }
+  // reset in-memory cache variables where appropriate
+  DATA = [];
+  DATA_UPDATED_AT = null;
+  currentSelected = null;
+  // update UI to indicate cache cleared, then attempt reload
+  const lastEl = document.getElementById('lastUpdated');
+  if(lastEl) lastEl.innerText = '最終更新: キャッシュをクリアしました';
+  // clear displayed lists/charts immediately
+  rankListEl.innerText = 'キャッシュをクリアしました。再読み込み中...';
+  if(chart){ chart.destroy(); chart = null; }
+  // attempt to reload data from server (this will show error if server is unavailable)
+  setTimeout(()=> {
+    loadData();
+  }, 250);
+});
 
 // safe binding for optional buttons
 const btnAll = document.getElementById('btnAll');
