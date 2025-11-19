@@ -63,7 +63,7 @@
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
+    .trend-item{Padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
     /* responsive */
@@ -394,38 +394,338 @@ function findClosestBefore(history, targetDate){
   return candidate;
 }
 
-/* --- calcDelta 修正 ---
-   要求:
-   - 直近の記録(last) の時刻から days 日引いた「同じ時刻」の履歴が存在すればその差を使う
-   - 存在しなければ、history の最も古いデータとの差を使う
+/* --- 新しい calcDelta 実装（要求どおり: 7/30日前が推定値であればそれを使い、なければ最古の推定値を使う） --- */
+
+/* ceil time to next half-hour mark (if already on exact half hour, keep it) */
+function ceilToHalfHour(date){
+  const d = new Date(date);
+  d.setSeconds(0,0);
+  const m = d.getMinutes();
+  if(m === 0 || m === 30) return d;
+  if(m < 30){
+    d.setMinutes(30);
+    return d;
+  }
+  // m > 30
+  d.setMinutes(0);
+  d.setHours(d.getHours() + 1);
+  return d;
+}
+
+/* floor time to previous half-hour mark (if already exact, keep it) */
+function floorToHalfHour(date){
+  const d = new Date(date);
+  d.setSeconds(0,0);
+  const m = d.getMinutes();
+  if(m === 0 || m === 30) return d;
+  if(m < 30){
+    d.setMinutes(0);
+    return d;
+  }
+  d.setMinutes(30);
+  return d;
+}
+
+/* preprocess history into sorted points [{t:Date, tsMin:number, v:number}] */
+function preprocessHistory(history){
+  if(!Array.isArray(history)) return [];
+  const pts = history.map(h=>{
+    const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
+    if(!t) return null;
+    return { t: t, tsMin: t.getTime() / 60000, v: (h.views || 0) };
+  }).filter(Boolean);
+  pts.sort((a,b)=> a.t.getTime() - b.t.getTime());
+  // remove duplicates with same minute (keep last)
+  const unique = [];
+  for(const p of pts){
+    const last = unique[unique.length-1];
+    if(last && Math.abs(last.tsMin - p.tsMin) < 1e-6){
+      unique[unique.length-1] = p;
+    } else unique.push(p);
+  }
+  return unique;
+}
+
+/* compute median of array */
+function median(arr){
+  if(!arr || arr.length===0) return 0;
+  const s = arr.slice().sort((a,b)=>a-b);
+  const m = Math.floor(s.length/2);
+  if(s.length % 2 === 1) return s[m];
+  return (s[m-1] + s[m]) / 2;
+}
+
+/* compute MAD (median absolute deviation) */
+function mad(arr){
+  if(!arr || arr.length===0) return 0;
+  const med = median(arr);
+  const abs = arr.map(x => Math.abs(x - med));
+  return median(abs);
+}
+
+/* compute EMA for array of rates (most recent last). alpha between 0..1 */
+function emaOfRates(rates, alpha){
+  if(!rates || rates.length===0) return 0;
+  let s = rates[0];
+  for(let i=1;i<rates.length;i++){
+    s = alpha * rates[i] + (1 - alpha) * s;
+  }
+  return s;
+}
+
+/* robust weighted linear regression + EMA blending
+   Returns object:
+   { slope_reg: (views/min), slope_ema: (views/min), slope_final, r2, nPoints, medRate }
+*/
+function computeAdvancedSlope(history){
+  const pts = preprocessHistory(history);
+  const n = pts.length;
+  if(n < 2) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+
+  // compute per-segment instantaneous rates (views per minute)
+  const segRates = [];
+  for(let i=0;i<pts.length-1;i++){
+    const dv = pts[i+1].v - pts[i].v;
+    const dt = pts[i+1].tsMin - pts[i].tsMin;
+    if(dt <= 0) continue;
+    segRates.push(dv / dt);
+  }
+  if(segRates.length === 0) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+
+  const medRate = median(segRates);
+  const madRate = mad(segRates) || 1e-6; // avoid zero
+
+  // filter out segments that are extreme outliers ( > med + k * MAD )
+  const OUTLIER_K = 6; // strict threshold
+  const goodIdx = [];
+  for(let i=0;i<pts.length;i++){
+    // keep points whose adjacent segment rates are not extreme outliers
+    // we'll check the segment to next point (if exists) and segment from prev (if exists)
+    let ok = true;
+    if(i < pts.length - 1){
+      const r = (pts[i+1].v - pts[i].v) / Math.max(0.0001, (pts[i+1].tsMin - pts[i].tsMin));
+      if(Math.abs(r - medRate) > OUTLIER_K * madRate) ok = false;
+    }
+    if(i > 0){
+      const r2 = (pts[i].v - pts[i-1].v) / Math.max(0.0001, (pts[i].tsMin - pts[i-1].tsMin));
+      if(Math.abs(r2 - medRate) > OUTLIER_K * madRate) ok = false;
+    }
+    if(ok) goodIdx.push(i);
+  }
+  // build filtered points
+  const goodPts = goodIdx.map(i => pts[i]);
+  const m = goodPts.length;
+  if(m < 2){
+    // if filtering removed too much, use original pts
+    goodPts.splice(0, goodPts.length, ...pts);
+  }
+
+  // Weighted linear regression on (x: minutes since reference, y: views)
+  // reference time: last point time (so x <= 0 for older points). To avoid huge numbers, use delta minutes relative to last point.
+  const last = goodPts[goodPts.length - 1];
+  const refTs = last.tsMin;
+  const xs = goodPts.map(p => p.tsMin - refTs); // negative or zero
+  const ys = goodPts.map(p => p.v);
+
+  // weights: exponential decay by age (minutes). half-life parameter tuned to emphasize recent data.
+  const HALF_LIFE_MIN = 180; // 3 hours half-life (can be tuned)
+  const ln2 = Math.log(2);
+  const ws = xs.map(x => Math.exp(- (Math.abs(x) / HALF_LIFE_MIN) * ln2 ));
+
+  // compute weighted sums
+  let S=0, Sx=0, Sy=0, Sxx=0, Sxy=0;
+  for(let i=0;i<xs.length;i++){
+    const w = ws[i];
+    const x = xs[i];
+    const y = ys[i];
+    S += w;
+    Sx += w * x;
+    Sy += w * y;
+    Sxx += w * x * x;
+    Sxy += w * x * y;
+  }
+
+  const denom = (S * Sxx - Sx * Sx);
+  let slope_reg = 0;
+  let intercept = 0;
+  if(Math.abs(denom) > 1e-9){
+    slope_reg = (S * Sxy - Sx * Sy) / denom; // units: views per minute (because x is minutes)
+    intercept = (Sy - slope_reg * Sx) / S;
+  } else {
+    // fallback: use simple average rate
+    const totalDv = ys[ys.length-1] - ys[0];
+    const totalDt = (goodPts[goodPts.length-1].tsMin - goodPts[0].tsMin) || 1;
+    slope_reg = totalDv / totalDt;
+    intercept = ys[ys.length-1] - slope_reg * xs[xs.length-1];
+  }
+
+  // compute weighted R^2 as measure of fit quality
+  // weighted residual sum of squares
+  let SSres = 0;
+  let SStot = 0;
+  const yWeightedMean = Sy / S;
+  for(let i=0;i<xs.length;i++){
+    const w = ws[i];
+    const x = xs[i];
+    const y = ys[i];
+    const yhat = intercept + slope_reg * x;
+    SSres += w * Math.pow(y - yhat, 2);
+    SStot += w * Math.pow(y - yWeightedMean, 2);
+  }
+  let r2 = 0;
+  if(SStot > 1e-9) r2 = Math.max(0, 1 - (SSres / SStot));
+  // ensure numeric safety
+  if(!isFinite(r2) || r2 < 0) r2 = 0;
+
+  // EMA of instantaneous segment rates to capture recent rapid changes
+  // use alpha such that recent segments dominate (alpha ~ 0.5)
+  const instRates = [];
+  for(let i=0;i<pts.length-1;i++){
+    const dv = pts[i+1].v - pts[i].v;
+    const dt = pts[i+1].tsMin - pts[i].tsMin;
+    if(dt <= 0) continue;
+    instRates.push(dv / dt);
+  }
+  // alpha choice: prefer recent segments. If many segments, slightly smaller alpha.
+  const alpha = 0.5;
+  const slope_ema = emaOfRates(instRates, alpha);
+
+  // confidence: combine R2 and number of good points into 0..1
+  const nEff = Math.min(6, xs.length); // use up to 6 points for scaling
+  let conf = r2 * (nEff / 6);
+  // slightly boost if r2 is very high
+  if(conf < 0) conf = 0;
+  if(conf > 1) conf = 1;
+
+  // final slope: blend regression and EMA using confidence
+  let slope_final = conf * slope_reg + (1 - conf) * slope_ema;
+
+  // sanity caps: no negative slope, and limit to reasonable maximum to avoid crazy jumps
+  if(!isFinite(slope_final) || slope_final < 0) slope_final = Math.max(0, slope_ema, slope_reg, 0);
+  // limit as a multiple of median segment rate (avoid explosion when medRate ~ 0)
+  const maxMultiplier = 10;
+  const cap = Math.max(Math.abs(medRate) * maxMultiplier, 1); // at least 1 view/min cap
+  if(Math.abs(slope_final) > cap) slope_final = Math.sign(slope_final) * cap;
+
+  return {
+    slope_reg,
+    slope_ema,
+    slope_final,
+    r2,
+    nPoints: pts.length,
+    medRate
+  };
+}
+
+/* --- Build predicted series anchored at last recorded point.
+   Returns array of { t: Date, v: Number } starting from floorToHalfHour(earliestHistTime) up to lastRecTime inclusive,
+   step = 30 minutes. If not enough history points, will still return at least one element.
+*/
+function buildPredictedSeries(history){
+  const pts = preprocessHistory(history);
+  if(pts.length === 0) return [];
+
+  const lastRec = pts[pts.length - 1];
+  const lastRecTime = lastRec.t;
+  const lastRecViews = lastRec.v;
+
+  const slopeInfo = computeAdvancedSlope(history);
+  const slopePerMin = slopeInfo.slope_final;
+
+  const earliestTime = pts[0].t;
+  let t0 = floorToHalfHour(earliestTime);
+  // ensure t0 is not after lastRecTime
+  if(t0.getTime() > lastRecTime.getTime()) t0 = floorToHalfHour(lastRecTime);
+
+  const series = [];
+  const thirtyMin = 30 * 60 * 1000;
+  for(let t = new Date(t0.getTime()); t.getTime() <= lastRecTime.getTime(); t = new Date(t.getTime() + thirtyMin)){
+    const deltaMin = (t.getTime() - lastRecTime.getTime()) / 60000;
+    let pred = Math.round(lastRecViews + slopePerMin * deltaMin);
+    if(pred < 0) pred = 0;
+    series.push({ t: new Date(t.getTime()), v: pred });
+    // safety cap
+    if(series.length > 2000) break;
+  }
+  // ensure at least lastRecTime entry exists (if loop skipped due to t0 > lastRecTime)
+  if(series.length === 0){
+    series.push({ t: new Date(lastRecTime.getTime()), v: lastRecViews });
+  }
+  return series;
+}
+
+/* --- 新 calcDelta: days (number) -> return last - startValue according to rules:
+     1) compute targetTick = floorToHalfHour(lastRecTime - days)
+     2) if history contains an entry whose floorToHalfHour(entry.time) == targetTick -> use that entry.views
+     3) else build predicted series and:
+         - if predicted series contains targetTick -> use that predicted value
+         - else use predicted series' earliest value
 */
 function calcDelta(history, days){
-  if(!history || history.length===0) return 0;
-  const lastRec = lastHistoryEntry(history);
-  const lastDate = lastRec ? (lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null)) : null;
-  if(!lastDate) return 0;
+  if(!history || history.length === 0) return 0;
 
-  // 7日前（days日前）のターゲット時刻（同じ時刻）
-  const startDate = new Date(lastDate.getTime() - days * 24 * 60 * 60 * 1000);
+  // normalize history to points
+  const pts = preprocessHistory(history);
+  if(pts.length === 0) return 0;
 
-  // 探す基準は「分単位で一致」させる（同じ YYYY-MM-DD HH:MM であれば OK）
-  const targetMin = Math.floor(startDate.getTime() / 60000);
+  const lastRec = pts[pts.length - 1];
+  const lastRecTime = lastRec.t;
+  const lastViews = lastRec.v;
 
-  let matched = null;
-  for(const rec of history){
-    const t = rec.datetime ? new Date(rec.datetime) : (rec.date ? new Date(rec.date + 'T00:00:00.000Z') : null);
+  // compute target tick (floor to half-hour)
+  const targetDate = new Date(lastRecTime.getTime() - days * 24 * 60 * 60 * 1000);
+  const targetTick = floorToHalfHour(targetDate);
+
+  // 1) check if any actual history entry matches that half-hour slot
+  for(const h of history){
+    const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
     if(!t) continue;
-    const recMin = Math.floor(t.getTime() / 60000);
-    if(recMin === targetMin){
-      matched = rec;
-      break;
+    const slot = floorToHalfHour(t);
+    if(slot.getTime() === targetTick.getTime()){
+      // exact half-hour record found -> use measured views
+      const startViews = h.views || 0;
+      return Math.max(0, lastViews - startViews);
     }
   }
 
-  const startRec = matched ? matched : history[0]; // 存在しなければ最も古いデータを使う
-  const startViews = startRec.views || 0;
-  const lastViews = lastRec.views || 0;
-  return lastViews - startViews;
+  // 2) build predicted series (from earliest history half-hour to lastRecTime)
+  const predSeries = buildPredictedSeries(history);
+  if(predSeries.length === 0){
+    // fallback to simple behavior: use earliest recorded history views
+    const earliest = pts[0];
+    const startViews = earliest ? earliest.v : 0;
+    return Math.max(0, lastViews - startViews);
+  }
+
+  // try to find predicted entry exactly at targetTick
+  let matched = predSeries.find(p => p.t.getTime() === targetTick.getTime());
+  if(matched){
+    return Math.max(0, lastViews - matched.v);
+  }
+
+  // if no exact targetTick in predicted series, check whether targetTick is earlier than earliest predicted tick
+  const earliestPred = predSeries[0];
+  if(targetTick.getTime() < earliestPred.t.getTime()){
+    // use earliest predicted value as requested
+    return Math.max(0, lastViews - earliestPred.v);
+  }
+
+  // if targetTick is after latest predicted tick (shouldn't happen because predicted series goes to lastRecTime),
+  // fallback to nearest earlier predicted
+  // find closest before
+  let candidate = null;
+  for(const p of predSeries){
+    if(p.t.getTime() <= targetTick.getTime()) candidate = p;
+    else break;
+  }
+  if(candidate){
+    return Math.max(0, lastViews - candidate.v);
+  }
+
+  // final fallback: earliest recorded
+  const earliestRec = pts[0];
+  const startViews = earliestRec ? earliestRec.v : 0;
+  return Math.max(0, lastViews - startViews);
 }
 
 /* --- render ranking & trend picks --- */
@@ -697,229 +997,6 @@ function selectVideo(v){
   drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
-/* --- Prediction utilities (improved) --- */
-
-/* ceil time to next half-hour mark (if already on exact half hour, keep it) */
-function ceilToHalfHour(date){
-  const d = new Date(date);
-  d.setSeconds(0,0);
-  const m = d.getMinutes();
-  if(m === 0 || m === 30) return d;
-  if(m < 30){
-    d.setMinutes(30);
-    return d;
-  }
-  // m > 30
-  d.setMinutes(0);
-  d.setHours(d.getHours() + 1);
-  return d;
-}
-
-/* floor time to previous half-hour mark (if already exact, keep it) */
-function floorToHalfHour(date){
-  const d = new Date(date);
-  d.setSeconds(0,0);
-  const m = d.getMinutes();
-  if(m === 0 || m === 30) return d;
-  if(m < 30){
-    d.setMinutes(0);
-    return d;
-  }
-  d.setMinutes(30);
-  return d;
-}
-
-/* preprocess history into sorted points [{t:Date, tsMin:number, v:number}] */
-function preprocessHistory(history){
-  if(!Array.isArray(history)) return [];
-  const pts = history.map(h=>{
-    const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
-    if(!t) return null;
-    return { t: t, tsMin: t.getTime() / 60000, v: (h.views || 0) };
-  }).filter(Boolean);
-  pts.sort((a,b)=> a.t.getTime() - b.t.getTime());
-  // remove duplicates with same minute (keep last)
-  const unique = [];
-  for(const p of pts){
-    const last = unique[unique.length-1];
-    if(last && Math.abs(last.tsMin - p.tsMin) < 1e-6){
-      unique[unique.length-1] = p;
-    } else unique.push(p);
-  }
-  return unique;
-}
-
-/* compute median of array */
-function median(arr){
-  if(!arr || arr.length===0) return 0;
-  const s = arr.slice().sort((a,b)=>a-b);
-  const m = Math.floor(s.length/2);
-  if(s.length % 2 === 1) return s[m];
-  return (s[m-1] + s[m]) / 2;
-}
-
-/* compute MAD (median absolute deviation) */
-function mad(arr){
-  if(!arr || arr.length===0) return 0;
-  const med = median(arr);
-  const abs = arr.map(x => Math.abs(x - med));
-  return median(abs);
-}
-
-/* compute EMA for array of rates (most recent last). alpha between 0..1 */
-function emaOfRates(rates, alpha){
-  if(!rates || rates.length===0) return 0;
-  let s = rates[0];
-  for(let i=1;i<rates.length;i++){
-    s = alpha * rates[i] + (1 - alpha) * s;
-  }
-  return s;
-}
-
-/* robust weighted linear regression + EMA blending
-   Returns object:
-   { slope_reg: (views/min), slope_ema: (views/min), slope_final, r2, nPoints, medRate }
-*/
-function computeAdvancedSlope(history){
-  const pts = preprocessHistory(history);
-  const n = pts.length;
-  if(n < 2) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
-
-  // compute per-segment instantaneous rates (views per minute)
-  const segRates = [];
-  for(let i=0;i<pts.length-1;i++){
-    const dv = pts[i+1].v - pts[i].v;
-    const dt = pts[i+1].tsMin - pts[i].tsMin;
-    if(dt <= 0) continue;
-    segRates.push(dv / dt);
-  }
-  if(segRates.length === 0) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
-
-  const medRate = median(segRates);
-  const madRate = mad(segRates) || 1e-6; // avoid zero
-
-  // filter out segments that are extreme outliers ( > med + k * MAD )
-  const OUTLIER_K = 6; // strict threshold
-  const goodIdx = [];
-  for(let i=0;i<pts.length;i++){
-    // keep points whose adjacent segment rates are not extreme outliers
-    // we'll check the segment to next point (if exists) and segment from prev (if exists)
-    let ok = true;
-    if(i < pts.length - 1){
-      const r = (pts[i+1].v - pts[i].v) / Math.max(0.0001, (pts[i+1].tsMin - pts[i].tsMin));
-      if(Math.abs(r - medRate) > OUTLIER_K * madRate) ok = false;
-    }
-    if(i > 0){
-      const r2 = (pts[i].v - pts[i-1].v) / Math.max(0.0001, (pts[i].tsMin - pts[i-1].tsMin));
-      if(Math.abs(r2 - medRate) > OUTLIER_K * madRate) ok = false;
-    }
-    if(ok) goodIdx.push(i);
-  }
-  // build filtered points
-  const goodPts = goodIdx.map(i => pts[i]);
-  const m = goodPts.length;
-  if(m < 2){
-    // if filtering removed too much, use original pts
-    goodPts.splice(0, goodPts.length, ...pts);
-  }
-
-  // Weighted linear regression on (x: minutes since reference, y: views)
-  // reference time: last point time (so x <= 0 for older points). To avoid huge numbers, use delta minutes relative to last point.
-  const last = goodPts[goodPts.length - 1];
-  const refTs = last.tsMin;
-  const xs = goodPts.map(p => p.tsMin - refTs); // negative or zero
-  const ys = goodPts.map(p => p.v);
-
-  // weights: exponential decay by age (minutes). half-life parameter tuned to emphasize recent data.
-  const HALF_LIFE_MIN = 180; // 3 hours half-life (can be tuned)
-  const ln2 = Math.log(2);
-  const ws = xs.map(x => Math.exp(- (Math.abs(x) / HALF_LIFE_MIN) * ln2 ));
-
-  // compute weighted sums
-  let S=0, Sx=0, Sy=0, Sxx=0, Sxy=0;
-  for(let i=0;i<xs.length;i++){
-    const w = ws[i];
-    const x = xs[i];
-    const y = ys[i];
-    S += w;
-    Sx += w * x;
-    Sy += w * y;
-    Sxx += w * x * x;
-    Sxy += w * x * y;
-  }
-
-  const denom = (S * Sxx - Sx * Sx);
-  let slope_reg = 0;
-  let intercept = 0;
-  if(Math.abs(denom) > 1e-9){
-    slope_reg = (S * Sxy - Sx * Sy) / denom; // units: views per minute (because x is minutes)
-    intercept = (Sy - slope_reg * Sx) / S;
-  } else {
-    // fallback: use simple average rate
-    const totalDv = ys[ys.length-1] - ys[0];
-    const totalDt = (goodPts[goodPts.length-1].tsMin - goodPts[0].tsMin) || 1;
-    slope_reg = totalDv / totalDt;
-    intercept = ys[ys.length-1] - slope_reg * xs[xs.length-1];
-  }
-
-  // compute weighted R^2 as measure of fit quality
-  // weighted residual sum of squares
-  let SSres = 0;
-  let SStot = 0;
-  const yWeightedMean = Sy / S;
-  for(let i=0;i<xs.length;i++){
-    const w = ws[i];
-    const x = xs[i];
-    const y = ys[i];
-    const yhat = intercept + slope_reg * x;
-    SSres += w * Math.pow(y - yhat, 2);
-    SStot += w * Math.pow(y - yWeightedMean, 2);
-  }
-  let r2 = 0;
-  if(SStot > 1e-9) r2 = Math.max(0, 1 - (SSres / SStot));
-  // ensure numeric safety
-  if(!isFinite(r2) || r2 < 0) r2 = 0;
-
-  // EMA of instantaneous segment rates to capture recent rapid changes
-  // use alpha such that recent segments dominate (alpha ~ 0.5)
-  const instRates = [];
-  for(let i=0;i<pts.length-1;i++){
-    const dv = pts[i+1].v - pts[i].v;
-    const dt = pts[i+1].tsMin - pts[i].tsMin;
-    if(dt <= 0) continue;
-    instRates.push(dv / dt);
-  }
-  // alpha choice: prefer recent segments. If many segments, slightly smaller alpha.
-  const alpha = 0.5;
-  const slope_ema = emaOfRates(instRates, alpha);
-
-  // confidence: combine R2 and number of good points into 0..1
-  const nEff = Math.min(6, xs.length); // use up to 6 points for scaling
-  let conf = r2 * (nEff / 6);
-  // slightly boost if r2 is very high
-  if(conf < 0) conf = 0;
-  if(conf > 1) conf = 1;
-
-  // final slope: blend regression and EMA using confidence
-  let slope_final = conf * slope_reg + (1 - conf) * slope_ema;
-
-  // sanity caps: no negative slope, and limit to reasonable maximum to avoid crazy jumps
-  if(!isFinite(slope_final) || slope_final < 0) slope_final = Math.max(0, slope_ema, slope_reg, 0);
-  // limit as a multiple of median segment rate (avoid explosion when medRate ~ 0)
-  const maxMultiplier = 10;
-  const cap = Math.max(Math.abs(medRate) * maxMultiplier, 1); // at least 1 view/min cap
-  if(Math.abs(slope_final) > cap) slope_final = Math.sign(slope_final) * cap;
-
-  return {
-    slope_reg,
-    slope_ema,
-    slope_final,
-    r2,
-    nPoints: pts.length,
-    medRate
-  };
-}
-
 /* --- drawChartForSelection (modified to use improved predictor) --- */
 function drawChartForSelection(period){
   if(!currentSelected) return;
@@ -949,8 +1026,9 @@ function drawChartForSelection(period){
     startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   } else {
     // 'all' => use earliest history timestamp if available; otherwise fallback to 30 days
-    const firstRec = hist[0];
-    const firstT = firstRec ? (firstRec.datetime ? new Date(firstRec.datetime) : (firstRec.date ? new Date(firstRec.date + 'T00:00:00.000Z') : null)) : null;
+    const pts = preprocessHistory(hist);
+    const firstRec = pts[0];
+    const firstT = firstRec ? (firstRec.t ? new Date(firstRec.t) : null) : null;
     if(firstT && !isNaN(firstT.getTime())) startTime = new Date(firstT);
     else startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
@@ -958,7 +1036,7 @@ function drawChartForSelection(period){
   // make sure startTime is not after now
   if(startTime > now) startTime = new Date(now.getTime());
 
-  // --- FIX: use floorToHalfHour(startTime) so earlier half-hour (e.g. 18:30) is included ---
+  // use floorToHalfHour(startTime) so earlier half-hour (e.g. 18:30) is included
   let t0 = floorToHalfHour(startTime);
   // If t0 ended up > now (unlikely) floor to previous half hour of now
   if(t0 > now) t0 = floorToHalfHour(now);
