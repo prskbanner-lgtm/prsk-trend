@@ -63,7 +63,7 @@
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     /* trend list */
     .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{Padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
+    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
     /* responsive */
@@ -394,7 +394,11 @@ function findClosestBefore(history, targetDate){
   return candidate;
 }
 
-/* --- 新しい calcDelta 実装（要求どおり: 7/30日前が推定値であればそれを使い、なければ最古の推定値を使う） --- */
+/* --- NEW: prediction-aware delta calculation ---
+   要求に合わせて：
+   - "直近N日増分" は「現在の推定値」 - 「N日前の同時刻（半時刻に丸めた推定値）」を使う
+   - もし N日前の推定値（該当半時刻）がデータ範囲より古く存在しない場合は、1番古い推定値（最も古い推定半時刻）の値を使う
+*/
 
 /* ceil time to next half-hour mark (if already on exact half hour, keep it) */
 function ceilToHalfHour(date){
@@ -617,115 +621,54 @@ function computeAdvancedSlope(history){
   };
 }
 
-/* --- Build predicted series anchored at last recorded point.
-   Returns array of { t: Date, v: Number } starting from floorToHalfHour(earliestHistTime) up to lastRecTime inclusive,
-   step = 30 minutes. If not enough history points, will still return at least one element.
+/* --- NEW: predict value at arbitrary Date (rounded to half-hour tick semantics as used in chart)
+   - targetDate -> rounded down to previous half-hour (floorToHalfHour) as the "comparison tick"
+   - If targetTick is earlier than earliest history point's half-hour, use earliest history half-hour instead.
+   - predictions are linear extrapolation from last recorded point using computeAdvancedSlope().slope_final
 */
-function buildPredictedSeries(history){
-  const pts = preprocessHistory(history);
-  if(pts.length === 0) return [];
-
-  const lastRec = pts[pts.length - 1];
-  const lastRecTime = lastRec.t;
-  const lastRecViews = lastRec.v;
-
-  const slopeInfo = computeAdvancedSlope(history);
-  const slopePerMin = slopeInfo.slope_final;
-
-  const earliestTime = pts[0].t;
-  let t0 = floorToHalfHour(earliestTime);
-  // ensure t0 is not after lastRecTime
-  if(t0.getTime() > lastRecTime.getTime()) t0 = floorToHalfHour(lastRecTime);
-
-  const series = [];
-  const thirtyMin = 30 * 60 * 1000;
-  for(let t = new Date(t0.getTime()); t.getTime() <= lastRecTime.getTime(); t = new Date(t.getTime() + thirtyMin)){
-    const deltaMin = (t.getTime() - lastRecTime.getTime()) / 60000;
-    let pred = Math.round(lastRecViews + slopePerMin * deltaMin);
-    if(pred < 0) pred = 0;
-    series.push({ t: new Date(t.getTime()), v: pred });
-    // safety cap
-    if(series.length > 2000) break;
-  }
-  // ensure at least lastRecTime entry exists (if loop skipped due to t0 > lastRecTime)
-  if(series.length === 0){
-    series.push({ t: new Date(lastRecTime.getTime()), v: lastRecViews });
-  }
-  return series;
-}
-
-/* --- 新 calcDelta: days (number) -> return last - startValue according to rules:
-     1) compute targetTick = floorToHalfHour(lastRecTime - days)
-     2) if history contains an entry whose floorToHalfHour(entry.time) == targetTick -> use that entry.views
-     3) else build predicted series and:
-         - if predicted series contains targetTick -> use that predicted value
-         - else use predicted series' earliest value
-*/
-function calcDelta(history, days){
-  if(!history || history.length === 0) return 0;
-
-  // normalize history to points
+function predictValueAt(history, targetDate){
+  if(!Array.isArray(history) || history.length === 0) return 0;
   const pts = preprocessHistory(history);
   if(pts.length === 0) return 0;
 
   const lastRec = pts[pts.length - 1];
   const lastRecTime = lastRec.t;
-  const lastViews = lastRec.v;
+  const lastRecViews = lastRec.v;
 
-  // compute target tick (floor to half-hour)
-  const targetDate = new Date(lastRecTime.getTime() - days * 24 * 60 * 60 * 1000);
-  const targetTick = floorToHalfHour(targetDate);
+  // get slope (views per minute)
+  const slopeInfo = computeAdvancedSlope(history);
+  const slopePerMin = slopeInfo.slope_final || 0;
 
-  // 1) check if any actual history entry matches that half-hour slot
-  for(const h of history){
-    const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
-    if(!t) continue;
-    const slot = floorToHalfHour(t);
-    if(slot.getTime() === targetTick.getTime()){
-      // exact half-hour record found -> use measured views
-      const startViews = h.views || 0;
-      return Math.max(0, lastViews - startViews);
-    }
+  // target tick = floor to half hour (user example expects 19:35 -> 19:30)
+  let targetTick = floorToHalfHour(new Date(targetDate));
+  // earliest tick based on earliest history point (floor to half hour)
+  const firstRec = pts[0];
+  const firstTick = floorToHalfHour(firstRec.t);
+
+  // if requested targetTick is before earliest tick, use earliest tick instead (per user request)
+  if(targetTick.getTime() < firstTick.getTime()){
+    targetTick = new Date(firstTick.getTime());
   }
 
-  // 2) build predicted series (from earliest history half-hour to lastRecTime)
-  const predSeries = buildPredictedSeries(history);
-  if(predSeries.length === 0){
-    // fallback to simple behavior: use earliest recorded history views
-    const earliest = pts[0];
-    const startViews = earliest ? earliest.v : 0;
-    return Math.max(0, lastViews - startViews);
-  }
+  const deltaMin = (targetTick.getTime() - lastRecTime.getTime()) / 60000;
+  let pred = Math.round(lastRecViews + slopePerMin * deltaMin);
+  if(pred < 0) pred = 0;
+  return pred;
+}
 
-  // try to find predicted entry exactly at targetTick
-  let matched = predSeries.find(p => p.t.getTime() === targetTick.getTime());
-  if(matched){
-    return Math.max(0, lastViews - matched.v);
-  }
-
-  // if no exact targetTick in predicted series, check whether targetTick is earlier than earliest predicted tick
-  const earliestPred = predSeries[0];
-  if(targetTick.getTime() < earliestPred.t.getTime()){
-    // use earliest predicted value as requested
-    return Math.max(0, lastViews - earliestPred.v);
-  }
-
-  // if targetTick is after latest predicted tick (shouldn't happen because predicted series goes to lastRecTime),
-  // fallback to nearest earlier predicted
-  // find closest before
-  let candidate = null;
-  for(const p of predSeries){
-    if(p.t.getTime() <= targetTick.getTime()) candidate = p;
-    else break;
-  }
-  if(candidate){
-    return Math.max(0, lastViews - candidate.v);
-  }
-
-  // final fallback: earliest recorded
-  const earliestRec = pts[0];
-  const startViews = earliestRec ? earliestRec.v : 0;
-  return Math.max(0, lastViews - startViews);
+/* --- REPLACE calcDelta to follow requested behavior:
+     - compute predicted current value (at now)
+     - compute predicted value at now - days (rounded down to half-hour)
+     - if that target tick is older than available history, use earliest predicted tick instead
+     - return difference (predNow - predTarget)
+*/
+function calcDelta(history, days){
+  if(!Array.isArray(history) || history.length === 0) return 0;
+  const now = new Date();
+  const targetDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const predNow = predictValueAt(history, now);
+  const predTarget = predictValueAt(history, targetDate);
+  return Math.max(0, predNow - predTarget);
 }
 
 /* --- render ranking & trend picks --- */
@@ -946,7 +889,11 @@ function selectVideo(v){
   // show the latest API-fetched value (should be the last history entry's views)
   const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
   const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
-  document.getElementById('selectedViews').innerText = fmt(lastViews) + ' 回';
+  // previously we showed lastViews; per user request show estimated current value
+  const estNow = predictValueAt(currentSelected.history || [], new Date());
+  document.getElementById('selectedViews').innerText = fmt(estNow) + ' 回';
+
+  // show deltas using prediction-aware calcDelta
   document.getElementById('viewDelta7').innerText = fmt(calcDelta(currentSelected.history,7)) + ' 回';
   document.getElementById('viewDelta30').innerText = fmt(calcDelta(currentSelected.history,30)) + ' 回';
   document.getElementById('publishDate').innerText = currentSelected.published || '—';
@@ -1026,9 +973,8 @@ function drawChartForSelection(period){
     startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   } else {
     // 'all' => use earliest history timestamp if available; otherwise fallback to 30 days
-    const pts = preprocessHistory(hist);
-    const firstRec = pts[0];
-    const firstT = firstRec ? (firstRec.t ? new Date(firstRec.t) : null) : null;
+    const firstRec = hist[0];
+    const firstT = firstRec ? (firstRec.datetime ? new Date(firstRec.datetime) : (firstRec.date ? new Date(firstRec.date + 'T00:00:00.000Z') : null)) : null;
     if(firstT && !isNaN(firstT.getTime())) startTime = new Date(firstT);
     else startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
@@ -1036,7 +982,7 @@ function drawChartForSelection(period){
   // make sure startTime is not after now
   if(startTime > now) startTime = new Date(now.getTime());
 
-  // use floorToHalfHour(startTime) so earlier half-hour (e.g. 18:30) is included
+  // use floorToHalfHour(startTime) to include the earlier half-hour tick (fix reported issue)
   let t0 = floorToHalfHour(startTime);
   // If t0 ended up > now (unlikely) floor to previous half hour of now
   if(t0 > now) t0 = floorToHalfHour(now);
@@ -1059,9 +1005,7 @@ function drawChartForSelection(period){
   const timesFull = [];
 
   for(const t of ticks){
-    const deltaMin = (t.getTime() - lastRecTime.getTime()) / 60000; // can be negative if tick before lastRecTime
-    let pred = Math.round(lastRecViews + slopePerMin * deltaMin);
-    if(pred < 0) pred = 0;
+    const pred = predictValueAt(hist, t);
     labels.push(formatLabelForTick(t, period));
     data.push(pred);
     timesFull.push(t.toLocaleString());
@@ -1140,9 +1084,16 @@ function drawChartForSelection(period){
     });
   }
 
-  // Ensure latest API value is shown in the metric after (re)draw
+  // Ensure metrics reflect predicted current value (per user request)
+  const estNow = predictValueAt(hist, new Date());
   const selViews = document.getElementById('selectedViews');
-  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastRecViews)} 回`;
+  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(estNow)} 回`;
+  const vd7 = calcDelta(hist, 7);
+  const vd30 = calcDelta(hist, 30);
+  const el7 = document.getElementById('viewDelta7');
+  if(el7) el7.innerText = `${Intl.NumberFormat().format(vd7)} 回`;
+  const el30 = document.getElementById('viewDelta30');
+  if(el30) el30.innerText = `${Intl.NumberFormat().format(vd30)} 回`;
 }
 
 /* helper to generate concise labels (for x-axis)
@@ -1183,6 +1134,11 @@ document.addEventListener('click', function(evt){
       const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
       const selViews = document.getElementById('selectedViews');
       if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
+      // also update deltas to reflect recorded last value differences if desired; but keep prediction-based display consistent
+      const el7 = document.getElementById('viewDelta7');
+      if(el7) el7.innerText = `${Intl.NumberFormat().format(calcDelta(currentSelected.history,7))} 回`;
+      const el30 = document.getElementById('viewDelta30');
+      if(el30) el30.innerText = `${Intl.NumberFormat().format(calcDelta(currentSelected.history,30))} 回`;
     }
   }
 });
