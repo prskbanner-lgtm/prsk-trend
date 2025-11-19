@@ -55,7 +55,7 @@
     .chart-area{height:320px;}
     .tabs{display:flex;gap:8px;margin-bottom:12px;}
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
-    .tabs button.active{Background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
+    .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
     .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto; display:flex;flex-direction:column;justify-content:center;}
     .metric .label{font-size:12px;color:var(--muted)}
@@ -677,6 +677,53 @@ function selectVideo(v){
   drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
+/* --- 推定ロジック helpers ---
+   - 直近 N 点から views/分 を算出（単純な平均傾き）
+   - 範囲内の毎時00分/30分に推定点を生成（既存の実測点が近接していればそれを優先）
+*/
+function estimateRatePerMinute(points, considerCount = 6){
+  // points: array of {t: Date, v: number} sorted ascending
+  if(!points || points.length < 2) return 0;
+  const n = Math.min(considerCount, points.length);
+  const recent = points.slice(points.length - n);
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  const deltaViews = (last.v || 0) - (first.v || 0);
+  const deltaMinutes = (last.t.getTime() - first.t.getTime()) / 60000;
+  if(!deltaMinutes || !isFinite(deltaMinutes)) return 0;
+  return deltaViews / deltaMinutes; // views per minute (can be fractional)
+}
+
+function generateHourlyHalfHourTimes(startDate, endDate){
+  // produce Date objects for every hh:00 and hh:30 between startDate and endDate inclusive
+  const out = [];
+  if(!startDate || !endDate || startDate.getTime() > endDate.getTime()) return out;
+  // normalize to the nearest earlier half-hour
+  const cur = new Date(startDate);
+  cur.setSeconds(0,0);
+  const m = cur.getMinutes();
+  if(m < 30){
+    cur.setMinutes(0);
+  } else {
+    cur.setMinutes(30);
+  }
+  // ensure cur <= startDate
+  if(cur.getTime() > startDate.getTime()){
+    // step back one half-hour
+    cur.setMinutes(cur.getMinutes() - 30);
+  }
+  while(cur.getTime() <= endDate.getTime()){
+    out.push(new Date(cur));
+    cur.setMinutes(cur.getMinutes() + 30);
+  }
+  return out;
+}
+
+/* --- drawChartForSelection 改修 ---
+   - 履歴の実測点に加え、表示範囲内の毎時00分/30分の推測点を生成してプロット
+   - 推測点は tooltip で "(推測)" と明示
+   - ラベルは "YYYY-MM-DD HH:mm" 形式（時間あり）に変更
+*/
 function drawChartForSelection(period){
   if(!currentSelected) return;
   const hist = currentSelected.history || [];
@@ -689,7 +736,7 @@ function drawChartForSelection(period){
   const pts = hist.map(h => {
     const origIso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
     const ts = origIso ? new Date(origIso) : null;
-    return ts ? { t: ts, v: (h.views || 0), orig: origIso } : null;
+    return ts ? { t: ts, v: (h.views || 0), orig: origIso, estimated: false } : null;
   }).filter(Boolean);
 
   let points = pts.slice();
@@ -703,19 +750,75 @@ function drawChartForSelection(period){
     points = points.filter(p => p.t >= cutoff);
   }
 
-  // labels: date only (YYYY-MM-DD) for axis ticks
-  const labels = points.map(p => p.t.toISOString().slice(0,10));
-  // data values
-  const data = points.map(p => p.v);
-  // timesFull: display the exact datetime when the views were recorded (use orig if present)
-  const timesFull = points.map(p => {
-    if(p.orig){
-      // show the exact recorded datetime in browser-local format
-      return formatRecordedTime(p.orig);
+  // if after filtering we have no points, handle gracefully
+  if(points.length === 0){
+    if(chart){ chart.destroy(); chart = null; }
+    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+    return;
+  }
+
+  // compute estimated growth rate (views per minute) from recent points
+  const ratePerMin = estimateRatePerMinute(points, 6); // 最近最大6点で計算
+
+  // build inferred times between first and last displayed point
+  const firstTime = points[0].t;
+  const lastTime = points[points.length - 1].t;
+  const inferredTimes = generateHourlyHalfHourTimes(firstTime, lastTime);
+
+  // helper: check if an actual point exists very near a target time (within 30s)
+  function findActualNear(target){
+    for(const p of points){
+      if(Math.abs(p.t.getTime() - target.getTime()) <= 30 * 1000) return p;
     }
-    // fallback: use the point timestamp
+    return null;
+  }
+
+  // produce inferred points
+  const inferred = [];
+  for(const t of inferredTimes){
+    const actual = findActualNear(t);
+    if(actual) continue; // skip if actual exists (prefer measured)
+    // find last actual before t (if none, use first actual)
+    let lastActual = null;
+    for(let i = points.length - 1; i >= 0; i--){
+      if(points[i].t.getTime() <= t.getTime()){
+        lastActual = points[i];
+        break;
+      }
+    }
+    if(!lastActual){
+      lastActual = points[0];
+    }
+    const minutesDiff = (t.getTime() - lastActual.t.getTime()) / 60000;
+    const estValue = Math.max(0, Math.round((lastActual.v || 0) + ratePerMin * minutesDiff));
+    inferred.push({ t: new Date(t), v: estValue, orig: null, estimated: true, baseFrom: lastActual.t.toISOString() });
+  }
+
+  // merge actual + inferred points and sort ascending
+  const merged = points.concat(inferred).sort((a,b)=>a.t - b.t);
+
+  // prepare labels and data arrays; labels will be precise to minute
+  const labels = merged.map(p => {
+    const pad = n => String(n).padStart(2, '0');
+    const d = p.t;
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const dataValues = merged.map(p => p.v);
+  // timesFull: use recorded/orig times if present, otherwise show generated time with "(推測)"
+  const timesFull = merged.map(p => {
+    if(p.orig) return formatRecordedTime(p.orig);
+    if(p.estimated){
+      // label estimated points as 推測 and include baseFrom for transparency
+      const d = p.t;
+      return `${d.toLocaleString()} （推測）`;
+    }
     return formatRecordedTime(p.t.toISOString());
   });
+
+  // per-point styles: make estimated points visually different
+  const pointBackgroundColors = merged.map(p => p.estimated ? 'rgba(120,120,120,0.14)' : hexToRgba(((currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb')), 1));
+  const pointBorderColors = merged.map(p => p.estimated ? 'rgba(80,80,80,0.9)' : ( (currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb') ));
+  const pointRadii = merged.map(p => p.estimated ? 3 : 4);
 
   // choose color: if banner is '-' or missing use unit color; otherwise banner color
   const banner = currentSelected.banner;
@@ -726,9 +829,12 @@ function drawChartForSelection(period){
   if(chart){
     // update existing chart data & styling to reflect latest values without recreating tooltip behavior
     chart.data.labels = labels;
-    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].data = dataValues;
     chart.data.datasets[0].backgroundColor = areaColor;
     chart.data.datasets[0].borderColor = lineColor;
+    chart.data.datasets[0].pointBackgroundColor = pointBackgroundColors;
+    chart.data.datasets[0].pointBorderColor = pointBorderColors;
+    chart.data.datasets[0].pointRadius = pointRadii;
     // attach timesFull for tooltip title (these times represent the time the view count was recorded)
     chart.data.datasets[0].timesFull = timesFull;
     chart.update('none');
@@ -739,12 +845,14 @@ function drawChartForSelection(period){
         labels,
         datasets: [{
           label: currentSelected.title,
-          data,
+          data: dataValues,
           tension:0.2,
           fill:true,
           backgroundColor: areaColor,
           borderColor: lineColor,
-          pointRadius:3,
+          pointRadius: pointRadii,
+          pointBackgroundColor: pointBackgroundColors,
+          pointBorderColor: pointBorderColors,
           // attach times array so tooltip callback can access time including clock (recorded time)
           timesFull: timesFull
         }]
@@ -781,9 +889,16 @@ function drawChartForSelection(period){
                 // fallback to label (date)
                 return chart.data.labels[it.dataIndex] || '';
               },
-              // show views as label
+              // show views as label, and mark 推測
               label: function(context){
-                return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+                const base = `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+                const ds = chart.data.datasets[context.datasetIndex];
+                const idx = context.dataIndex;
+                // if timesFull indicates 推測 (contains '推測'), append marker
+                if(ds && Array.isArray(ds.timesFull) && typeof ds.timesFull[idx] === 'string' && ds.timesFull[idx].includes('（推測）')) {
+                 return base + ' （推測）';
+                }
+                return base;
               }
             }
           }
@@ -859,6 +974,14 @@ function selectDefault(){
 
 /* --- initial load --- */
 loadData();
+
+// --- 追加: クライアント側で data/videos.json を自動再読み込み（20分ごと）
+// サーバ側（GitHub Actions / 他）が 20 分ごとに data を更新する想定で、表示も追従するため。
+const RELOAD_INTERVAL_MINUTES = 20;
+setInterval(() => {
+  loadData();
+}, RELOAD_INTERVAL_MINUTES * 60 * 1000);
+
 </script>
 </body>
 </html>
