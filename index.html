@@ -604,170 +604,6 @@ function renderRankList(){
   });
 }
 
-/* --- Improved prediction utilities --- */
-
-/**
- * Weighted median helper
- */
-function weightedMedian(values, weights) {
-  // values: array, weights: same length
-  const zipped = values.map((v,i)=>({v:v,w:weights[i]})).sort((a,b)=>a.v-b.v);
-  const total = weights.reduce((a,b)=>a+b,0);
-  let cum = 0;
-  for(const z of zipped){
-    cum += z.w;
-    if(cum >= total/2) return z.v;
-  }
-  return zipped.length ? zipped[zipped.length-1].v : 0;
-}
-
-/**
- * Robust weighted linear regression and prediction
- * history: array of { datetime: ISO or date, views: number }
- * targets: array of Date objects for which to predict
- *
- * returns array of predicted values aligned to targets,
- * and additional metadata { slope, intercept, usedPoints, isRobust }
- */
-function robustWeightedLinearPredict(history, targets){
-  if(!Array.isArray(history) || history.length === 0) {
-    return { preds: targets.map(_=>null), meta: { slope:0, intercept:0, usedPoints:0 } };
-  }
-
-  // build points from history (convert to Date)
-  const pts = history.map(h => {
-    const iso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
-    const t = iso ? new Date(iso) : null;
-    return (t && !isNaN(t.getTime())) ? { t, v: (h.views || 0) } : null;
-  }).filter(Boolean);
-
-  if(pts.length === 0){
-    return { preds: targets.map(_=>null), meta: { slope:0, intercept:0, usedPoints:0 } };
-  }
-
-  // limit lookback to recent window: 14 days max to avoid stale seasonality
-  const lastTime = pts[pts.length-1].t;
-  const lookbackMs = 14 * 24 * 3600 * 1000; // 14 days
-  let recentPts = pts.filter(p => (lastTime.getTime() - p.t.getTime()) <= lookbackMs);
-
-  // also cap number of points to, say, 500 for performance
-  if(recentPts.length > 500) recentPts = recentPts.slice(-500);
-
-  // if still <2 points, fallback: use last known value (no growth)
-  if(recentPts.length < 2) {
-    const lastV = recentPts[recentPts.length-1].v || 0;
-    return { preds: targets.map(_=> lastV), meta: { slope: 0, intercept: lastV, usedPoints: recentPts.length } };
-  }
-
-  // compute x as minutes relative to lastTime (so last point x=0 or near 0)
-  const xs = recentPts.map(p => (p.t.getTime() - lastTime.getTime()) / 60000.0); // negative or zero
-  const ys = recentPts.map(p => p.v);
-
-  // weights: exponential decay by age (half-life = 60 minutes)
-  const halfLifeMinutes = 60;
-  const lambda = Math.log(2) / halfLifeMinutes; // decay rate per minute
-  const weights = recentPts.map((p, i) => {
-    const ageMin = (lastTime.getTime() - recentPts[i].t.getTime()) / 60000.0;
-    return Math.exp(-lambda * ageMin);
-  });
-
-  function weightedLinearFit(xs, ys, weights){
-    const W = weights.reduce((a,b)=>a+b,0);
-    if(W <= 0) return null;
-    const xw = xs.reduce((s,xi,i)=> s + weights[i]*xi, 0) / W;
-    const yw = ys.reduce((s,yi,i)=> s + weights[i]*yi, 0) / W;
-    let num = 0, den = 0;
-    for(let i=0;i<xs.length;i++){
-      const dx = xs[i] - xw;
-      const dy = ys[i] - yw;
-      num += weights[i] * dx * dy;
-      den += weights[i] * dx * dx;
-    }
-    const slope = den === 0 ? 0 : num / den; // views per minute
-    const intercept = yw - slope * xw;
-    return { slope, intercept };
-  }
-
-  // initial fit
-  let fit = weightedLinearFit(xs, ys, weights);
-  if(!fit) {
-    const lastV = ys[ys.length-1];
-    return { preds: targets.map(_=> lastV), meta: { slope: 0, intercept: lastV, usedPoints: recentPts.length } };
-  }
-
-  // compute residuals and MAD, then remove outliers beyond threshold and refit
-  const predsInitial = xs.map(x => fit.intercept + fit.slope * x);
-  const residuals = ys.map((y,i)=> y - predsInitial[i]);
-  const absRes = residuals.map(r => Math.abs(r));
-  // MAD (median absolute deviation) robust std estimate
-  const medRes = weightedMedian(absRes, weights);
-  const mad = medRes;
-  // scale factor 1.4826 => approx std for normal distribution
-  const sigmaEst = mad * 1.4826;
-  // remove points with |residual| > k * sigmaEst (k=3) but only if sigmaEst > 0
-  let filteredIdx = [];
-  if(sigmaEst > 0){
-    for(let i=0;i<residuals.length;i++){
-      if(Math.abs(residuals[i]) <= 3 * sigmaEst) filteredIdx.push(i);
-    }
-  } else {
-    // nothing to filter if no variation
-    filteredIdx = recentPts.map((_,i)=>i);
-  }
-
-  // if filtered too aggressively (less than 2 points), keep more points (use original)
-  if(filteredIdx.length < 2) filteredIdx = recentPts.map((_,i)=>i);
-
-  // prepare filtered arrays
-  const xsF = filteredIdx.map(i=>xs[i]);
-  const ysF = filteredIdx.map(i=>ys[i]);
-  const wsF = filteredIdx.map(i=>weights[i]);
-
-  // refit on filtered data
-  const fitRobust = weightedLinearFit(xsF, ysF, wsF) || fit;
-
-  // ensure slope non-negative (views cannot decrease). If slope negative but small, set to 0.
-  let slope = fitRobust.slope;
-  if(slope < 0) slope = 0;
-
-  // compute a baseline recent median per-minute rate to prevent absurdly large slopes
-  // derive adjacent diffs over short windows (last up to 6 hours)
-  const sixHoursMs = 6 * 3600 * 1000;
-  const shortPts = recentPts.filter(p => lastTime.getTime() - p.t.getTime() <= sixHoursMs);
-  const shortRates = [];
-  for(let i=1;i<shortPts.length;i++){
-    const dv = (shortPts[i].v - shortPts[i-1].v);
-    const dtMin = (shortPts[i].t.getTime() - shortPts[i-1].t.getTime()) / 60000.0;
-    if(dtMin > 0) shortRates.push(dv / dtMin);
-  }
-  const medianShortRate = shortRates.length ? weightedMedian(shortRates, shortRates.map(_=>1)) : (slope || 0);
-  // set upper cap for slope: max(medianShortRate*20, medianShortRate+1) but at least slope
-  const upperCap = Math.max(Math.abs(medianShortRate) * 20, Math.abs(medianShortRate) + 1, slope);
-  if(slope > upperCap) slope = upperCap;
-
-  // intercept: compute predicted value at x=0 (lastTime)
-  // Since xs are relative to lastTime, x=0 corresponds to lastTime; compute intercept accordingly
-  // Recompute intercept via weighted mean to be stable
-  const Wf = wsF.reduce((a,b)=>a+b,0);
-  const xwF = xsF.reduce((s,xi,i)=> s + wsF[i]*xi, 0) / Wf;
-  const ywF = ysF.reduce((s,yi,i)=> s + wsF[i]*yi, 0) / Wf;
-  const intercept = ywF - slope * xwF;
-
-  // produce preds for targets
-  const preds = targets.map(tgt => {
-    const dMin = (tgt.getTime() - lastTime.getTime()) / 60000.0; // could be positive
-    let yPred = intercept + slope * dMin;
-    // enforce not less than last observed value
-    const lastObs = ys[ys.length-1];
-    if(yPred < lastObs) yPred = lastObs;
-    // avoid tiny negatives
-    yPred = Math.max(0, Math.round(yPred));
-    return yPred;
-  });
-
-  return { preds, meta: { slope, intercept, usedPoints: recentPts.length, filteredPoints: xsF.length } };
-}
-
 /* --- chart & selection --- */
 let currentSelected = null;
 const ctx = document.getElementById('trendChart').getContext('2d');
@@ -837,10 +673,234 @@ function selectVideo(v){
     badgesEl.appendChild(unitBadge);
   }
 
-  // redraw chart using up-to-date history
+  // redraw chart using up-to-date history (but we will display predicted values only)
   drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
+/* --- Prediction utilities (improved) --- */
+
+/* ceil time to next half-hour mark (if already on exact half hour, keep it) */
+function ceilToHalfHour(date){
+  const d = new Date(date);
+  d.setSeconds(0,0);
+  const m = d.getMinutes();
+  if(m === 0 || m === 30) return d;
+  if(m < 30){
+    d.setMinutes(30);
+    return d;
+  }
+  // m > 30
+  d.setMinutes(0);
+  d.setHours(d.getHours() + 1);
+  return d;
+}
+
+/* floor time to previous half-hour mark (if already exact, keep it) */
+function floorToHalfHour(date){
+  const d = new Date(date);
+  d.setSeconds(0,0);
+  const m = d.getMinutes();
+  if(m === 0 || m === 30) return d;
+  if(m < 30){
+    d.setMinutes(0);
+    return d;
+  }
+  d.setMinutes(30);
+  return d;
+}
+
+/* preprocess history into sorted points [{t:Date, tsMin:number, v:number}] */
+function preprocessHistory(history){
+  if(!Array.isArray(history)) return [];
+  const pts = history.map(h=>{
+    const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
+    if(!t) return null;
+    return { t: t, tsMin: t.getTime() / 60000, v: (h.views || 0) };
+  }).filter(Boolean);
+  pts.sort((a,b)=> a.t.getTime() - b.t.getTime());
+  // remove duplicates with same minute (keep last)
+  const unique = [];
+  for(const p of pts){
+    const last = unique[unique.length-1];
+    if(last && Math.abs(last.tsMin - p.tsMin) < 1e-6){
+      unique[unique.length-1] = p;
+    } else unique.push(p);
+  }
+  return unique;
+}
+
+/* compute median of array */
+function median(arr){
+  if(!arr || arr.length===0) return 0;
+  const s = arr.slice().sort((a,b)=>a-b);
+  const m = Math.floor(s.length/2);
+  if(s.length % 2 === 1) return s[m];
+  return (s[m-1] + s[m]) / 2;
+}
+
+/* compute MAD (median absolute deviation) */
+function mad(arr){
+  if(!arr || arr.length===0) return 0;
+  const med = median(arr);
+  const abs = arr.map(x => Math.abs(x - med));
+  return median(abs);
+}
+
+/* compute EMA for array of rates (most recent last). alpha between 0..1 */
+function emaOfRates(rates, alpha){
+  if(!rates || rates.length===0) return 0;
+  let s = rates[0];
+  for(let i=1;i<rates.length;i++){
+    s = alpha * rates[i] + (1 - alpha) * s;
+  }
+  return s;
+}
+
+/* robust weighted linear regression + EMA blending
+   Returns object:
+   { slope_reg: (views/min), slope_ema: (views/min), slope_final, r2, nPoints, medRate }
+*/
+function computeAdvancedSlope(history){
+  const pts = preprocessHistory(history);
+  const n = pts.length;
+  if(n < 2) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+
+  // compute per-segment instantaneous rates (views per minute)
+  const segRates = [];
+  for(let i=0;i<pts.length-1;i++){
+    const dv = pts[i+1].v - pts[i].v;
+    const dt = pts[i+1].tsMin - pts[i].tsMin;
+    if(dt <= 0) continue;
+    segRates.push(dv / dt);
+  }
+  if(segRates.length === 0) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+
+  const medRate = median(segRates);
+  const madRate = mad(segRates) || 1e-6; // avoid zero
+
+  // filter out segments that are extreme outliers ( > med + k * MAD )
+  const OUTLIER_K = 6; // strict threshold
+  const goodIdx = [];
+  for(let i=0;i<pts.length;i++){
+    // keep points whose adjacent segment rates are not extreme outliers
+    // we'll check the segment to next point (if exists) and segment from prev (if exists)
+    let ok = true;
+    if(i < pts.length - 1){
+      const r = (pts[i+1].v - pts[i].v) / Math.max(0.0001, (pts[i+1].tsMin - pts[i].tsMin));
+      if(Math.abs(r - medRate) > OUTLIER_K * madRate) ok = false;
+    }
+    if(i > 0){
+      const r2 = (pts[i].v - pts[i-1].v) / Math.max(0.0001, (pts[i].tsMin - pts[i-1].tsMin));
+      if(Math.abs(r2 - medRate) > OUTLIER_K * madRate) ok = false;
+    }
+    if(ok) goodIdx.push(i);
+  }
+  // build filtered points
+  const goodPts = goodIdx.map(i => pts[i]);
+  const m = goodPts.length;
+  if(m < 2){
+    // if filtering removed too much, use original pts
+    goodPts.splice(0, goodPts.length, ...pts);
+  }
+
+  // Weighted linear regression on (x: minutes since reference, y: views)
+  // reference time: last point time (so x <= 0 for older points). To avoid huge numbers, use delta minutes relative to last point.
+  const last = goodPts[goodPts.length - 1];
+  const refTs = last.tsMin;
+  const xs = goodPts.map(p => p.tsMin - refTs); // negative or zero
+  const ys = goodPts.map(p => p.v);
+
+  // weights: exponential decay by age (minutes). half-life parameter tuned to emphasize recent data.
+  const HALF_LIFE_MIN = 180; // 3 hours half-life (can be tuned)
+  const ln2 = Math.log(2);
+  const ws = xs.map(x => Math.exp(- (Math.abs(x) / HALF_LIFE_MIN) * ln2 ));
+
+  // compute weighted sums
+  let S=0, Sx=0, Sy=0, Sxx=0, Sxy=0;
+  for(let i=0;i<xs.length;i++){
+    const w = ws[i];
+    const x = xs[i];
+    const y = ys[i];
+    S += w;
+    Sx += w * x;
+    Sy += w * y;
+    Sxx += w * x * x;
+    Sxy += w * x * y;
+  }
+
+  const denom = (S * Sxx - Sx * Sx);
+  let slope_reg = 0;
+  let intercept = 0;
+  if(Math.abs(denom) > 1e-9){
+    slope_reg = (S * Sxy - Sx * Sy) / denom; // units: views per minute (because x is minutes)
+    intercept = (Sy - slope_reg * Sx) / S;
+  } else {
+    // fallback: use simple average rate
+    const totalDv = ys[ys.length-1] - ys[0];
+    const totalDt = (goodPts[goodPts.length-1].tsMin - goodPts[0].tsMin) || 1;
+    slope_reg = totalDv / totalDt;
+    intercept = ys[ys.length-1] - slope_reg * xs[xs.length-1];
+  }
+
+  // compute weighted R^2 as measure of fit quality
+  // weighted residual sum of squares
+  let SSres = 0;
+  let SStot = 0;
+  const yWeightedMean = Sy / S;
+  for(let i=0;i<xs.length;i++){
+    const w = ws[i];
+    const x = xs[i];
+    const y = ys[i];
+    const yhat = intercept + slope_reg * x;
+    SSres += w * Math.pow(y - yhat, 2);
+    SStot += w * Math.pow(y - yWeightedMean, 2);
+  }
+  let r2 = 0;
+  if(SStot > 1e-9) r2 = Math.max(0, 1 - (SSres / SStot));
+  // ensure numeric safety
+  if(!isFinite(r2) || r2 < 0) r2 = 0;
+
+  // EMA of instantaneous segment rates to capture recent rapid changes
+  // use alpha such that recent segments dominate (alpha ~ 0.5)
+  const instRates = [];
+  for(let i=0;i<pts.length-1;i++){
+    const dv = pts[i+1].v - pts[i].v;
+    const dt = pts[i+1].tsMin - pts[i].tsMin;
+    if(dt <= 0) continue;
+    instRates.push(dv / dt);
+  }
+  // alpha choice: prefer recent segments. If many segments, slightly smaller alpha.
+  const alpha = 0.5;
+  const slope_ema = emaOfRates(instRates, alpha);
+
+  // confidence: combine R2 and number of good points into 0..1
+  const nEff = Math.min(6, xs.length); // use up to 6 points for scaling
+  let conf = r2 * (nEff / 6);
+  // slightly boost if r2 is very high
+  if(conf < 0) conf = 0;
+  if(conf > 1) conf = 1;
+
+  // final slope: blend regression and EMA using confidence
+  let slope_final = conf * slope_reg + (1 - conf) * slope_ema;
+
+  // sanity caps: no negative slope, and limit to reasonable maximum to avoid crazy jumps
+  if(!isFinite(slope_final) || slope_final < 0) slope_final = Math.max(0, slope_ema, slope_reg, 0);
+  // limit as a multiple of median segment rate (avoid explosion when medRate ~ 0)
+  const maxMultiplier = 10;
+  const cap = Math.max(Math.abs(medRate) * maxMultiplier, 1); // at least 1 view/min cap
+  if(Math.abs(slope_final) > cap) slope_final = Math.sign(slope_final) * cap;
+
+  return {
+    slope_reg,
+    slope_ema,
+    slope_final,
+    r2,
+    nPoints: pts.length,
+    medRate
+  };
+}
+
+/* --- drawChartForSelection (modified to use improved predictor) --- */
 function drawChartForSelection(period){
   if(!currentSelected) return;
   const hist = currentSelected.history || [];
@@ -849,154 +909,95 @@ function drawChartForSelection(period){
     ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
     return;
   }
-  // convert to entries with timestamp, views and original datetime string (if available)
-  const pts = hist.map(h => {
-    const origIso = h.datetime ? h.datetime : (h.date ? (h.date + 'T00:00:00.000Z') : null);
-    const ts = origIso ? new Date(origIso) : null;
-    return ts ? { t: ts, v: (h.views || 0), orig: origIso, isPred: false } : null;
-  }).filter(Boolean);
 
-  let points = pts.slice();
-  if(points.length === 0){
-    if(chart){ chart.destroy(); chart = null; }
-    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
-    return;
-  }
+  // last recorded actual
+  const lastRec = hist[hist.length - 1];
+  const lastRecTime = lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null);
+  const lastRecViews = lastRec.views || 0;
 
-  if(period === '7') {
-    const cutoff = new Date(points[points.length-1].t);
-    cutoff.setUTCDate(cutoff.getUTCDate() - 7);
-    points = points.filter(p => p.t >= cutoff);
-  } else if(period === '30') {
-    const cutoff = new Date(points[points.length-1].t);
-    cutoff.setUTCDate(cutoff.getUTCDate() - 30);
-    points = points.filter(p => p.t >= cutoff);
-  }
+  // advanced slope estimation
+  const slopeInfo = computeAdvancedSlope(hist);
+  const slopePerMin = slopeInfo.slope_final; // views per minute
 
-  // Prepare prediction targets: most recent :00, most recent :30, and now
   const now = new Date();
-  let t00 = new Date(now); t00.setMinutes(0,0,0); if(t00 > now) t00.setHours(t00.getHours() - 1);
-  let t30 = new Date(now); t30.setMinutes(30,0,0); if(t30 > now) t30.setHours(t30.getHours() - 1);
-  const candidateTargets = [t00, t30, now];
-  // unique by ISO
-  const seenIso = new Set();
-  const targets = [];
-  candidateTargets.forEach(tt => { const iso = tt.toISOString(); if(!seenIso.has(iso)) { seenIso.add(iso); targets.push(tt); } });
 
-  // Use robustWeightedLinearPredict to obtain predictions
-  const historyForPredict = points.map(p => ({ datetime: p.orig || p.t.toISOString(), views: p.v }));
-  const { preds, meta } = robustWeightedLinearPredict(historyForPredict, targets);
-
-  // create predicted entries for any target that doesn't exactly match an existing recorded time
-  const lastReal = points[points.length-1];
-  const lastTime = lastReal.t;
-  const lastViews = lastReal.v;
-
-  const predEntries = [];
-  for(let i=0;i<targets.length;i++){
-    const target = targets[i];
-    // skip if an exact recorded time exists
-    const exists = points.some(p => p.t.toISOString() === target.toISOString());
-    if(exists) continue;
-    const predVal = (preds && preds[i] !== null) ? preds[i] : lastViews;
-    predEntries.push({ t: target, v: predVal, orig: target.toISOString(), isPred: true });
+  // determine start time for predictions based on period
+  let startTime = null;
+  if(period === '7'){
+    startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if(period === '30'){
+    startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  } else {
+    // 'all' => use earliest history timestamp if available; otherwise fallback to 30 days
+    const firstRec = hist[0];
+    const firstT = firstRec ? (firstRec.datetime ? new Date(firstRec.datetime) : (firstRec.date ? new Date(firstRec.date + 'T00:00:00.000Z') : null)) : null;
+    if(firstT && !isNaN(firstT.getTime())) startTime = new Date(firstT);
+    else startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  // merge and sort by time
-  const combined = points.concat(predEntries).sort((a,b)=> a.t.getTime() - b.t.getTime());
+  // make sure startTime is not after now
+  if(startTime > now) startTime = new Date(now.getTime());
 
-  // prepare arrays aligned to combined for Chart.js (category axis using ISO strings)
-  const labels = combined.map(p => p.t.toISOString()); // keep full ISO so each point is unique
-  const mainData = combined.map(p => p.isPred ? null : p.v);
-  const predData = combined.map(p => p.isPred ? p.v : null);
+  // we will generate timestamps at each :00 and :30 between startTime (rounded up to half-hour) and now.
+  let t0 = ceilToHalfHour(startTime);
+  // If the ceil pushed beyond now (rare), floor to previous half hour
+  if(t0 > now) t0 = floorToHalfHour(now);
 
-  // timesFull arrays for tooltips: historical entries show recorded local time,
-  // predicted entries show local time with "（推測）" suffix
-  const mainTimesFull = combined.map(p => {
-    if(p.isPred) return '';
-    if(p.orig) return formatRecordedTime(p.orig);
-    return formatRecordedTime(p.t.toISOString());
-  });
-  const predTimesFull = combined.map(p => {
-    if(!p.isPred) return '';
-    return formatRecordedTime(p.t.toISOString()) + ' （推測）';
-  });
+  const ticks = [];
+  const thirtyMin = 30 * 60 * 1000;
+  for(let t = new Date(t0.getTime()); t.getTime() <= now.getTime(); t = new Date(t.getTime() + thirtyMin)){
+    ticks.push(new Date(t.getTime()));
+    // safety maximum of 2000 ticks to avoid insane plotting
+    if(ticks.length > 2000) break;
+  }
+  // ensure current exact time is included as last tick (if not equal to last item)
+  if(ticks.length === 0 || Math.abs(ticks[ticks.length-1].getTime() - now.getTime()) > 1000){
+    ticks.push(new Date(now.getTime()));
+  }
 
-  // choose color: if banner is '-' or missing use unit color; otherwise banner color
+  // compute predicted values: anchor from last recorded point (linear with slopePerMin)
+  const labels = [];
+  const data = [];
+  const timesFull = [];
+
+  for(const t of ticks){
+    const deltaMin = (t.getTime() - lastRecTime.getTime()) / 60000; // can be negative if tick before lastRecTime
+    let pred = Math.round(lastRecViews + slopePerMin * deltaMin);
+    if(pred < 0) pred = 0;
+    labels.push(formatLabelForTick(t, period));
+    data.push(pred);
+    timesFull.push(t.toLocaleString());
+  }
+
+  // choose color: prefer banner color if present, else unit color
   const banner = currentSelected.banner;
   let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb');
   const areaColor = hexToRgba(colorHex, 0.06);
   const lineColor = colorHex;
 
-  // --- create/update chart ---
   if(chart){
-    // update labels & datasets
     chart.data.labels = labels;
-
-    // ensure dataset 0 (history) exists
-    if(!chart.data.datasets[0]) chart.data.datasets[0] = {};
-    chart.data.datasets[0].data = mainData;
+    chart.data.datasets[0].data = data;
     chart.data.datasets[0].backgroundColor = areaColor;
     chart.data.datasets[0].borderColor = lineColor;
-    chart.data.datasets[0].label = currentSelected.title;
-    chart.data.datasets[0].timesFull = mainTimesFull;
-
-    // dataset 1: predicted points (only points, no connecting line)
-    const predDataset = {
-      label: '推測値（00/30/現在）',
-      data: predData,
-      tension:0.2,
-      fill:false,
-      showLine: false,
-      pointRadius:5,
-      pointStyle: 'rectRot',
-      backgroundColor: lineColor,
-      borderColor: lineColor,
-      timesFull: predTimesFull
-    };
-    if(chart.data.datasets.length < 2){
-      chart.data.datasets[1] = predDataset;
-    } else {
-      chart.data.datasets[1].data = predDataset.data;
-      chart.data.datasets[1].pointRadius = predDataset.pointRadius;
-      chart.data.datasets[1].pointStyle = predDataset.pointStyle;
-      chart.data.datasets[1].backgroundColor = predDataset.backgroundColor;
-      chart.data.datasets[1].borderColor = predDataset.borderColor;
-      chart.data.datasets[1].timesFull = predDataset.timesFull;
-      chart.data.datasets[1].label = predDataset.label;
-      chart.data.datasets[1].showLine = predDataset.showLine;
-    }
-
+    chart.data.datasets[0].timesFull = timesFull;
     chart.update('none');
   } else {
     chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels,
-        datasets: [
-          {
-            label: currentSelected.title,
-            data: mainData,
-            tension:0.2,
-            fill:true,
-            backgroundColor: areaColor,
-            borderColor: lineColor,
-            pointRadius:3,
-            timesFull: mainTimesFull
-          },
-          {
-            label: '推測値（00/30/現在）',
-            data: predData,
-            tension:0.2,
-            fill:false,
-            showLine: false,
-            pointRadius:5,
-            pointStyle: 'rectRot',
-            backgroundColor: lineColor,
-            borderColor: lineColor,
-            timesFull: predTimesFull
-          }
-        ]
+        datasets: [{
+          label: currentSelected.title,
+          data,
+          tension:0.2,
+          fill:true,
+          backgroundColor: areaColor,
+          borderColor: lineColor,
+          pointRadius:3,
+          // attach times array so tooltip callback can access time including clock (recorded time)
+          timesFull: timesFull
+        }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
@@ -1021,18 +1022,18 @@ function drawChartForSelection(period){
           legend:{display:false},
           tooltip:{
             callbacks:{
-              // show the exact datetime when the view count was recorded as tooltip title (in local time)
+              // show the exact datetime when the value is predicted as tooltip title (in local time)
               title: function(items){
                 if(!items || !items.length) return '';
                 const it = items[0];
                 const ds = chart.data.datasets[it.datasetIndex];
-                if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
+                if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return '推定: ' + ds.timesFull[it.dataIndex];
                 // fallback to label (date)
                 return chart.data.labels[it.dataIndex] || '';
               },
-              // show views as label
+              // show views as label, marked as 推定
               label: function(context){
-                return `${Intl.NumberFormat().format(context.parsed.y)} 回`;
+                return `推定 ${Intl.NumberFormat().format(context.parsed.y)} 回`;
               }
             }
           }
@@ -1042,10 +1043,35 @@ function drawChartForSelection(period){
   }
 
   // Ensure latest API value is shown in the metric after (re)draw
-  const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
-  const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
   const selViews = document.getElementById('selectedViews');
-  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastViews)} 回`;
+  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(lastRecViews)} 回`;
+}
+
+/* helper to generate concise labels (for x-axis)
+   - if period spans multiple days show "YYYY-MM-DD HH:mm"
+   - if single day show "HH:mm"
+*/
+function formatLabelForTick(date, period){
+  const now = new Date();
+  const daysSpan = (function(){
+    if(period === '7') return 7;
+    if(period === '30') return 30;
+    // for 'all', approximate by realized tick spread
+    return 3;
+  })();
+  if(daysSpan > 1){
+    // show date + time
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    const d = String(date.getDate()).padStart(2,'0');
+    const hh = String(date.getHours()).padStart(2,'0');
+    const mm = String(date.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${d} ${hh}:${mm}`;
+  } else {
+    const hh = String(date.getHours()).padStart(2,'0');
+    const mm = String(date.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }
 }
 
 /* --- clicking outside the chart restores latest API value into the metric --- */
@@ -1108,6 +1134,13 @@ function selectDefault(){
 
 /* --- initial load --- */
 loadData();
+
+// --- Auto-refresh data every 20 minutes (to match API fetch cadence)
+const TWENTY_MIN = 20 * 60 * 1000;
+setInterval(() => {
+  // refresh file from server
+  loadData();
+}, TWENTY_MIN);
 </script>
 </body>
 </html>
