@@ -90,6 +90,81 @@ function extractVideoIdFromUrl(urlStr) {
   // noop placeholder for linter friendliness
 })();
 
+/* --- Server-side forecasting helper ---
+   ブラウザ側と同様のロジックで、既存履歴から "now" における推定再生数を作る関数。
+   失敗時やデータ欠落時にこれを使って予測点を history に追加し、結果ファイルに書き出すことで
+   ブラウザのローカルキャッシュが消えても予測値が残るようにします。
+*/
+function forecastHistoryAppend(prevHistory, nowDate = new Date()) {
+  // prevHistory: array (may be empty). Return a new array (copy) with predicted entry appended when appropriate.
+  const hist = Array.isArray(prevHistory) ? prevHistory.slice() : [];
+  if (hist.length === 0) {
+    // no prior data: can't predict meaningfully, do nothing (could push zero if desired)
+    return hist;
+  }
+
+  // parse last entry date
+  const lastEntry = hist[hist.length - 1];
+  const lastDate = parseHistoryEntryDatetime(lastEntry);
+  if (!lastDate) return hist;
+
+  const now = nowDate;
+  const dtLastMs = now.getTime() - lastDate.getTime();
+
+  // if last was recorded within 30 seconds, consider it up-to-date; do not append duplicate predicted point
+  if (dtLastMs <= 30 * 1000) {
+    // if last entry has no datetime format, still skip
+    return hist;
+  }
+
+  // Look back up to M points (max 5) to estimate rate
+  const M = Math.min(5, hist.length);
+  const window = hist.slice(-M);
+
+  // find first and last parseable points in the window
+  let firstIdx = 0;
+  while (firstIdx < window.length && !parseHistoryEntryDatetime(window[firstIdx])) firstIdx++;
+  if (firstIdx >= window.length) return hist;
+
+  const first = window[firstIdx];
+  const lastWin = window[window.length - 1];
+
+  const tFirst = parseHistoryEntryDatetime(first);
+  const tLastWin = parseHistoryEntryDatetime(lastWin);
+  if (!tFirst || !tLastWin) return hist;
+
+  const vFirst = first.views || 0;
+  const vLastWin = lastWin.views || 0;
+  const secondsWindow = (tLastWin.getTime() - tFirst.getTime()) / 1000;
+
+  let ratePerSec = 0;
+  if (secondsWindow > 0) ratePerSec = (vLastWin - vFirst) / secondsWindow;
+
+  const secondsToNow = (now.getTime() - tLastWin.getTime()) / 1000;
+  let predictedViews = Math.round(vLastWin + ratePerSec * secondsToNow);
+
+  if (!isFinite(predictedViews) || predictedViews < 0) predictedViews = vLastWin;
+  if (predictedViews < vLastWin) predictedViews = vLastWin;
+
+  // fallback small positive assumption if no growth but large time gap
+  if (predictedViews === vLastWin && secondsToNow > 60 * 60) {
+    const extra = Math.max(1, Math.round(secondsToNow / (15 * 60))); // 1 view per 15 minutes baseline
+    predictedViews = vLastWin + extra;
+  }
+
+  const isoNowStr = nowISO(now);
+  // Avoid duplicating if last record already has same ISO (rare)
+  const lastIso = isoFromEntry(lastEntry);
+  if (lastIso === isoNowStr) {
+    // replace last entry with predicted-marked one
+    hist[hist.length - 1] = { datetime: isoNowStr, views: predictedViews, predicted: true };
+  } else {
+    hist.push({ datetime: isoNowStr, views: predictedViews, predicted: true });
+  }
+
+  return trimHistory(hist, 5000);
+}
+
 (async () => {
   try {
     console.log('読み込み: videos_list.json');
@@ -150,10 +225,12 @@ function extractVideoIdFromUrl(urlStr) {
         json = await fetchJson(urlApi);
       } catch (err) {
         console.error('YouTube API 取得エラー:', err.message);
-        // on error: fallback to existing data for this chunk
+        // on error: fallback to existing data for this chunk, but ALSO append server-side predicted entries
         for (const meta of chunk) {
           const prev = existingMap.get(meta.videoId);
           const prevHistory = prev && prev.history ? prev.history.slice() : [];
+          // compute predicted history based on prevHistory and append a predicted point (so prediction is persisted to data/videos.json)
+          const newHistory = prevHistory && prevHistory.length ? forecastHistoryAppend(prevHistory, new Date()) : prevHistory;
           results.push({
             videoId: meta.videoId,
             url: meta.url,
@@ -162,7 +239,7 @@ function extractVideoIdFromUrl(urlStr) {
             published: prev?.published || '',
             banner: meta.banner || prev?.banner || '',
             unit: meta.unit || prev?.unit || '',
-            history: trimHistory(prevHistory)
+            history: trimHistory(newHistory)
           });
         }
         continue;
@@ -216,6 +293,8 @@ function extractVideoIdFromUrl(urlStr) {
       }
     }
 
+    // If no fetch errors occurred, results contain the fresh values.
+    // If some chunks failed, those entries have server-side predicted points appended above.
     const out = { updated_at: new Date().toISOString(), videos: results };
     await fs.writeFile(OUT_PATH, JSON.stringify(out, null, 2), 'utf8');
     console.log('更新完了: data/videos.json を書き出しました。');
