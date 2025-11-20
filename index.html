@@ -2,272 +2,365 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>YouTube 再生数ランキング & トレンド ダッシュボード</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>YouTube 再生数ランキング & トレンド</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root{
-      /* 白背景に合わせた配色 */
-      --bg: #ffffff;
-      --card: #ffffff;
-      --muted: #596274;
-      --text: #111827;
-      --accent:#2563eb;
-      --glass: rgba(15,23,42,0.03);
-      --card-radius:12px;
-      font-family: Inter, system-ui, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-      color: var(--text);
-    }
-    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
-    .wrap{max-width:1200px;margin:28px auto;padding:20px;}
-    /* Header stays mostly the same, but center the search visually */
-    header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px;}
-    header .title{font-size:20px;color:var(--text); font-weight:700;}
-    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-    .card{
-      background:var(--card);
-      border-radius:var(--card-radius);
-      padding:14px;
-      box-shadow: 0 6px 18px rgba(15,23,42,0.06);
-      border: 1px solid rgba(15,23,42,0.04);
-    }
-    /* three-column layout (left: trend, center: main graph, right: ranking)
-       Adjusted so center is a bit narrower and right column (ランキング) is larger.
-       Kept overall structure the same.
-    */
-    .grid{display:grid;grid-template-columns: 240px minmax(220px, 1fr) 360px;gap:16px;align-items:start;}
-    /* column hooks so we can reorder in portrait/landscape */
-    .col-left{order:1;}
-    .col-center{order:2;}
-    .col-right{order:3;}
-
-    select, button, input[type="search"]{
-      background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
-      font-size:13px;
-    }
-    select:focus, input[type="search"]:focus, button:focus{ outline: 2px solid rgba(37,99,235,0.12); outline-offset:2px; }
-    button.primary{background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; font-weight:700; border:none; padding:9px 12px;}
-    .rank-list{display:flex;flex-direction:column;gap:8px; max-height:520px; overflow:auto; padding-right:6px;}
-    .video-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;transition:background .12s, transform .06s}
-    .video-item:hover{background:rgba(37,99,235,0.03); transform: translateY(-2px);}
-    /* thumbnails smaller as requested */
-    .thumb{width:64px;height:40px;border-radius:6px;background:#eee;flex:0 0 64px;object-fit:cover;border:1px solid rgba(15,23,42,0.04);}
-    .meta{flex:1;min-width:0;}
-    .meta .title{font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
-    .meta .sub{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#f1f5f9;color:var(--muted);border:1px solid rgba(15,23,42,0.03)}
-    .badge.clickable{cursor:pointer;}
-    .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
-    .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
-    .big-card{padding:16px;}
-    /* reduced chart area height (was 320px) to make the graph visually smaller */
-    .chart-area{height:220px;}
-    .tabs{display:flex;gap:8px;margin-bottom:12px;}
-    .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
-    .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
-    .top-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .metric{background:linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.01)); padding:8px;border-radius:10px; min-width:120px; border:1px solid rgba(15,23,42,0.04); flex:0 1 auto; display:flex;flex-direction:column;justify-content:center;}
-    .metric .label{font-size:12px;color:var(--muted)}
-    .metric .val{font-size:16px;color:var(--text);font-weight:700}
-    .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
-    /* trend list */
-    .trend-list{display:flex;flex-direction:column;gap:12px;}
-    .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
-    .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
-    .trend-item .val{font-weight:700;color:var(--text);}
-
-    /* ORIENTATION & RESPONSIVE RULES */
-    /* Mobile / narrow screens: single column stack */
-    @media (max-width: 980px){
-      .grid{grid-template-columns: 1fr; gap:12px;}
-      /* reorder for portrait vs landscape further below */
-      .chart-area{height:200px;} /* slightly smaller on narrow screens by default */
-      .thumb{width:100px; height:56px; flex:0 0 100px;}
-      .metric{min-width:100px; font-size:13px;}
+    :root {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --primary: #3b82f6;
+      --border: #e2e8f0;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     }
 
-    /* Portrait mode: トレンド情報 -> グラフ -> ランキング (縦画面) */
-    @media (orientation: portrait){
-      .grid{grid-template-columns: 1fr; gap:12px;}
-      .col-left{order:1;}   /* トレンドを先に */
-      .col-center{order:2;}  /* グラフを次に */
-      .col-right{order:3;}    /* ランキングは最後に */
-      .chart-area{height:180px;} /* portraitではさらに小さく */
-      .rank-list{max-height:420px;}
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
     }
 
-    /* Landscape mode: トレンド情報（上）→ グラフ（左）＋ランキング（右） */
-    @media (orientation: landscape){
-      /* Trend spans full width on the first row, graph and ranking side-by-side below */
-      .grid{
-        grid-template-columns: 1fr 420px;
-        grid-auto-rows: auto;
-        gap:16px;
+    /* Layout Grid */
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      padding: 16px 20px;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 10px;
+      z-index: 50;
+    }
+
+    .brand h1 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
+    .brand .meta { font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .controls input, .controls select, .controls button {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .controls input:focus, .controls select:focus {
+      background: white;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+    .btn-primary {
+      background: var(--primary) !important;
+      color: white !important;
+      border: none !important;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* Main Grid Areas */
+    .dashboard-grid {
+      display: grid;
+      gap: 20px;
+      /* Default Mobile: Stacked */
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "trend"
+        "chart"
+        "rank";
+    }
+
+    .area-trend { grid-area: trend; }
+    .area-chart { grid-area: chart; }
+    .area-rank  { grid-area: rank; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+    }
+    .card-body { padding: 16px; flex: 1; }
+
+    /* Trends */
+    .trend-list { display: flex; flex-direction: column; gap: 12px; }
+    .trend-item {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      transition: transform 0.2s;
+    }
+    .trend-item:hover { transform: translateY(-2px); }
+    .trend-item .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .trend-item .val { font-weight: 700; font-size: 1rem; }
+
+    /* Chart Section */
+    .chart-container { position: relative; height: 300px; width: 100%; }
+    .chart-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric-box {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .metric-box .label { font-size: 0.75rem; color: var(--text-muted); }
+    .metric-box .val { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+
+    .tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 10px; width: fit-content; margin-bottom: 16px; }
+    .tabs button {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tabs button.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    /* Ranking List */
+    .rank-list { display: flex; flex-direction: column; gap: 8px; max-height: 600px; overflow-y: auto; padding-right: 4px; }
+    .video-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+    }
+    .video-item:hover { background: #f1f5f9; }
+    .video-item.active { background: #eff6ff; border-color: #bfdbfe; }
+
+    .rank-num { font-size: 1.1rem; font-weight: 800; color: var(--primary); width: 24px; text-align: center; flex-shrink: 0; }
+    .thumb { width: 80px; height: 45px; object-fit: cover; border-radius: 6px; background: #e2e8f0; flex-shrink: 0; }
+    .meta { flex: 1; min-width: 0; }
+    .meta .title { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .meta .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #e2e8f0;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .badge.clickable { cursor: pointer; transition: opacity 0.2s; }
+    .badge.clickable:hover { opacity: 0.8; }
+
+    /* Media Queries */
+
+    /* Landscape Mobile & Tablet (Split View) */
+    /* "Landscape mode: トレンド情報（上）→ グラフ（左）＋ランキング（右）" */
+    @media (min-width: 600px) and (orientation: landscape) {
+      .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "trend trend"
+          "chart rank";
       }
-      .col-left{grid-column: 1 / -1; order:1;} /* trend spans full width on top */
-      .col-center{grid-column: 1 / 2; order:2;} /* graph left */
-      .col-right{grid-column: 2 / 3; order:3;}  /* ranking right */
-      .chart-area{height:220px;}
-      .rank-list{max-height:520px;}
+      .trend-list { flex-direction: row; flex-wrap: wrap; }
+      .trend-item { flex: 1 1 200px; }
+      .chart-container { height: 240px; }
     }
 
-    /* larger desktops: keep three-column layout defined earlier unless orientation overrides it */
-    @media (min-width: 1201px){
-      .grid{grid-template-columns: 240px minmax(320px, 1fr) 420px; gap:20px;}
-      .chart-area{height:220px;}
+    /* Desktop (3 Columns) */
+    @media (min-width: 1200px) {
+      .app-container { padding: 24px; }
+      .dashboard-grid {
+        grid-template-columns: 260px minmax(0, 1fr) 380px;
+        grid-template-areas:
+          "trend chart rank";
+      }
+      .trend-list { flex-direction: column; }
+      .trend-item { flex: initial; }
+      .chart-container { height: 400px; }
     }
+    
+    /* Scrollbar polish */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="app-container">
+    <!-- Header -->
     <header>
-      <div>
-        <div class="title">YouTube 再生数ランキング & トレンド</div>
-        <div class="subtitle" style="font-size:13px;color:var(--muted)">
-          <div id="lastUpdated" style="margin-top:6px;font-size:12px;color:var(--muted)">最終更新: 読み込み中...</div>
+      <div class="brand">
+        <h1>YouTube 再生数ランキング & トレンド</h1>
+        <div class="meta">
+          <span id="lastUpdated">読み込み中...</span>
         </div>
       </div>
       <div class="controls">
-        <input id="search" type="search" placeholder="タイトル / バナー / ユニット で検索">
+        <input id="search" type="search" placeholder="キーワード検索...">
         <select id="scope">
-          <option value="all">全体</option>
+          <option value="all">全範囲</option>
           <option value="banner">バナー別</option>
           <option value="unit">ユニット別</option>
         </select>
         <select id="groupFilter"><option value="all">グループ: 全て</option></select>
-        <button id="clearGroups" class="primary">グループ分けクリア</button>
+        <button id="clearGroups" class="btn-primary">クリア</button>
       </div>
     </header>
 
-    <!-- Added classes col-left / col-center / col-right to allow ordering in portrait/landscape -->
-    <div class="grid">
-      <!-- LEFT COLUMN: trend information -->
-      <div class="col-left">
-        <div class="card">
-          <strong style="color:var(--text)">トレンド情報</strong>
-          <div style="margin-top:10px" class="trend-list">
+    <div class="dashboard-grid">
+      <!-- Trends Column -->
+      <div class="card area-trend">
+        <div class="card-header">トレンド</div>
+        <div class="card-body">
+          <div class="trend-list">
             <div class="trend-item" id="trendItemNew">
               <div class="label">新着動画</div>
               <div id="trendNew" class="val">—</div>
             </div>
             <div class="trend-item" id="trendItemWeek">
-              <div class="label">直近1週間で再生数伸びトップ</div>
+              <div class="label">急上昇 (7日間)</div>
               <div id="trendWeek" class="val">—</div>
             </div>
             <div class="trend-item" id="trendItemMonth">
-              <div class="label">直近1ヶ月で再生数伸びトップ</div>
+              <div class="label">急上昇 (30日間)</div>
               <div id="trendMonth" class="val">—</div>
             </div>
             <div class="trend-item" id="trendItemTotal">
-              <div class="label">累計再生数トップ</div>
+              <div class="label">累計トップ</div>
               <div id="trendTotal" class="val">—</div>
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- CENTER COLUMN: graph / details -->
-      <div class="col-center">
-        <div class="card big-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div id="selectedTitle" style="font-weight:700;font-size:16px;color:var(--text)">（動画を選択してください）</div>
-              <div id="selectedMeta" style="font-size:13px;color:var(--muted);margin-top:6px">—</div>
-            </div>
-            <div class="stats-row">
-              <!-- This area used to show 最新再生回数; changed to display unit & banner badges per request -->
-              <div id="selectedBadges" style="display:flex;gap:6px;align-items:center;">
-                <!-- badges will be injected here -->
-              </div>
-            </div>
+      <!-- Chart Column -->
+      <div class="card area-chart">
+        <div class="card-header">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span id="selectedTitle" style="font-size:1.1rem;">動画を選択</span>
+            <span id="selectedMeta" style="font-size:0.85rem; font-weight:400; color:var(--text-muted)">—</span>
           </div>
-
-          <div style="margin-top:14px;" class="tabs">
-            <button class="tab-mode active" data-period="all">全期間推移</button>
-            <button class="tab-mode" data-period="30">直近30日</button>
-            <button class="tab-mode" data-period="7">直近7日</button>
+          <div id="selectedBadges" style="display:flex;gap:6px;"></div>
+        </div>
+        <div class="card-body">
+          <div class="tabs">
+            <button class="tab-mode active" data-period="all">全期間</button>
+            <button class="tab-mode" data-period="30">30日</button>
+            <button class="tab-mode" data-period="7">7日</button>
           </div>
-
-          <div class="chart-area card" style="padding:12px;">
-            <canvas id="trendChart" style="width:100%;height:220px"></canvas>
-            <!-- bottom info removed as requested (do not display tapped date/value) -->
+          <div class="chart-container">
+            <canvas id="trendChart"></canvas>
           </div>
-
-          <!-- Four metrics placed inline (one line): 最新再生回数, 直近7日増分, 直近30日増分, 投稿日 -->
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;">
-            <div class="metric card" style="min-width:150px; padding:8px;">
+          <div class="chart-metrics">
+            <div class="metric-box">
               <div class="label">最新再生数</div>
               <div id="selectedViews" class="val">—</div>
             </div>
-            <div class="metric card" style="min-width:150px; padding:8px;">
-              <div class="label">直近7日増分</div>
+            <div class="metric-box">
+              <div class="label">7日間増加</div>
               <div id="viewDelta7" class="val">—</div>
             </div>
-            <div class="metric card" style="min-width:150px; padding:8px;">
-              <div class="label">直近30日増分</div>
+            <div class="metric-box">
+              <div class="label">30日間増加</div>
               <div id="viewDelta30" class="val">—</div>
             </div>
-            <div class="metric card" style="min-width:150px; padding:8px;">
+            <div class="metric-box">
               <div class="label">投稿日</div>
               <div id="publishDate" class="val">—</div>
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- RIGHT COLUMN: ranking -->
-      <div class="col-right">
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <strong style="color:var(--text)">ランキング</strong>
-            <div style="font-size:13px;color:var(--muted)">並び替え:
-              <select id="sortMode">
-                <option value="total">累計再生数（降順）</option>
-                <option value="published">投稿日（新しい順）</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="margin-top:12px;" class="rank-list card" id="rankList">
-            読み込み中...
+      <!-- Ranking Column -->
+      <div class="card area-rank">
+        <div class="card-header">
+          <span>ランキング</span>
+          <select id="sortMode" style="font-size:0.8rem; padding:4px; border-radius:6px; border:1px solid var(--border);">
+            <option value="total">再生数順</option>
+            <option value="published">新着順</option>
+          </select>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div id="rankList" class="rank-list" style="padding:12px;">
+            <div style="text-align:center; padding:20px; color:var(--text-muted);">読み込み中...</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-<script>
+  <script>
 /* --- helper --- */
-function fmt(n){ return n === null || n === undefined ? '—' : n.toLocaleString(); }
-function safe(s){ return String(s||''); }
-function parseISOorDateString(s){
-  if(!s) return null;
+
+function fmt(n) {
+  return n === null || n === undefined ? '—' : n.toLocaleString();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function parseISOorDateString(s) {
+  if (!s) return null;
   // accepts "YYYY-MM-DD" or full ISO
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
   return new Date(s);
 }
 
-/* format an ISO-ish string to browser-local string (toLocaleString)
-   Previously this forced UTC output; changed to local to match header's toLocaleString display.
-*/
-function formatRecordedTime(iso){
-  if(!iso) return '—';
-  // if it's only a date like "YYYY-MM-DD", treat as midnight UTC (legacy)
-  let asIso = String(iso);
-  if(/^\d{4}-\d{2}-\d{2}$/.test(asIso)) asIso = asIso + 'T00:00:00.000Z';
-  try {
-    const d = new Date(asIso);
-    if(isNaN(d.getTime())) return iso;
-    // use browser locale so it matches new Date(...).toLocaleString() used for header
-    return d.toLocaleString();
-  } catch(e){
-    return iso;
-  }
-}
-
-/* --- Banner color mapping (expanded 3-digit hex to full 6-digit) --- */
+/* --- Banner color mapping --- */
 const BANNER_COLORS = {
   "一歌": "#33AAEE",
   "咲希": "#FFDD44",
@@ -291,7 +384,7 @@ const BANNER_COLORS = {
   "瑞希": "#DDAACC"
 };
 
-/* --- Unit fallback colors (expanded) --- */
+/* --- Unit fallback colors --- */
 const UNIT_COLORS = {
   "レオニ": "#4455DD",
   "モモジャン": "#88DD44",
@@ -300,114 +393,77 @@ const UNIT_COLORS = {
   "ニーゴ": "#884499"
 };
 
-/* convert hex color (#RRGGBB) to rgba string with alpha */
-function hexToRgba(hex, alpha){
-  if(!hex) return `rgba(37,99,235,${alpha})`;
-  hex = hex.replace('#','');
-  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
-  const r = parseInt(hex.slice(0,2),16);
-  const g = parseInt(hex.slice(2,4),16);
-  const b = parseInt(hex.slice(4,6),16);
-  return `rgba(${r},${g},${b},${alpha})`;
+function hexToRgba(hex, alpha) {
+  if (!hex) return "rgba(37,99,235," + alpha + ")";
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
 }
 
-/* mix provided hex color with white (#FFFFFF) in ratio 1:2 (1 color + 2 white) and return hex */
-function mixWithWhite(hex){
-  if(!hex) hex = '#2563eb';
-  hex = hex.replace('#','');
-  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
-  const r = parseInt(hex.slice(0,2),16);
-  const g = parseInt(hex.slice(2,4),16);
-  const b = parseInt(hex.slice(4,6),16);
-  // mix: (color * 1 + white * 2) / 3 -> white components are 255
-  const mr = Math.round((r + 2*255)/3);
-  const mg = Math.round((g + 2*255)/3);
-  const mb = Math.round((b + 2*255)/3);
-  return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
+function mixWithWhite(hex) {
+  if (!hex) hex = '#2563eb';
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const mr = Math.round((r + 2 * 255) / 3);
+  const mg = Math.round((g + 2 * 255) / 3);
+  const mb = Math.round((b + 2 * 255) / 3);
+  return '#' + [mr, mg, mb].map(n => n.toString(16).padStart(2, '0')).join('');
 }
 
-/* mix provided hex color with white (#FFFFFF) in ratio 1:W (1 color + W white) and return hex */
-function mixWithWhiteRatio(hex, whiteParts){
-  if(!hex) hex = '#2563eb';
-  if(!whiteParts || whiteParts < 0) whiteParts = 4;
-  hex = hex.replace('#','');
-  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
-  const r = parseInt(hex.slice(0,2),16);
-  const g = parseInt(hex.slice(2,4),16);
-  const b = parseInt(hex.slice(4,6),16);
+function mixWithWhiteRatio(hex, whiteParts) {
+  if (!hex) hex = '#2563eb';
+  if (!whiteParts || whiteParts < 0) whiteParts = 4;
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
   const total = 1 + whiteParts;
-  const mr = Math.round((r + whiteParts*255)/total);
-  const mg = Math.round((g + whiteParts*255)/total);
-  const mb = Math.round((b + whiteParts*255)/total);
-  return '#' + [mr,mg,mb].map(n=> n.toString(16).padStart(2,'0')).join('');
+  const mr = Math.round((r + whiteParts * 255) / total);
+  const mg = Math.round((g + whiteParts * 255) / total);
+  const mb = Math.round((b + whiteParts * 255) / total);
+  return '#' + [mr, mg, mb].map(n => n.toString(16).padStart(2, '0')).join('');
 }
 
-/* --- load data/videos.json --- */
+/* --- Data structures (JS, no TS interfaces) --- */
+/* History entry example: { datetime, date, views } */
+/* VideoData example: { videoId, title, url, thumbnail, published, banner, unit, history: [...], views, latest, d7, d30 } */
+
+/* --- Global State --- */
 let DATA = [];
 let DATA_UPDATED_AT = null;
-async function loadData(){
-  try{
-    const res = await fetch('data/videos.json', {cache: "no-store"});
-    if(!res.ok) throw new Error('data/videos.json が見つかりません: ' + res.status);
-    const json = await res.json();
-    DATA = json.videos || [];
-    DATA_UPDATED_AT = json.updated_at || null;
-    // show last updated in header
-    const lastEl = document.getElementById('lastUpdated');
-    if(DATA_UPDATED_AT){
-      const d = new Date(DATA_UPDATED_AT);
-      lastEl.innerText = '最終更新: ' + d.toLocaleString();
-    } else {
-      lastEl.innerText = '最終更新: —';
-    }
+let currentSelected = null;
+let chart = null;
 
-    buildGroupOptions();
-    renderRankList();
-
-    // preserve selection across reloads: if user had selected a video, re-select latest data for it
-    if(currentSelected && currentSelected.videoId){
-      const fresh = DATA.find(x=>x.videoId === currentSelected.videoId);
-      if(fresh){
-        // re-select fresh object (this updates latest metrics and redraws chart)
-        selectVideo(fresh);
-      } else {
-        // if not found, choose default
-        selectDefault();
-      }
-    } else {
-      selectDefault();
-    }
-
-  }catch(err){
-    console.error(err);
-    document.getElementById('rankList').innerText = 'データ読み込みエラー: ' + err.message;
-    const lastEl = document.getElementById('lastUpdated');
-    lastEl.innerText = '最終更新: エラー';
-  }
-}
-
-/* --- UI state and utilities --- */
+/* --- Elements --- */
 const rankListEl = document.getElementById('rankList');
 const sortModeEl = document.getElementById('sortMode');
 const searchEl = document.getElementById('search');
 const scopeEl = document.getElementById('scope');
 const groupFilterEl = document.getElementById('groupFilter');
 const clearBtn = document.getElementById('clearGroups');
+const ctx = document.getElementById('trendChart').getContext('2d');
 
 /* --- Group ordering --- */
 const BANNER_ORDER = [
-  "一歌","咲希","穂波","志歩","みのり","遥","愛莉","雫","こはね","杏","彰人","冬弥","司","えむ","寧々","類","奏","まふゆ","絵名","瑞希"
+  "一歌", "咲希", "穂波", "志歩", "みのり", "遥", "愛莉", "雫", "こはね", "杏", "彰人", "冬弥", "司", "えむ", "寧々", "類", "奏", "まふゆ", "絵名", "瑞希"
 ];
-const UNIT_ORDER = ["レオニ","モモジャン","ビビバス","ワンダショ","ニーゴ"];
+const UNIT_ORDER = ["レオニ", "モモジャン", "ビビバス", "ワンダショ", "ニーゴ"];
 
-function buildGroupOptions(){
+function buildGroupOptions() {
   groupFilterEl.innerHTML = '<option value="all">グループ: 全て</option>';
 
-  if(scopeEl.value === 'banner'){
+  if (scopeEl.value === 'banner') {
     BANNER_ORDER.forEach(b => {
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`);
     });
-  } else if(scopeEl.value === 'unit'){
+  } else if (scopeEl.value === 'unit') {
     UNIT_ORDER.forEach(u => {
       groupFilterEl.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
     });
@@ -419,183 +475,98 @@ function buildGroupOptions(){
   }
 }
 
-function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+/* --- Prediction Utilities --- */
 
-/* --- history utilities using datetime --- */
-function lastHistoryEntry(history){
-  if(!history || history.length===0) return null;
-  return history[history.length-1];
-}
-
-function findClosestBefore(history, targetDate){
-  if(!history || history.length===0) return null;
-  let candidate = history[0];
-  for(const rec of history){
-    const t = rec.datetime ? new Date(rec.datetime) : (rec.date ? new Date(rec.date + 'T00:00:00.000Z') : null);
-    if(!t) continue;
-    if(t <= targetDate) candidate = rec;
-    else break;
-  }
-  return candidate;
-}
-
-/* --- New: floorToHalfHour / ceilToHalfHour --- */
-/* floor time to previous half-hour mark (if already exact, keep it) */
-function floorToHalfHour(date){
-  const d = new Date(date);
-  d.setSeconds(0,0);
-  const m = d.getMinutes();
-  if(m === 0 || m === 30) return d;
-  if(m < 30){
-    d.setMinutes(0);
-    return d;
-  }
-  d.setMinutes(30);
-  return d;
-}
-function ceilToHalfHour(date){
-  const d = new Date(date);
-  d.setSeconds(0,0);
-  const m = d.getMinutes();
-  if(m === 0 || m === 30) return d;
-  if(m < 30){
-    d.setMinutes(30);
-    return d;
-  }
-  d.setMinutes(0);
-  d.setHours(d.getHours() + 1);
-  return d;
-}
-
-function calcDelta(history, days){
-  // kept for backward compatibility but not used for display deltas anymore
-  if(!history || history.length===0) return 0;
-  const lastRec = lastHistoryEntry(history);
-  const lastDate = lastRec ? (lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null)) : null;
-  if(!lastDate) return 0;
-  const startDate = new Date(lastDate);
-  startDate.setUTCDate(startDate.getUTCDate() - days);
-  const startRec = findClosestBefore(history, startDate) || history[0];
-  if(!startRec) return 0;
-  const startViews = startRec.views || 0;
-  const lastViews = lastRec.views || 0;
-  return lastViews - startViews;
-}
-
-/* --- render ranking & trend picks --- */
-let _lastTopPicks = { new:null, week:null, month:null, total:null };
-
-/* --- Prediction utilities (improved) --- */
-
-/* preprocess history into sorted points [{t:Date, tsMin:number, v:number}] */
-function preprocessHistory(history){
-  if(!Array.isArray(history)) return [];
-  const pts = history.map(h=>{
+function preprocessHistory(history) {
+  if (!Array.isArray(history)) return [];
+  const pts = history.map(h => {
     const t = h.datetime ? new Date(h.datetime) : (h.date ? new Date(h.date + 'T00:00:00.000Z') : null);
-    if(!t) return null;
+    if (!t) return null;
     return { t: t, tsMin: t.getTime() / 60000, v: (h.views || 0) };
-  }).filter(Boolean);
-  pts.sort((a,b)=> a.t.getTime() - b.t.getTime());
-  // remove duplicates with same minute (keep last)
+  }).filter((x) => !!x);
+  
+  pts.sort((a, b) => a.t.getTime() - b.t.getTime());
+  
   const unique = [];
-  for(const p of pts){
-    const last = unique[unique.length-1];
-    if(last && Math.abs(last.tsMin - p.tsMin) < 1e-6){
-      unique[unique.length-1] = p;
+  for (const p of pts) {
+    const last = unique[unique.length - 1];
+    if (last && Math.abs(last.tsMin - p.tsMin) < 1e-6) {
+      unique[unique.length - 1] = p;
     } else unique.push(p);
   }
   return unique;
 }
 
-/* compute median of array */
-function median(arr){
-  if(!arr || arr.length===0) return 0;
-  const s = arr.slice().sort((a,b)=>a-b);
-  const m = Math.floor(s.length/2);
-  if(s.length % 2 === 1) return s[m];
-  return (s[m-1] + s[m]) / 2;
+function median(arr) {
+  if (!arr || arr.length === 0) return 0;
+  const s = arr.slice().sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  if (s.length % 2 === 1) return s[m];
+  return (s[m - 1] + s[m]) / 2;
 }
 
-/* compute MAD (median absolute deviation) */
-function mad(arr){
-  if(!arr || arr.length===0) return 0;
+function mad(arr) {
+  if (!arr || arr.length === 0) return 0;
   const med = median(arr);
   const abs = arr.map(x => Math.abs(x - med));
   return median(abs);
 }
 
-/* compute EMA for array of rates (most recent last). alpha between 0..1 */
-function emaOfRates(rates, alpha){
-  if(!rates || rates.length===0) return 0;
+function emaOfRates(rates, alpha) {
+  if (!rates || rates.length === 0) return 0;
   let s = rates[0];
-  for(let i=1;i<rates.length;i++){
+  for (let i = 1; i < rates.length; i++) {
     s = alpha * rates[i] + (1 - alpha) * s;
   }
   return s;
 }
 
-/* robust weighted linear regression + EMA blending
-   Returns object:
-   { slope_reg: (views/min), slope_ema: (views/min), slope_final, r2, nPoints, medRate }
-*/
-function computeAdvancedSlope(history){
+function computeAdvancedSlope(history) {
   const pts = preprocessHistory(history);
   const n = pts.length;
-  if(n < 2) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+  if (n < 2) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2: 0, nPoints: n, medRate: 0 };
 
-  // compute per-segment instantaneous rates (views per minute)
   const segRates = [];
-  for(let i=0;i<pts.length-1;i++){
-    const dv = pts[i+1].v - pts[i].v;
-    const dt = pts[i+1].tsMin - pts[i].tsMin;
-    if(dt <= 0) continue;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dv = pts[i + 1].v - pts[i].v;
+    const dt = pts[i + 1].tsMin - pts[i].tsMin;
+    if (dt <= 0) continue;
     segRates.push(dv / dt);
   }
-  if(segRates.length === 0) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2:0, nPoints: n, medRate:0 };
+  if (segRates.length === 0) return { slope_reg: 0, slope_ema: 0, slope_final: 0, r2: 0, nPoints: n, medRate: 0 };
 
   const medRate = median(segRates);
-  const madRate = mad(segRates) || 1e-6; // avoid zero
+  const madRate = mad(segRates) || 1e-6;
 
-  // filter out segments that are extreme outliers ( > med + k * MAD )
-  const OUTLIER_K = 6; // strict threshold
+  const OUTLIER_K = 6;
   const goodIdx = [];
-  for(let i=0;i<pts.length;i++){
-    // keep points whose adjacent segment rates are not extreme outliers
-    // we'll check the segment to next point (if exists) and segment from prev (if exists)
+  for (let i = 0; i < pts.length; i++) {
     let ok = true;
-    if(i < pts.length - 1){
-      const r = (pts[i+1].v - pts[i].v) / Math.max(0.0001, (pts[i+1].tsMin - pts[i].tsMin));
-      if(Math.abs(r - medRate) > OUTLIER_K * madRate) ok = false;
+    if (i < pts.length - 1) {
+      const r = (pts[i + 1].v - pts[i].v) / Math.max(0.0001, (pts[i + 1].tsMin - pts[i].tsMin));
+      if (Math.abs(r - medRate) > OUTLIER_K * madRate) ok = false;
     }
-    if(i > 0){
-      const r2 = (pts[i].v - pts[i-1].v) / Math.max(0.0001, (pts[i].tsMin - pts[i-1].tsMin));
-      if(Math.abs(r2 - medRate) > OUTLIER_K * madRate) ok = false;
+    if (i > 0) {
+      const r2 = (pts[i].v - pts[i - 1].v) / Math.max(0.0001, (pts[i].tsMin - pts[i - 1].tsMin));
+      if (Math.abs(r2 - medRate) > OUTLIER_K * madRate) ok = false;
     }
-    if(ok) goodIdx.push(i);
+    if (ok) goodIdx.push(i);
   }
-  // build filtered points
+  
   const goodPts = goodIdx.map(i => pts[i]);
-  const m = goodPts.length;
-  if(m < 2){
-    // if filtering removed too much, use original pts
-    goodPts.splice(0, goodPts.length, ...pts);
-  }
+  if (goodPts.length < 2) goodPts.splice(0, goodPts.length, ...pts);
 
-  // Weighted linear regression on (x: minutes since reference, y: views)
-  // reference time: last point time (so x <= 0 for older points). To avoid huge numbers, use delta minutes relative to last point.
   const last = goodPts[goodPts.length - 1];
   const refTs = last.tsMin;
-  const xs = goodPts.map(p => p.tsMin - refTs); // negative or zero
+  const xs = goodPts.map(p => p.tsMin - refTs);
   const ys = goodPts.map(p => p.v);
 
-  // weights: exponential decay by age (minutes). half-life parameter tuned to emphasize recent data.
-  const HALF_LIFE_MIN = 180; // 3 hours half-life (can be tuned)
+  const HALF_LIFE_MIN = 180;
   const ln2 = Math.log(2);
-  const ws = xs.map(x => Math.exp(- (Math.abs(x) / HALF_LIFE_MIN) * ln2 ));
+  const ws = xs.map(x => Math.exp(-(Math.abs(x) / HALF_LIFE_MIN) * ln2));
 
-  // compute weighted sums
-  let S=0, Sx=0, Sy=0, Sxx=0, Sxy=0;
-  for(let i=0;i<xs.length;i++){
+  let S = 0, Sx = 0, Sy = 0, Sxx = 0, Sxy = 0;
+  for (let i = 0; i < xs.length; i++) {
     const w = ws[i];
     const x = xs[i];
     const y = ys[i];
@@ -609,23 +580,20 @@ function computeAdvancedSlope(history){
   const denom = (S * Sxx - Sx * Sx);
   let slope_reg = 0;
   let intercept = 0;
-  if(Math.abs(denom) > 1e-9){
-    slope_reg = (S * Sxy - Sx * Sy) / denom; // units: views per minute (because x is minutes)
+  if (Math.abs(denom) > 1e-9) {
+    slope_reg = (S * Sxy - Sx * Sy) / denom;
     intercept = (Sy - slope_reg * Sx) / S;
   } else {
-    // fallback: use simple average rate
-    const totalDv = ys[ys.length-1] - ys[0];
-    const totalDt = (goodPts[goodPts.length-1].tsMin - goodPts[0].tsMin) || 1;
+    const totalDv = ys[ys.length - 1] - ys[0];
+    const totalDt = (goodPts[goodPts.length - 1].tsMin - goodPts[0].tsMin) || 1;
     slope_reg = totalDv / totalDt;
-    intercept = ys[ys.length-1] - slope_reg * xs[xs.length-1];
+    intercept = ys[ys.length - 1] - slope_reg * xs[xs.length - 1];
   }
 
-  // compute weighted R^2 as measure of fit quality
-  // weighted residual sum of squares
   let SSres = 0;
   let SStot = 0;
   const yWeightedMean = Sy / S;
-  for(let i=0;i<xs.length;i++){
+  for (let i = 0; i < xs.length; i++) {
     const w = ws[i];
     const x = xs[i];
     const y = ys[i];
@@ -634,89 +602,71 @@ function computeAdvancedSlope(history){
     SStot += w * Math.pow(y - yWeightedMean, 2);
   }
   let r2 = 0;
-  if(SStot > 1e-9) r2 = Math.max(0, 1 - (SSres / SStot));
-  // ensure numeric safety
-  if(!isFinite(r2) || r2 < 0) r2 = 0;
+  if (SStot > 1e-9) r2 = Math.max(0, 1 - (SSres / SStot));
+  if (!isFinite(r2) || r2 < 0) r2 = 0;
 
-  // EMA of instantaneous segment rates to capture recent rapid changes
-  // use alpha such that recent segments dominate (alpha ~ 0.5)
   const instRates = [];
-  for(let i=0;i<pts.length-1;i++){
-    const dv = pts[i+1].v - pts[i].v;
-    const dt = pts[i+1].tsMin - pts[i].tsMin;
-    if(dt <= 0) continue;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dv = pts[i + 1].v - pts[i].v;
+    const dt = pts[i + 1].tsMin - pts[i].tsMin;
+    if (dt <= 0) continue;
     instRates.push(dv / dt);
   }
-  // alpha choice: prefer recent segments. If many segments, slightly smaller alpha.
   const alpha = 0.5;
   const slope_ema = emaOfRates(instRates, alpha);
 
-  // confidence: combine R2 and number of good points into 0..1
-  const nEff = Math.min(6, xs.length); // use up to 6 points for scaling
+  const nEff = Math.min(6, xs.length);
   let conf = r2 * (nEff / 6);
-  // slightly boost if r2 is very high
-  if(conf < 0) conf = 0;
-  if(conf > 1) conf = 1;
+  if (conf < 0) conf = 0;
+  if (conf > 1) conf = 1;
 
-  // final slope: blend regression and EMA using confidence
   let slope_final = conf * slope_reg + (1 - conf) * slope_ema;
-
-  // sanity caps: no negative slope, and limit to reasonable maximum to avoid crazy jumps
-  if(!isFinite(slope_final) || slope_final < 0) slope_final = Math.max(0, slope_ema, slope_reg, 0);
-  // limit as a multiple of median segment rate (avoid explosion when medRate ~ 0)
+  if (!isFinite(slope_final) || slope_final < 0) slope_final = Math.max(0, slope_ema, slope_reg, 0);
+  
   const maxMultiplier = 10;
-  const cap = Math.max(Math.abs(medRate) * maxMultiplier, 1); // at least 1 view/min cap
-  if(Math.abs(slope_final) > cap) slope_final = Math.sign(slope_final) * cap;
+  const cap = Math.max(Math.abs(medRate) * maxMultiplier, 1);
+  if (Math.abs(slope_final) > cap) slope_final = Math.sign(slope_final) * cap;
 
-  return {
-    slope_reg,
-    slope_ema,
-    slope_final,
-    r2,
-    nPoints: pts.length,
-    medRate
-  };
+  return { slope_reg, slope_ema, slope_final, r2, nPoints: pts.length, medRate };
 }
 
-/* --- New: predict value at an arbitrary time using current history + slope --- */
-/* If history empty -> returns 0.
-   Uses computeAdvancedSlope(history) to obtain slope (views/min) and anchors from last recorded point.
-   Returns rounded integer (>=0).
-*/
-function predictValueAt(history, targetDate){
-  if(!history || history.length === 0) return 0;
+function predictValueAt(history, targetDate) {
+  if (!history || history.length === 0) return 0;
   const last = history[history.length - 1];
   const lastTime = last.datetime ? new Date(last.datetime) : (last.date ? new Date(last.date + 'T00:00:00.000Z') : null);
   const lastViews = last.views || 0;
-  if(!lastTime) return lastViews;
+  if (!lastTime) return lastViews;
   const slopeInfo = computeAdvancedSlope(history);
   const slope = slopeInfo.slope_final || 0;
   const deltaMin = (targetDate.getTime() - lastTime.getTime()) / 60000;
   let pred = lastViews + slope * deltaMin;
-  if(!isFinite(pred)) pred = lastViews;
-  if(pred < 0) pred = 0;
+  if (!isFinite(pred)) pred = lastViews;
+  if (pred < 0) pred = 0;
   return Math.round(pred);
 }
 
-/* helper: earliest history time (Date) or null */
-function earliestHistoryTime(history){
-  if(!history || history.length === 0) return null;
+function earliestHistoryTime(history) {
+  if (!history || history.length === 0) return null;
   const first = history[0];
   const t = first.datetime ? new Date(first.datetime) : (first.date ? new Date(first.date + 'T00:00:00.000Z') : null);
   return t;
 }
 
-/* --- New: calc delta using predicted current and predicted earlier tick (or earliest) ---
-   Behavior:
-   - nowPred = predictValueAt(history, now)
-   - targetTick = floorToHalfHour(now - days)
-   - if targetTick < earliestHistoryTime -> baseTick = floorToHalfHour(earliestHistoryTime)
-     else baseTick = targetTick
-   - basePred = predictValueAt(history, baseTick)
-   - return nowPred - basePred
-*/
-function calcDeltaWithPrediction(history, days){
-  if(!history || history.length === 0) return 0;
+function floorToHalfHour(date) {
+  const d = new Date(date);
+  d.setSeconds(0, 0);
+  const m = d.getMinutes();
+  if (m === 0 || m === 30) return d;
+  if (m < 30) {
+    d.setMinutes(0);
+    return d;
+  }
+  d.setMinutes(30);
+  return d;
+}
+
+function calcDeltaWithPrediction(history, days) {
+  if (!history || history.length === 0) return 0;
   const now = new Date();
   const nowPred = predictValueAt(history, now);
 
@@ -724,52 +674,90 @@ function calcDeltaWithPrediction(history, days){
   const targetTick = floorToHalfHour(target);
   const firstTime = earliestHistoryTime(history);
   let baseTick;
-  if(!firstTime) {
+  if (!firstTime) {
     baseTick = targetTick;
   } else {
     const firstTick = floorToHalfHour(firstTime);
-    if(targetTick.getTime() < firstTick.getTime()) baseTick = firstTick;
+    if (targetTick.getTime() < firstTick.getTime()) baseTick = firstTick;
     else baseTick = targetTick;
   }
   const basePred = predictValueAt(history, baseTick);
   return Math.max(0, nowPred - basePred);
 }
 
-/* --- render ranking & trend picks (updated to use predicted current values for sorting/metrics) --- */
-function renderRankList(){
-  // annotate each video with predicted latest and deltas (7/30) using prediction functions
-  const globalAnnotated = DATA.map(v=>{
-    const latestPred = predictValueAt(v.history || [], new Date()); // predicted current value
+/* --- Logic --- */
+let _lastTopPicks = { new: null, week: null, month: null, total: null };
+
+async function loadData() {
+  try {
+    const res = await fetch('data/videos.json', { cache: "no-store" });
+    if (!res.ok) throw new Error('data/videos.json が見つかりません: ' + res.status);
+    const json = await res.json();
+    DATA = json.videos || [];
+    DATA_UPDATED_AT = json.updated_at || null;
+    
+    const lastEl = document.getElementById('lastUpdated');
+    if (lastEl) {
+      if (DATA_UPDATED_AT) {
+        const d = new Date(DATA_UPDATED_AT);
+        lastEl.innerText = '最終更新: ' + d.toLocaleString();
+      } else {
+        lastEl.innerText = '最終更新: —';
+      }
+    }
+
+    buildGroupOptions();
+    renderRankList();
+
+    if (currentSelected && currentSelected.videoId) {
+      const fresh = DATA.find(x => x.videoId === currentSelected.videoId);
+      if (fresh) selectVideo(fresh);
+      else selectDefault();
+    } else {
+      selectDefault();
+    }
+
+  } catch (err) {
+    console.error(err);
+    if (rankListEl) rankListEl.innerText = 'データ読み込みエラー: ' + err.message;
+    const lastEl = document.getElementById('lastUpdated');
+    if (lastEl) lastEl.innerText = '最終更新: エラー';
+  }
+}
+
+function renderRankList() {
+  const globalAnnotated = DATA.map(v => {
+    const latestPred = predictValueAt(v.history || [], new Date());
     const d7 = calcDeltaWithPrediction(v.history || [], 7);
     const d30 = calcDeltaWithPrediction(v.history || [], 30);
-    return {...v, latest: latestPred, d7, d30};
+    return Object.assign({}, v, { latest: latestPred, d7: d7, d30: d30 });
   });
 
-  const topWeekGlobal = globalAnnotated.reduce((acc,cur)=> cur.d7 > (acc.d7||-Infinity) ? cur : acc, {});
-  const topMonthGlobal = globalAnnotated.reduce((acc,cur)=> cur.d30 > (acc.d30||-Infinity) ? cur : acc, {});
-  const topTotalGlobal = globalAnnotated.reduce((acc,cur)=> cur.latest > (acc.latest||-Infinity) ? cur : acc, {});
+  const topWeekGlobal = globalAnnotated.reduce((acc, cur) => cur.d7 > (acc.d7 || -Infinity) ? cur : acc, {});
+  const topMonthGlobal = globalAnnotated.reduce((acc, cur) => cur.d30 > (acc.d30 || -Infinity) ? cur : acc, {});
+  const topTotalGlobal = globalAnnotated.reduce((acc, cur) => cur.latest > (acc.latest || -Infinity) ? cur : acc, {});
 
-  function getPublishDate(v){
-    if(!v) return null;
-    if(v.published){
+  function getPublishDate(v) {
+    if (!v) return null;
+    if (v.published) {
       const d = parseISOorDateString(v.published);
-      if(d && !isNaN(d)) return d;
+      if (d && !isNaN(d.getTime())) return d;
     }
-    const last = v.history && v.history.length ? v.history[v.history.length-1] : null;
-    if(last){
-      if(last.datetime) return new Date(last.datetime);
-      if(last.date) return new Date(last.date + 'T00:00:00.000Z');
+    const last = v.history && v.history.length ? v.history[v.history.length - 1] : null;
+    if (last) {
+      if (last.datetime) return new Date(last.datetime);
+      if (last.date) return new Date(last.date + 'T00:00:00.000Z');
     }
     return null;
   }
 
   let topNewGlobal = null;
-  for(const v of globalAnnotated){
+  for (const v of globalAnnotated) {
     const pd = getPublishDate(v);
-    if(!pd) continue;
-    if(!topNewGlobal) topNewGlobal = { video: v, date: pd };
+    if (!pd) continue;
+    if (!topNewGlobal) topNewGlobal = { video: v, date: pd };
     else {
-      if(pd.getTime() > topNewGlobal.date.getTime()){
+      if (pd.getTime() > topNewGlobal.date.getTime()) {
         topNewGlobal = { video: v, date: pd };
       }
     }
@@ -780,46 +768,48 @@ function renderRankList(){
   _lastTopPicks.total = topTotalGlobal && topTotalGlobal.title ? topTotalGlobal : null;
   _lastTopPicks.new = topNewGlobal && topNewGlobal.video ? topNewGlobal.video : null;
 
-  document.getElementById('trendWeek').innerText = _lastTopPicks.week ? `${_lastTopPicks.week.title} — ${fmt(_lastTopPicks.week.d7)} 回` : '—';
-  document.getElementById('trendMonth').innerText = _lastTopPicks.month ? `${_lastTopPicks.month.title} — ${fmt(_lastTopPicks.month.d30)} 回` : '—';
-  document.getElementById('trendTotal').innerText = _lastTopPicks.total ? `${_lastTopPicks.total.title} — ${fmt(_lastTopPicks.total.latest)} 回` : '—';
+  const trendWeekEl = document.getElementById('trendWeek');
+  const trendMonthEl = document.getElementById('trendMonth');
+  const trendTotalEl = document.getElementById('trendTotal');
+  const trendNewEl = document.getElementById('trendNew');
 
-  if(_lastTopPicks.new){
+  if (trendWeekEl) trendWeekEl.innerText = _lastTopPicks.week ? `${_lastTopPicks.week.title} — ${fmt(_lastTopPicks.week.d7)} 回` : '—';
+  if (trendMonthEl) trendMonthEl.innerText = _lastTopPicks.month ? `${_lastTopPicks.month.title} — ${fmt(_lastTopPicks.month.d30)} 回` : '—';
+  if (trendTotalEl) trendTotalEl.innerText = _lastTopPicks.total ? `${_lastTopPicks.total.title} — ${fmt(_lastTopPicks.total.latest)} 回` : '—';
+
+  if (_lastTopPicks.new) {
     const d = getPublishDate(_lastTopPicks.new) || new Date();
-    const yyyyMMdd = d.toISOString().slice(0,10);
-    document.getElementById('trendNew').innerText = `${_lastTopPicks.new.title} — ${yyyyMMdd}`;
+    const yyyyMMdd = d.toISOString().slice(0, 10);
+    if (trendNewEl) trendNewEl.innerText = `${_lastTopPicks.new.title} — ${yyyyMMdd}`;
   } else {
-    document.getElementById('trendNew').innerText = '—';
+    if (trendNewEl) trendNewEl.innerText = '—';
   }
 
-  // attach click handlers and unit-color borders/backgrounds to trend items
-  function setupTrendItem(itemId, video){
+  function setupTrendItem(itemId, video) {
     const el = document.getElementById(itemId);
-    if(!el) return;
+    if (!el) return;
     el.style.border = '';
     el.style.cursor = '';
     el.onclick = null;
 
-    if(video){
+    if (video) {
       const unitColor = UNIT_COLORS[video.unit] || null;
-      if(unitColor){
+      if (unitColor) {
         el.style.border = `2px solid ${unitColor}`;
-        // set background as unit color mixed with white in 1:4 ratio
         el.style.background = mixWithWhiteRatio(unitColor, 4);
       } else {
-        el.style.border = '1px solid rgba(15,23,42,0.04)';
-        // keep default background (do not override)
-        el.style.background = '';
+        el.style.border = '1px solid var(--border)';
+        el.style.background = '#f8fafc';
       }
       el.style.cursor = 'pointer';
-      el.onclick = function(e){
+      el.onclick = function (e) {
         e.stopPropagation();
         selectVideo(video);
       };
     } else {
-      el.style.border = '1px solid rgba(15,23,42,0.04)';
+      el.style.border = '1px solid var(--border)';
       el.style.cursor = 'default';
-      el.style.background = '';
+      el.style.background = '#f8fafc';
     }
   }
 
@@ -828,260 +818,245 @@ function renderRankList(){
   setupTrendItem('trendItemTotal', _lastTopPicks.total);
   setupTrendItem('trendItemNew', _lastTopPicks.new);
 
-  // Now build the list that user sees (apply filters/search)
   const mode = sortModeEl.value;
   const q = searchEl.value.trim().toLowerCase();
   let list = DATA.slice();
 
   const gv = groupFilterEl.value;
-  if(gv && gv !== 'all'){
-    if(gv.startsWith('banner:')) list = list.filter(v=>v.banner === gv.slice(7));
-    else if(gv.startsWith('unit:')) list = list.filter(v=>v.unit === gv.slice(5));
+  if (gv && gv !== 'all') {
+    if (gv.startsWith('banner:')) list = list.filter(v => v.banner === gv.slice(7));
+    else if (gv.startsWith('unit:')) list = list.filter(v => v.unit === gv.slice(5));
     else {
-      if(scopeEl.value === 'banner') list = list.filter(v=>v.banner === gv);
-      if(scopeEl.value === 'unit') list = list.filter(v=>v.unit === gv);
+      if (scopeEl.value === 'banner') list = list.filter(v => v.banner === gv);
+      if (scopeEl.value === 'unit') list = list.filter(v => v.unit === gv);
     }
   }
 
-  if(q) list = list.filter(v=>{
-    return (v.title||'').toLowerCase().includes(q) || (v.banner||'').toLowerCase().includes(q) || (v.unit||'').toLowerCase().includes(q);
+  if (q) list = list.filter(v => {
+    return (v.title || '').toLowerCase().includes(q) || (v.banner || '').toLowerCase().includes(q) || (v.unit || '').toLowerCase().includes(q);
   });
 
-  // Annotate again for displayed list (to ensure sorting uses predicted latest)
-  const annotated = list.map(v=>{
+  const annotated = list.map(v => {
     const latestPred = predictValueAt(v.history || [], new Date());
     const d7 = calcDeltaWithPrediction(v.history || [], 7);
     const d30 = calcDeltaWithPrediction(v.history || [], 30);
-    return {...v, latest: latestPred, d7, d30};
+    return Object.assign({}, v, { latest: latestPred, d7: d7, d30: d30 });
   });
 
-  if(mode === 'total') {
-    annotated.sort((a,b)=>b.latest - a.latest);
-  } else if(mode === 'published') {
-    annotated.sort((a,b)=>{
-      const da = parseISOorDateString(a.published) || (a.history && a.history.length ? new Date(a.history[a.history.length-1].datetime || a.history[a.history.length-1].date + 'T00:00:00.000Z') : null);
-      const db = parseISOorDateString(b.published) || (b.history && b.history.length ? new Date(b.history[b.history.length-1].datetime || b.history[b.history.length-1].date + 'T00:00:00.000Z') : null);
+  if (mode === 'total') {
+    annotated.sort((a, b) => b.latest - a.latest);
+  } else if (mode === 'published') {
+    annotated.sort((a, b) => {
+      const da = parseISOorDateString(a.published) || (a.history && a.history.length ? new Date(a.history[a.history.length - 1].datetime || a.history[a.history.length - 1].date + 'T00:00:00.000Z') : null);
+      const db = parseISOorDateString(b.published) || (b.history && b.history.length ? new Date(b.history[b.history.length - 1].datetime || b.history[b.history.length - 1].date + 'T00:00:00.000Z') : null);
       const ta = da ? da.getTime() : 0;
       const tb = db ? db.getTime() : 0;
-      return tb - ta; // newest first
+      return tb - ta;
     });
   }
 
   rankListEl.innerHTML = '';
-  if(annotated.length === 0){
-    rankListEl.innerText = '該当する動画がありません。';
+  if (annotated.length === 0) {
+    rankListEl.innerHTML = '<div style="padding:12px;color:var(--text-muted)">該当する動画がありません。</div>';
     return;
   }
 
-  annotated.forEach((v, idx)=>{
+  annotated.forEach((v, idx) => {
     const li = document.createElement('div');
     li.className = 'video-item';
+    // Check if active
+    if (currentSelected && currentSelected.videoId === v.videoId) {
+      li.classList.add('active');
+    }
     li.innerHTML = `
-      <div class="rank-num">${idx+1}</div>
+      <div class="rank-num">${idx + 1}</div>
       <img class="thumb" src="${escapeHtml(v.thumbnail)}" alt="thumb">
       <div class="meta">
         <div class="title">${escapeHtml(v.title)}</div>
-        <div class="sub">
-          <div class="badge">${escapeHtml(v.banner)}</div>
-          <div class="badge">${escapeHtml(v.unit)}</div>
-          <div style="margin-left:auto;color:var(--muted)">${fmt(v.latest)} 回</div>
-          <div style="color:var(--muted);font-size:12px">▲${fmt(v.d7)} / 7d</div>
+        <div class="tags">
+          <div class="badge banner-badge">${escapeHtml(v.banner)}</div>
+          <div class="badge unit-badge">${escapeHtml(v.unit)}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.75rem;color:var(--text-muted)">
+           <span>${fmt(v.latest)} 回</span>
+           <span>▲${fmt(v.d7)} / 7d</span>
         </div>
       </div>
     `;
-    // after element created, color the badges by mixing with white 1:2 and attach click handlers
-    const badgeEls = li.querySelectorAll('.badge');
-    if(badgeEls && badgeEls.length >= 1){
-      const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#2563eb';
-      const blended = mixWithWhite(bannerHex);
-      badgeEls[0].style.backgroundColor = blended;
-      badgeEls[0].style.color = '#111827';
-      badgeEls[0].style.border = '1px solid rgba(15,23,42,0.04)';
-      badgeEls[0].classList.add('clickable');
-      // click -> jump to banner filter
-      badgeEls[0].addEventListener('click', function(e){
+    
+    const bannerBadge = li.querySelector('.banner-badge');
+    if(bannerBadge){
+      const bannerHex = (v.banner && BANNER_COLORS[v.banner]) ? BANNER_COLORS[v.banner] : '#e2e8f0';
+      bannerBadge.style.backgroundColor = mixWithWhite(bannerHex);
+      bannerBadge.style.color = '#1e293b';
+      bannerBadge.classList.add('clickable');
+      bannerBadge.addEventListener('click', function (e) {
         e.stopPropagation();
         scopeEl.value = 'all';
         buildGroupOptions();
-        try { groupFilterEl.value = `banner:${v.banner}`; } catch(e){}
+        try { groupFilterEl.value = 'banner:' + v.banner; } catch (e) { }
         renderRankList();
         rankListEl.scrollTop = 0;
       });
     }
-    if(badgeEls && badgeEls.length >= 2){
-      const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#2563eb';
-      const blendedU = mixWithWhite(unitHex);
-      badgeEls[1].style.backgroundColor = blendedU;
-      badgeEls[1].style.color = '#111827';
-      badgeEls[1].style.border = '1px solid rgba(15,23,42,0.04)';
-      badgeEls[1].classList.add('clickable');
-      // click -> jump to unit filter
-      badgeEls[1].addEventListener('click', function(e){
+    
+    const unitBadge = li.querySelector('.unit-badge');
+    if(unitBadge){
+      const unitHex = (v.unit && UNIT_COLORS[v.unit]) ? UNIT_COLORS[v.unit] : '#e2e8f0';
+      unitBadge.style.backgroundColor = mixWithWhite(unitHex);
+      unitBadge.style.color = '#1e293b';
+      unitBadge.classList.add('clickable');
+      unitBadge.addEventListener('click', function (e) {
         e.stopPropagation();
         scopeEl.value = 'all';
         buildGroupOptions();
-        try { groupFilterEl.value = `unit:${v.unit}`; } catch(e){}
+        try { groupFilterEl.value = 'unit:' + v.unit; } catch (e) { }
         renderRankList();
         rankListEl.scrollTop = 0;
       });
     }
 
-    li.addEventListener('click', ()=> selectVideo(v));
+    li.addEventListener('click', () => selectVideo(v));
     rankListEl.appendChild(li);
   });
 }
 
-/* --- chart & selection --- */
-let currentSelected = null;
-const ctx = document.getElementById('trendChart').getContext('2d');
-let chart = null;
+function selectVideo(v) {
+  const vid = (typeof v === 'object' && v.videoId) ? v.videoId : (typeof v === 'string' ? v : null);
+  let fresh;
+  if (vid) fresh = DATA.find(x => x.videoId === vid);
+  
+  // Fallback if not found in DATA but passed as object
+  if (!fresh && typeof v === 'object') fresh = v;
 
-function selectVideo(v){
-  // Accept either a video object from DATA or an object that at least contains videoId.
-  const vid = (v && v.videoId) ? v.videoId : (typeof v === 'string' ? v : null);
-  let fresh = null;
-  if(vid) fresh = DATA.find(x=>x.videoId === vid) || v;
-  else fresh = v;
+  currentSelected = fresh || null;
+  if (!currentSelected) return;
 
-  currentSelected = fresh;
-  if(!currentSelected) return;
+  // Update styling in list
+  const allItems = document.querySelectorAll('.video-item');
+  allItems.forEach(el => el.classList.remove('active'));
 
-  document.getElementById('selectedTitle').innerText = currentSelected.title || '（動画を選択してください）';
-  // keep link only in selectedMeta to avoid duplicate banner/unit display
-  document.getElementById('selectedMeta').innerHTML = `<a href="${currentSelected.url || '#'}" target="_blank" style="color:var(--accent)">${currentSelected.url ? 'YouTubeへ' : ''}</a>`;
-
-  // --- USE PREDICTED CURRENT VALUE for displayed latest ---
-  const now = new Date();
-  const lastRec = currentSelected.history && currentSelected.history.length ? currentSelected.history[currentSelected.history.length-1] : null;
-  const lastViews = lastRec ? lastRec.views : (currentSelected.views || 0);
-  const predNow = predictValueAt(currentSelected.history || [], now);
-
-  document.getElementById('selectedViews').innerText = fmt(predNow) + ' 回';
-  document.getElementById('viewDelta7').innerText = fmt(calcDeltaWithPrediction(currentSelected.history || [],7)) + ' 回';
-  document.getElementById('viewDelta30').innerText = fmt(calcDeltaWithPrediction(currentSelected.history || [],30)) + ' 回';
-  document.getElementById('publishDate').innerText = currentSelected.published || '—';
-
-  // Show badges (unit and banner) in the right-top stats area (replaces the old 最新再生数)
-  const badgesEl = document.getElementById('selectedBadges');
-  if(badgesEl){
-    badgesEl.innerHTML = '';
-
-    const bannerBadge = document.createElement('div');
-    bannerBadge.className = 'badge clickable';
-    bannerBadge.innerText = currentSelected.banner || '—';
-    const bannerHex = (currentSelected.banner && BANNER_COLORS[currentSelected.banner]) ? BANNER_COLORS[currentSelected.banner] : '#2563eb';
-    bannerBadge.style.backgroundColor = mixWithWhite(bannerHex);
-    bannerBadge.style.color = '#111827';
-    bannerBadge.style.border = '1px solid rgba(15,23,42,0.04)';
-    // badge click -> jump to banner classification
-    bannerBadge.addEventListener('click', function(e){
-      e.stopPropagation();
-      scopeEl.value = 'all';
-      buildGroupOptions();
-      try { groupFilterEl.value = `banner:${currentSelected.banner}`; } catch(e){}
-      renderRankList();
-      rankListEl.scrollTop = 0;
-    });
-    badgesEl.appendChild(bannerBadge);
-
-    const unitBadge = document.createElement('div');
-    unitBadge.className = 'badge clickable';
-    unitBadge.innerText = currentSelected.unit || '—';
-    const unitHex = (currentSelected.unit && UNIT_COLORS[currentSelected.unit]) ? UNIT_COLORS[currentSelected.unit] : '#2563eb';
-    unitBadge.style.backgroundColor = mixWithWhite(unitHex);
-    unitBadge.style.color = '#111827';
-    unitBadge.style.border = '1px solid rgba(15,23,42,0.04)';
-    // badge click -> jump to unit classification
-    unitBadge.addEventListener('click', function(e){
-      e.stopPropagation();
-      scopeEl.value = 'all';
-      buildGroupOptions();
-      try { groupFilterEl.value = `unit:${currentSelected.unit}`; } catch(e){}
-      renderRankList();
-      rankListEl.scrollTop = 0;
-    });
-    badgesEl.appendChild(unitBadge);
+  // Find and mark active item (best-effort)
+  const items = Array.from(document.querySelectorAll('.video-item'));
+  for (const it of items) {
+    const titleEl = it.querySelector('.title');
+    if (titleEl && titleEl.textContent === currentSelected.title) {
+      it.classList.add('active');
+      break;
+    }
   }
 
-  // redraw chart using up-to-date history (but we will display predicted values only)
+  const titleEl = document.getElementById('selectedTitle');
+  if (titleEl) titleEl.innerText = currentSelected.title || '（動画を選択してください）';
+  const metaEl = document.getElementById('selectedMeta');
+  if (metaEl) metaEl.innerHTML = `<a href="${currentSelected.url || '#'}" target="_blank" style="color:var(--primary);text-decoration:none;">YouTubeで見る &rarr;</a>`;
+
+  const now = new Date();
+  const predNow = predictValueAt(currentSelected.history || [], now);
+
+  const selViewsEl = document.getElementById('selectedViews');
+  if (selViewsEl) selViewsEl.innerText = fmt(predNow) + ' 回';
+  const viewDelta7El = document.getElementById('viewDelta7');
+  if (viewDelta7El) viewDelta7El.innerText = fmt(calcDeltaWithPrediction(currentSelected.history || [], 7)) + ' 回';
+  const viewDelta30El = document.getElementById('viewDelta30');
+  if (viewDelta30El) viewDelta30El.innerText = fmt(calcDeltaWithPrediction(currentSelected.history || [], 30)) + ' 回';
+  const publishDateEl = document.getElementById('publishDate');
+  if (publishDateEl) publishDateEl.innerText = currentSelected.published || '—';
+
+  const badgesEl = document.getElementById('selectedBadges');
+  if (badgesEl) {
+    badgesEl.innerHTML = '';
+    if(currentSelected.banner){
+      const b = document.createElement('div');
+      b.className = 'badge clickable';
+      b.innerText = currentSelected.banner;
+      const color = BANNER_COLORS[currentSelected.banner] || '#e2e8f0';
+      b.style.background = mixWithWhite(color);
+      b.style.color = '#1e293b';
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        scopeEl.value = 'all';
+        buildGroupOptions();
+        try { groupFilterEl.value = 'banner:' + currentSelected.banner; } catch (e) { }
+        renderRankList();
+      });
+      badgesEl.appendChild(b);
+    }
+    if(currentSelected.unit){
+      const u = document.createElement('div');
+      u.className = 'badge clickable';
+      u.innerText = currentSelected.unit;
+      const color = UNIT_COLORS[currentSelected.unit] || '#e2e8f0';
+      u.style.background = mixWithWhite(color);
+      u.style.color = '#1e293b';
+      u.addEventListener('click', (e) => {
+        e.stopPropagation();
+        scopeEl.value = 'all';
+        buildGroupOptions();
+        try { groupFilterEl.value = 'unit:' + currentSelected.unit; } catch (e) { }
+        renderRankList();
+      });
+      badgesEl.appendChild(u);
+    }
+  }
+
   drawChartForSelection(document.querySelector('.tab-mode.active') ? document.querySelector('.tab-mode.active').dataset.period : 'all');
 }
 
-/* --- drawChartForSelection (uses improved predictor and shows predicted ticks) --- */
-function drawChartForSelection(period){
-  if(!currentSelected) return;
+function drawChartForSelection(period) {
+  if (!currentSelected) return;
   const hist = currentSelected.history || [];
-  if(hist.length === 0) {
-    if(chart){ chart.destroy(); chart = null; }
-    ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+  
+  if (hist.length === 0) {
+    if (chart) { chart.destroy(); chart = null; }
+    if(ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     return;
   }
 
-  // last recorded actual
-  const lastRec = hist[hist.length - 1];
-  const lastRecTime = lastRec.datetime ? new Date(lastRec.datetime) : (lastRec.date ? new Date(lastRec.date + 'T00:00:00.000Z') : null);
-  const lastRecViews = lastRec.views || 0;
-
-  // advanced slope estimation
-  const slopeInfo = computeAdvancedSlope(hist);
-  const slopePerMin = slopeInfo.slope_final; // views per minute
-
   const now = new Date();
-
-  // determine start time for predictions based on period
-  let startTime = null;
-  if(period === '7'){
+  let startTime;
+  if (period === '7') {
     startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  } else if(period === '30'){
+  } else if (period === '30') {
     startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   } else {
-    // 'all' => use earliest history timestamp if available; otherwise fallback to 30 days
     const firstRec = hist[0];
     const firstT = firstRec ? (firstRec.datetime ? new Date(firstRec.datetime) : (firstRec.date ? new Date(firstRec.date + 'T00:00:00.000Z') : null)) : null;
-    if(firstT && !isNaN(firstT.getTime())) startTime = new Date(firstT);
+    if (firstT && !isNaN(firstT.getTime())) startTime = new Date(firstT);
     else startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  // make sure startTime is not after now
-  if(startTime > now) startTime = new Date(now.getTime());
-
-  // use floorToHalfHour(startTime) so earlier half-hour (e.g. 18:30) is included
+  if (startTime > now) startTime = new Date(now.getTime());
   let t0 = floorToHalfHour(startTime);
-  // If t0 ended up > now (unlikely) floor to previous half hour of now
-  if(t0 > now) t0 = floorToHalfHour(now);
+  if (t0 > now) t0 = floorToHalfHour(now);
 
   const ticks = [];
   const thirtyMin = 30 * 60 * 1000;
-  for(let t = new Date(t0.getTime()); t.getTime() <= now.getTime(); t = new Date(t.getTime() + thirtyMin)){
+  for (let t = new Date(t0.getTime()); t.getTime() <= now.getTime(); t = new Date(t.getTime() + thirtyMin)) {
     ticks.push(new Date(t.getTime()));
-    // safety maximum of 2000 ticks to avoid insane plotting
-    if(ticks.length > 2000) break;
+    if (ticks.length > 2000) break;
   }
-  // ensure current exact time is included as last tick (if not equal to last item)
-  if(ticks.length === 0 || Math.abs(ticks[ticks.length-1].getTime() - now.getTime()) > 1000){
+  if (ticks.length === 0 || Math.abs(ticks[ticks.length - 1].getTime() - now.getTime()) > 1000) {
     ticks.push(new Date(now.getTime()));
   }
 
-  // compute predicted values: anchor from last recorded point (linear with slopePerMin)
   const labels = [];
   const data = [];
   const timesFull = [];
 
-  for(const t of ticks){
-    // Use predictValueAt to compute predicted value at arbitrary tick
+  for (const t of ticks) {
     const pred = predictValueAt(hist, t);
     labels.push(formatLabelForTick(t, period));
     data.push(pred);
     timesFull.push(t.toLocaleString());
   }
 
-  // choose color: prefer banner color if present, else unit color
   const banner = currentSelected.banner;
-  let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#2563eb');
-  const areaColor = hexToRgba(colorHex, 0.06);
+  let colorHex = (banner && banner !== '-' && BANNER_COLORS[banner]) ? BANNER_COLORS[banner] : (UNIT_COLORS[currentSelected.unit] || '#3b82f6');
+  const areaColor = hexToRgba(colorHex, 0.1);
   const lineColor = colorHex;
 
-  if(chart){
+  if (chart) {
     chart.data.labels = labels;
     chart.data.datasets[0].data = data;
     chart.data.datasets[0].backgroundColor = areaColor;
@@ -1089,57 +1064,60 @@ function drawChartForSelection(period){
     chart.data.datasets[0].timesFull = timesFull;
     chart.update('none');
   } else {
+    if(!ctx) return;
     chart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels,
+        labels: labels,
         datasets: [{
           label: currentSelected.title,
-          data,
-          tension:0.2,
-          fill:true,
+          data: data,
+          tension: 0.2,
+          fill: true,
           backgroundColor: areaColor,
           borderColor: lineColor,
-          pointRadius:3,
-          // attach times array so tooltip callback can access time including clock (recorded time)
+          pointRadius: 2,
+          pointHoverRadius: 4,
           timesFull: timesFull
         }]
       },
       options: {
-        responsive:true, maintainAspectRatio:false,
+        responsive: true,
+        maintainAspectRatio: false,
         interaction: { mode: 'nearest', intersect: false },
-        layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+        layout: { padding: { left: 0, right: 0, top: 10, bottom: 0 } },
         scales: {
           x: {
-            display:true,
-            grid:{color:'rgba(15,23,42,0.03)'},
-            ticks:{ color:'#6b7c93', font: { size:10 }, autoSkip: true, maxRotation:0, minRotation:0 },
-            type: 'category'
+            display: true,
+            grid: { display:false },
+            ticks: { color: '#94a3b8', font: { size: 10 }, autoSkip: true, maxRotation: 0, minRotation: 0 },
           },
           y: {
-            display:true,
-            grid:{color:'rgba(15,23,42,0.03)'},
-            ticks:{ color:'#6b7c93', font: { size:10 }, padding: 2, callback: v => Intl.NumberFormat().format(v) },
-            beginAtZero: false,
-            offset: false
+            display: true,
+            grid: { color: '#f1f5f9' },
+            ticks: { color: '#94a3b8', font: { size: 10 }, callback: function(v){ return Intl.NumberFormat().format(v); } },
+            beginAtZero: false
           }
         },
         plugins: {
-          legend:{display:false},
-          tooltip:{
-            callbacks:{
-              // show the exact datetime when the value is predicted as tooltip title (in local time)
-              title: function(items){
-                if(!items || !items.length) return '';
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            titleColor: '#0f172a',
+            bodyColor: '#0f172a',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              title: function (items) {
+                if (!items || !items.length) return '';
                 const it = items[0];
                 const ds = chart.data.datasets[it.datasetIndex];
-                if(ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return '推定: ' + ds.timesFull[it.dataIndex];
-                // fallback to label (date)
+                if (ds && Array.isArray(ds.timesFull) && ds.timesFull[it.dataIndex]) return ds.timesFull[it.dataIndex];
                 return chart.data.labels[it.dataIndex] || '';
               },
-              // show views as label, marked as 推定
-              label: function(context){
-                return `推定 ${Intl.NumberFormat().format(context.parsed.y)} 回`;
+              label: function (context) {
+                return '推定 ' + Intl.NumberFormat().format(context.parsed.y) + ' 回';
               }
             }
           }
@@ -1148,87 +1126,62 @@ function drawChartForSelection(period){
     });
   }
 
-  // Ensure latest PREDICTED value is shown in the metric after (re)draw
   const selViews = document.getElementById('selectedViews');
-  if(selViews) selViews.innerText = `${Intl.NumberFormat().format(predictValueAt(hist, new Date()))} 回`;
+  if (selViews) selViews.innerText = Intl.NumberFormat().format(predictValueAt(hist, new Date())) + ' 回';
 }
 
-/* helper to generate concise labels (for x-axis)
-   - if period spans multiple days show "YYYY-MM-DD HH:mm"
-   - if single day show "HH:mm"
-*/
-function formatLabelForTick(date, period){
-  const now = new Date();
-  const daysSpan = (function(){
-    if(period === '7') return 7;
-    if(period === '30') return 30;
-    // for 'all', approximate by realized tick spread
-    return 3;
+function formatLabelForTick(date, period) {
+  const daysSpan = (function () {
+    if (period === '7') return 7;
+    if (period === '30') return 30;
+    return 3; // all
   })();
-  if(daysSpan > 1){
-    // show date + time
-    const y = date.getFullYear();
-    const m = String(date.getMonth()+1).padStart(2,'0');
-    const d = String(date.getDate()).padStart(2,'0');
-    const hh = String(date.getHours()).padStart(2,'0');
-    const mm = String(date.getMinutes()).padStart(2,'0');
-    return `${y}-${m}-${d} ${hh}:${mm}`;
+  if (daysSpan > 1) {
+    const m = String(date.getMonth() + 1);
+    const d = String(date.getDate());
+    return `${m}/${d}`;
   } else {
-    const hh = String(date.getHours()).padStart(2,'0');
-    const mm = String(date.getMinutes()).padStart(2,'0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
   }
 }
 
-/* --- clicking outside the chart restores latest API value into the metric --- */
-document.addEventListener('click', function(evt){
-  const chartAreaEl = document.querySelector('.chart-area');
-  if(!chartAreaEl) return;
-  if(!chartAreaEl.contains(evt.target)){
-    // restore latest value to the true latest record when clicking outside chart area
-    if(currentSelected){
-      // display predicted current value
+document.addEventListener('click', function (evt) {
+  const chartAreaEl = document.querySelector('.card.area-chart');
+  if (!chartAreaEl) return;
+  if (!chartAreaEl.contains(evt.target)) {
+    if (currentSelected) {
       const selViews = document.getElementById('selectedViews');
-      if(selViews) selViews.innerText = `${Intl.NumberFormat().format(predictValueAt(currentSelected.history || [], new Date()))} 回`;
+      if (selViews) selViews.innerText = Intl.NumberFormat().format(predictValueAt(currentSelected.history || [], new Date())) + ' 回';
     }
   }
 });
 
-/* --- event binding --- */
-// clear groups button
-if(clearBtn) clearBtn.addEventListener('click', function(){
+/* --- Init --- */
+if (clearBtn) clearBtn.addEventListener('click', function () {
   scopeEl.value = 'all';
   buildGroupOptions();
-  try { groupFilterEl.value = 'all'; } catch(e){}
+  try { groupFilterEl.value = 'all'; } catch (e) { }
   renderRankList();
-  rankListEl.scrollTop = 0;
 });
 
 sortModeEl.addEventListener('change', renderRankList);
 searchEl.addEventListener('input', renderRankList);
-scopeEl.addEventListener('change', ()=>{ buildGroupOptions(); renderRankList(); });
+scopeEl.addEventListener('change', function() { buildGroupOptions(); renderRankList(); });
 groupFilterEl.addEventListener('change', renderRankList);
 
-// safe binding for optional buttons
-const btnAll = document.getElementById('btnAll');
-if(btnAll) btnAll.addEventListener('click', ()=> { scopeEl.value='all'; buildGroupOptions(); renderRankList(); });
-const btnBanner = document.getElementById('btnBanner');
-if(btnBanner) btnBanner.addEventListener('click', ()=> { scopeEl.value='banner'; buildGroupOptions(); renderRankList(); });
-const btnUnit = document.getElementById('btnUnit');
-if(btnUnit) btnUnit.addEventListener('click', ()=> { scopeEl.value='unit'; buildGroupOptions(); renderRankList(); });
-
-document.querySelectorAll('.tab-mode').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab-mode').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.tab-mode').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-mode').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     drawChartForSelection(btn.dataset.period);
   });
 });
 
-/* --- default select --- */
-function selectDefault(){
-  if(DATA.length) {
-    const sorted = DATA.slice().sort((a,b)=> {
+function selectDefault() {
+  if (DATA.length) {
+    const sorted = DATA.slice().sort((a, b) => {
       const la = predictValueAt(a.history || [], new Date());
       const lb = predictValueAt(b.history || [], new Date());
       return lb - la;
@@ -1237,15 +1190,13 @@ function selectDefault(){
   }
 }
 
-/* --- initial load --- */
 loadData();
 
-// --- Auto-refresh data every 20 minutes (to match API fetch cadence)
 const TWENTY_MIN = 20 * 60 * 1000;
 setInterval(() => {
-  // refresh file from server
   loadData();
 }, TWENTY_MIN);
-</script>
+
+  </script>
 </body>
 </html>
