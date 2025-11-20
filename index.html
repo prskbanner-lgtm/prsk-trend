@@ -36,7 +36,7 @@
        Kept overall structure the same.
     */
     .grid{display:grid;grid-template-columns: 240px minmax(220px, 1fr) 360px;gap:16px;align-items:start;}
-    /* column hooks so we can reorder in portrait */
+    /* column hooks so we can reorder in portrait/landscape */
     .col-left{order:1;}
     .col-center{order:2;}
     .col-right{order:3;}
@@ -86,31 +86,32 @@
       .metric{min-width:100px; font-size:13px;}
     }
 
-    /* Portrait mode: prioritize ranking first, then chart, then trend */
-    @media (orientation: portrait) and (max-width: 1200px){
+    /* Portrait mode: トレンド情報 -> グラフ -> ランキング (縦画面) */
+    @media (orientation: portrait){
       .grid{grid-template-columns: 1fr; gap:12px;}
-      .col-right{order:1;}   /* ランキングを先に */
+      .col-left{order:1;}   /* トレンドを先に */
       .col-center{order:2;}  /* グラフを次に */
-      .col-left{order:3;}    /* トレンドは最後に */
+      .col-right{order:3;}    /* ランキングは最後に */
       .chart-area{height:180px;} /* portraitではさらに小さく */
       .rank-list{max-height:420px;}
     }
 
-    /* Landscape mode: trend on top full width, graph + ranking side-by-side below */
+    /* Landscape mode: トレンド情報（上）→ グラフ（左）＋ランキング（右） */
     @media (orientation: landscape){
-      /* try a two-column layout: left (trend) collapses above, center+right side-by-side */
+      /* Trend spans full width on the first row, graph and ranking side-by-side below */
       .grid{
-        grid-template-columns: 1fr 360px;
+        grid-template-columns: 1fr 420px;
         grid-auto-rows: auto;
+        gap:16px;
       }
       .col-left{grid-column: 1 / -1; order:1;} /* trend spans full width on top */
-      .col-center{grid-column: 1 / 2; order:2;}
-      .col-right{grid-column: 2 / 3; order:3;}
-      .chart-area{height:200px;}
+      .col-center{grid-column: 1 / 2; order:2;} /* graph left */
+      .col-right{grid-column: 2 / 3; order:3;}  /* ranking right */
+      .chart-area{height:220px;}
       .rank-list{max-height:520px;}
     }
 
-    /* larger desktops: keep three-column layout defined earlier */
+    /* larger desktops: keep three-column layout defined earlier unless orientation overrides it */
     @media (min-width: 1201px){
       .grid{grid-template-columns: 240px minmax(320px, 1fr) 420px; gap:20px;}
       .chart-area{height:220px;}
@@ -138,7 +139,7 @@
       </div>
     </header>
 
-    <!-- Added classes col-left / col-center / col-right to allow ordering in portrait -->
+    <!-- Added classes col-left / col-center / col-right to allow ordering in portrait/landscape -->
     <div class="grid">
       <!-- LEFT COLUMN: trend information -->
       <div class="col-left">
