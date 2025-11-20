@@ -86,12 +86,12 @@
       .metric{min-width:100px; font-size:13px;}
     }
 
-    /* Portrait mode: prioritize ranking first, then chart, then trend */
+    /* Portrait mode: prioritize トレンド -> グラフ -> ランキング */
     @media (orientation: portrait) and (max-width: 1200px){
       .grid{grid-template-columns: 1fr; gap:12px;}
-      .col-right{order:1;}   /* ランキングを先に */
+      .col-left{order:1;}   /* トレンドを先に */
       .col-center{order:2;}  /* グラフを次に */
-      .col-left{order:3;}    /* トレンドは最後に */
+      .col-right{order:3;}    /* ランキングは最後に */
       .chart-area{height:180px;} /* portraitではさらに小さく */
       .rank-list{max-height:420px;}
     }
