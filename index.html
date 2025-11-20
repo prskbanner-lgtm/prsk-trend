@@ -86,18 +86,18 @@
       .metric{min-width:100px; font-size:13px;}
     }
 
-    /* Portrait mode: prioritize トレンド -> グラフ -> ランキング */
+    /* Portrait mode: prioritize ranking first, then chart, then trend */
     @media (orientation: portrait) and (max-width: 1200px){
       .grid{grid-template-columns: 1fr; gap:12px;}
-      .col-left{order:1;}   /* トレンドを先に */
+      .col-right{order:1;}   /* ランキングを先に */
       .col-center{order:2;}  /* グラフを次に */
-      .col-right{order:3;}    /* ランキングは最後に */
+      .col-left{order:3;}    /* トレンドは最後に */
       .chart-area{height:180px;} /* portraitではさらに小さく */
       .rank-list{max-height:420px;}
     }
 
-    /* Landscape mode on smaller devices: keep chart and ranking side-by-side if width allows */
-    @media (orientation: landscape) and (max-width: 1200px){
+    /* Landscape mode: trend on top full width, graph + ranking side-by-side below */
+    @media (orientation: landscape){
       /* try a two-column layout: left (trend) collapses above, center+right side-by-side */
       .grid{
         grid-template-columns: 1fr 360px;
