@@ -86,12 +86,12 @@
       .metric{min-width:100px; font-size:13px;}
     }
 
-    /* Portrait mode: prioritize ランキング first, then chart, then trend (original) */
+    /* Portrait mode: prioritize トレンド -> グラフ -> ランキング */
     @media (orientation: portrait) and (max-width: 1200px){
       .grid{grid-template-columns: 1fr; gap:12px;}
-      .col-right{order:1;}   /* ランキングを先に */
+      .col-left{order:1;}   /* トレンドを先に */
       .col-center{order:2;}  /* グラフを次に */
-      .col-left{order:3;}    /* トレンドは最後に */
+      .col-right{order:3;}    /* ランキングは最後に */
       .chart-area{height:180px;} /* portraitではさらに小さく */
       .rank-list{max-height:420px;}
     }
@@ -115,75 +115,6 @@
       .grid{grid-template-columns: 240px minmax(320px, 1fr) 420px; gap:20px;}
       .chart-area{height:220px;}
     }
-
-    /* -------------------------------------------------------------
-       NEW: 横画面（landscape）全般の調整（トレンド・ランキングを小さく、
-       中央グラフを大きく。フォントや画像サイズも抑える）
-       - 既存のルールを壊さないために最後に追加し、上書きしています
-       ------------------------------------------------------------- */
-    @media (orientation: landscape) {
-      /* make side columns narrower and center (chart) much larger */
-      .grid{
-        grid-template-columns: 160px minmax(520px, 1fr) 160px;
-        gap:12px;
-        align-items:start;
-      }
-
-      /* side columns visual shrink: cards padding smaller */
-      .col-left .card, .col-right .card {
-        padding:10px;
-      }
-      .col-left .trend-item, .col-right .card .video-item {
-        padding:8px;
-        border-radius:8px;
-      }
-
-      /* trend small adjustments */
-      .trend-item .label{font-size:12px;}
-      .trend-item .val{font-size:13px;}
-      .trend-list{gap:10px;}
-
-      /* ranking list compact */
-      .rank-list{gap:6px; max-height:520px;}
-      .video-item{padding:6px; gap:8px;}
-      .thumb{width:48px;height:34px;flex:0 0 48px;border-radius:6px;}
-      .meta .title{font-size:12px;}
-      .meta .sub{font-size:11px; gap:6px;}
-      .badge{padding:3px 6px;font-size:11px;}
-      .rank-num{font-size:13px;width:24px;}
-
-      /* reduce header/control densities a bit */
-      header .title{font-size:18px;}
-      .controls input[type="search"], .controls select, .controls button{font-size:12px;padding:6px 8px;}
-
-      /* metrics smaller */
-      .metric{min-width:100px;padding:6px;}
-      .metric .label{font-size:11px;}
-      .metric .val{font-size:14px;}
-
-      /* enlarge chart area substantially for landscape */
-      .chart-area{height:380px;}
-
-      /* ensure tabs and chart canvas scale nicely */
-      .tabs button{padding:6px 10px;font-size:12px;}
-      .chart-area canvas{height:100% !important;}
-
-      /* slightly smaller overall card shadows/padding to keep focus on chart */
-      .card{padding:10px;}
-    }
-
-    /* Extra: large landscape desktops — emphasize center more */
-    @media (orientation: landscape) and (min-width: 1400px){
-      .grid{
-        grid-template-columns: 160px minmax(760px, 1fr) 160px;
-        gap:18px;
-      }
-      .chart-area{height:480px;}
-      .thumb{width:56px;height:36px;flex:0 0 56px;}
-      .meta .title{font-size:13px;}
-      .metric{min-width:120px;padding:8px;}
-    }
-
   </style>
 </head>
 <body>
