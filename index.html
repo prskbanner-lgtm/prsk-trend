@@ -35,7 +35,12 @@
        Adjusted so center is a bit narrower and right column (ランキング) is larger.
        Kept overall structure the same.
     */
-    .grid{display:grid;grid-template-columns: 240px minmax(220px, 1fr) 360px;gap:16px;}
+    .grid{display:grid;grid-template-columns: 240px minmax(220px, 1fr) 360px;gap:16px;align-items:start;}
+    /* column hooks so we can reorder in portrait */
+    .col-left{order:1;}
+    .col-center{order:2;}
+    .col-right{order:3;}
+
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
       font-size:13px;
@@ -70,11 +75,45 @@
     .trend-item{padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(15,23,42,0.01), rgba(15,23,42,0.00));}
     .trend-item .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
     .trend-item .val{font-weight:700;color:var(--text);}
-    /* responsive */
+
+    /* ORIENTATION & RESPONSIVE RULES */
+    /* Mobile / narrow screens: single column stack */
     @media (max-width: 980px){
-      .grid{grid-template-columns: 1fr; }
+      .grid{grid-template-columns: 1fr; gap:12px;}
+      /* reorder for portrait vs landscape further below */
+      .chart-area{height:200px;} /* slightly smaller on narrow screens by default */
       .thumb{width:100px; height:56px; flex:0 0 100px;}
       .metric{min-width:100px; font-size:13px;}
+    }
+
+    /* Portrait mode: prioritize ranking first, then chart, then trend */
+    @media (orientation: portrait) and (max-width: 1200px){
+      .grid{grid-template-columns: 1fr; gap:12px;}
+      .col-right{order:1;}   /* ランキングを先に */
+      .col-center{order:2;}  /* グラフを次に */
+      .col-left{order:3;}    /* トレンドは最後に */
+      .chart-area{height:180px;} /* portraitではさらに小さく */
+      .rank-list{max-height:420px;}
+    }
+
+    /* Landscape mode on smaller devices: keep chart and ranking side-by-side if width allows */
+    @media (orientation: landscape) and (max-width: 1200px){
+      /* try a two-column layout: left (trend) collapses above, center+right side-by-side */
+      .grid{
+        grid-template-columns: 1fr 360px;
+        grid-auto-rows: auto;
+      }
+      .col-left{grid-column: 1 / -1; order:1;} /* trend spans full width on top */
+      .col-center{grid-column: 1 / 2; order:2;}
+      .col-right{grid-column: 2 / 3; order:3;}
+      .chart-area{height:200px;}
+      .rank-list{max-height:520px;}
+    }
+
+    /* larger desktops: keep three-column layout defined earlier */
+    @media (min-width: 1201px){
+      .grid{grid-template-columns: 240px minmax(320px, 1fr) 420px; gap:20px;}
+      .chart-area{height:220px;}
     }
   </style>
 </head>
@@ -99,9 +138,10 @@
       </div>
     </header>
 
+    <!-- Added classes col-left / col-center / col-right to allow ordering in portrait -->
     <div class="grid">
       <!-- LEFT COLUMN: trend information -->
-      <div>
+      <div class="col-left">
         <div class="card">
           <strong style="color:var(--text)">トレンド情報</strong>
           <div style="margin-top:10px" class="trend-list">
@@ -127,7 +167,7 @@
       </div>
 
       <!-- CENTER COLUMN: graph / details -->
-      <div>
+      <div class="col-center">
         <div class="card big-card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
@@ -177,7 +217,7 @@
       </div>
 
       <!-- RIGHT COLUMN: ranking -->
-      <div>
+      <div class="col-right">
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <strong style="color:var(--text)">ランキング</strong>
