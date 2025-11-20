@@ -31,8 +31,11 @@
       box-shadow: 0 6px 18px rgba(15,23,42,0.06);
       border: 1px solid rgba(15,23,42,0.04);
     }
-    /* three-column layout (left: trend, center: main graph, right: ranking) */
-    .grid{display:grid;grid-template-columns: 240px 1fr 240px;gap:16px;}
+    /* three-column layout (left: trend, center: main graph, right: ranking)
+       Adjusted so center is a bit narrower and right column (ランキング) is larger.
+       Kept overall structure the same.
+    */
+    .grid{display:grid;grid-template-columns: 240px minmax(220px, 1fr) 360px;gap:16px;}
     select, button, input[type="search"]{
       background:#f7f9fb; border:1px solid rgba(15,23,42,0.06); color:var(--text); padding:8px 10px;border-radius:8px;
       font-size:13px;
@@ -52,7 +55,8 @@
     .rank-num{font-size:14px;color:var(--accent);width:28px;text-align:center;font-weight:700}
     .stats-row{display:flex;gap:8px;align-items:center; justify-content:flex-end;}
     .big-card{padding:16px;}
-    .chart-area{height:320px;}
+    /* reduced chart area height (was 320px) to make the graph visually smaller */
+    .chart-area{height:220px;}
     .tabs{display:flex;gap:8px;margin-bottom:12px;}
     .tabs button{background:transparent;border:1px solid rgba(15,23,42,0.04);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;}
     .tabs button.active{background:linear-gradient(90deg, rgba(37,99,235,0.08), rgba(37,99,235,0.04)); color:var(--text);border-color:transparent;}
@@ -145,7 +149,7 @@
           </div>
 
           <div class="chart-area card" style="padding:12px;">
-            <canvas id="trendChart" style="width:100%;height:320px"></canvas>
+            <canvas id="trendChart" style="width:100%;height:220px"></canvas>
             <!-- bottom info removed as requested (do not display tapped date/value) -->
           </div>
 
