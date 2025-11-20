@@ -56,9 +56,14 @@
       border-radius: var(--radius-lg);
       border: 1px solid rgba(255,255,255,0.5);
       box-shadow: var(--shadow-sm);
-      position: sticky;
+      /* Changed: fixed positioning so header doesn't shift while scrolling */
+      position: fixed;
       top: 10px;
-      z-index: 50;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 1400px;
+      z-index: 1000;
     }
 
     .brand h1 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
@@ -235,6 +240,9 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Spacer to prevent content being hidden under fixed header */
+    #headerSpacer { height: 0; width: 100%; display: block; }
   </style>
 </head>
 <body>
@@ -258,6 +266,9 @@
         <button id="clearGroups" class="btn-primary">クリア</button>
       </div>
     </header>
+
+    <!-- Spacer inserted to keep original flow (header is fixed) -->
+    <div id="headerSpacer" aria-hidden="true"></div>
 
     <div class="dashboard-grid">
       <!-- Trends Column -->
@@ -1196,6 +1207,24 @@ const TWENTY_MIN = 20 * 60 * 1000;
 setInterval(() => {
   loadData();
 }, TWENTY_MIN);
+
+/* --- New: keep header spacer height in sync with fixed header --- */
+function adjustHeaderSpacer() {
+  const header = document.querySelector('header');
+  const spacer = document.getElementById('headerSpacer');
+  if (!header || !spacer) return;
+  // measure header height including margins
+  const rect = header.getBoundingClientRect();
+  // Add a small extra gap (10px) to match existing top offset
+  spacer.style.height = Math.ceil(rect.height + 10) + 'px';
+  // Also ensure header stays centered in very narrow viewports: adjust width to container if possible
+  // (header CSS already sets width and max-width)
+}
+window.addEventListener('resize', adjustHeaderSpacer);
+window.addEventListener('orientationchange', adjustHeaderSpacer);
+document.addEventListener('DOMContentLoaded', adjustHeaderSpacer);
+// In case DOM already parsed (script at end), run once
+setTimeout(adjustHeaderSpacer, 50);
 
   </script>
 </body>
