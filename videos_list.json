@@ -1,0 +1,6 @@
+{
+  "videos": [
+    { "url": "https://www.youtube.com/watch?v=EXAMPLEID1", "banner": "一歌", "unit": "レオニ" },
+    { "url": "https://www.youtube.com/watch?v=EXAMPLEID2", "banner": "咲希", "unit": "モモジャン" }
+  ]
+}
