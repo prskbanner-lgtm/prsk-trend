@@ -77,10 +77,15 @@
         .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
         .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
 
-        /* Chart Controls */
-        .chart-controls { display: flex; gap: 8px; align-items: center; }
-        .chart-btn { border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-jp); }
-        .chart-btn:hover { background: #e4e6eb; }
+        /* Chart Controls (New) */
+        .chart-controls { display: flex; gap: 8px; }
+        .chart-btn {
+            background: var(--bg-body); border: 1px solid var(--border-color);
+            color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s);
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+            font-family: var(--font-jp);
+        }
+        .chart-btn:hover { background: var(--primary-soft); color: var(--primary); }
         .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
         .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
@@ -107,8 +112,13 @@
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .ranking-title-row i { color: var(--rank-1); }
 
+        /* Ranking Controls */
         .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .custom-select { width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer; outline: none; transition: border-color 0.2s; }
+        .custom-select {
+            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
+            background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer;
+            outline: none; transition: border-color 0.2s;
+        }
         .custom-select:focus { border-color: var(--text-secondary); }
 
         .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1; }
@@ -133,6 +143,8 @@
             .ranking-card { max-height: 500px; } 
             .chart-card { padding: 16px; }
             .chart-area-wrapper { height: 250px; }
+            .chart-header { flex-direction: column; }
+            .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
         }
     </style>
 </head>
@@ -159,7 +171,7 @@
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
                     <div class="meta-row">
                         <span class="meta-item" id="currentDate">
-                             <i class="ri-calendar-line"></i> -
+                            <i class="ri-calendar-line"></i> -
                         </span>
                         <a id="currentLink" href="#" target="_blank" class="meta-item youtube-link" style="display:none;">
                             <i class="ri-youtube-fill"></i> YouTubeで見る
@@ -167,13 +179,13 @@
                     </div>
                 </div>
                 <div class="chart-controls">
-                    <button class="chart-btn active" onclick="setGraphMode('1m')" id="btn1m">直近1ヶ月</button>
-                    <button class="chart-btn" onclick="setGraphMode('all')" id="btnAll">全期間</button>
+                    <button class="chart-btn active" id="btnMode1m" onclick="setGraphMode('1m')">直近1ヶ月</button>
+                    <button class="chart-btn" id="btnModeAll" onclick="setGraphMode('all')">全期間</button>
                 </div>
             </div>
 
             <div class="chart-area-wrapper">
-                 <canvas id="viewChart"></canvas>
+                <canvas id="viewChart"></canvas>
             </div>
 
             <div class="stats-container">
@@ -189,7 +201,7 @@
                     <div class="comp-item">
                         <span class="label">前週比 (1 Week)</span>
                         <span class="value" id="diff-1w">-</span>
-                     </div>
+                    </div>
                     <div class="comp-item">
                         <span class="label">前月比 (1 Month)</span>
                         <span class="value" id="diff-1m">-</span>
@@ -201,12 +213,12 @@
         <div class="ranking-card">
             <div class="ranking-header">
                 <div class="ranking-title-row">
-                     <i class="ri-trophy-line"></i>
+                    <i class="ri-trophy-line"></i>
                     <h3>再生数ランキング</h3>
                 </div>
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
-                         <option value="all">全ユニット</option>
+                        <option value="all">全ユニット</option>
                     </select>
                     <select id="sortOrder" class="custom-select">
                         <option value="views">総再生数順</option>
@@ -301,8 +313,8 @@
     let chartInstance = null;
     let allData = {};
     let processedVideos = [];
+    let currentVideoId = null;
     let currentGraphMode = '1m'; // '1m' or 'all'
-    let currentSelectedVideo = null;
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -324,21 +336,27 @@
         const ms1m = 30 * ms1d;
 
         processedVideos = Object.keys(data).map(key => {
-            const history = data[key].history;
-            const currentPredicted = calculateValueAt(history, currentTimestamp);
-            const val1dAgo = calculateValueAtWithFallback(history, currentTimestamp - ms1d);
-            const val1wAgo = calculateValueAtWithFallback(history, currentTimestamp - ms1w);
-            const val1mAgo = calculateValueAtWithFallback(history, currentTimestamp - ms1m);
+            const vData = data[key];
+            // 互換性維持：古い形式(historyのみ)と新しい形式(recent_history + daily_history)の両対応
+            const recentHist = vData.recent_history || vData.history || [];
+            const dailyHist = vData.daily_history || [];
+
+            // 最新の予測値計算には詳細なrecent_historyを使う
+            const currentPredicted = calculateValueAt(recentHist, currentTimestamp);
+            const val1dAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1d);
+            const val1wAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1w);
+            const val1mAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1m);
             
             return {
                 id: key,
-                info: data[key].info,
+                info: vData.info,
                 latestViews: Math.round(currentPredicted),
                 growth1d: Math.round(currentPredicted - val1dAgo),
                 growth1w: Math.round(currentPredicted - val1wAgo),
                 growth1m: Math.round(currentPredicted - val1mAgo),
-                history: history,
-                uploadDateObj: new Date(data[key].info.uploadDate)
+                recent_history: recentHist,
+                daily_history: dailyHist,
+                uploadDateObj: new Date(vData.info.uploadDate)
             };
         });
 
@@ -348,7 +366,8 @@
 
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
-            selectVideo(newestVideo.id);
+            currentVideoId = newestVideo.id;
+            updateGraph(newestVideo);
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -382,7 +401,6 @@
             if (unitFilter === 'all') return true;
             return v.info.unit === unitFilter;
         });
-
         filtered.sort((a, b) => {
             switch (sortOrder) {
                 case 'date': return b.uploadDateObj - a.uploadDateObj;
@@ -400,7 +418,7 @@
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
         const firstTime = sortedHistory[0].time;
         const lastTime = sortedHistory[sortedHistory.length - 1].time;
-
+        
         if (targetTime >= firstTime && targetTime <= lastTime) {
             for (let i = 0; i < sortedHistory.length - 1; i++) {
                 const p1 = sortedHistory[i];
@@ -411,6 +429,7 @@
                 }
             }
         }
+        // 未来の予測 (線形回帰)
         if (targetTime > lastTime) {
             const lastPoint = sortedHistory[sortedHistory.length - 1];
             let weightedSlope = 0, totalWeight = 0;
@@ -438,75 +457,55 @@
         return calculateValueAt(history, targetTime);
     }
 
-    function generateGraphData(history, mode) {
-        const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
-        if(sortedHistory.length === 0) return [];
-
+    // グラフデータの生成（モードによる分岐）
+    function generateGraphData(video, mode) {
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
         const nowTime = new Date(nowJST).getTime();
         const dataPoints = [];
 
-        if (mode === 'all') {
-            // 全期間: 毎日00:00の予測値 + 現在値
-            // 最初のデータの日付を取得
-            const start = new Date(sortedHistory[0].time);
-            start.setHours(0, 0, 0, 0); // JST 00:00相当(ローカル設定がJST前提、またはブラウザ時間に依存。Dashboard利用者はほぼ日本想定)
+        if (mode === '1m') {
+            // 直近1ヶ月：recent_historyを使用（高解像度）
+            const hist = video.recent_history || [];
+            if(hist.length === 0) return [];
             
-            // データループ: 開始日から昨日まで
-            let iterDate = new Date(start);
-            while (iterDate.getTime() < nowTime) {
-                 // 未来の日付になったら終了
-                 if (iterDate.getTime() > nowTime) break;
-
-                 const ts = iterDate.getTime();
-                 // 履歴の範囲内(または少し前)であれば計算
-                 if (ts >= sortedHistory[0].time) {
-                     dataPoints.push({
-                         x: ts,
-                         y: Math.round(calculateValueAt(history, ts))
-                     });
-                 }
-                 // 翌日の00:00へ
-                 iterDate.setDate(iterDate.getDate() + 1);
-            }
-            // 最後に現在値
-            dataPoints.push({
-                x: nowTime,
-                y: Math.round(calculateValueAt(history, nowTime))
-            });
-
-        } else {
-            // 直近1ヶ月: 30分刻みの詳細
-            const ms30d = 30 * 24 * 60 * 60 * 1000;
-            let startTime = nowTime - ms30d;
-            
-            // 実際の履歴開始点より前には遡らない
-            if (startTime < sortedHistory[0].time) {
-                startTime = sortedHistory[0].time;
-            }
+            const sortedHistory = hist.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
+            const startTime = sortedHistory[0].time;
 
             let iterTime = new Date(startTime);
+            // 30分刻みでプロット
             iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
             iterTime.setSeconds(0);
             iterTime.setMilliseconds(0);
             let iterTs = iterTime.getTime();
 
             while (iterTs <= nowTime) {
-                dataPoints.push({
-                    x: iterTs, 
-                    y: Math.round(calculateValueAt(history, iterTs))
-                });
+                if (iterTs >= startTime) {
+                    dataPoints.push({
+                        x: iterTs, 
+                        y: Math.round(calculateValueAt(hist, iterTs))
+                    });
+                }
                 iterTs += 30 * 60 * 1000;
             }
-            
-            // 最後に現在値を追加
-            dataPoints.push({
-                x: nowTime,
-                y: Math.round(calculateValueAt(history, nowTime))
+        } else {
+            // 全期間：daily_historyを使用（00:00の点のみ） + 現在値
+            const hist = video.daily_history || [];
+            // daily_historyをそのままプロット
+            hist.forEach(h => {
+                dataPoints.push({
+                    x: new Date(h.timestamp).getTime(),
+                    y: h.views
+                });
             });
         }
 
-        return dataPoints;
+        // 最後に現在の予測値を追加
+        dataPoints.push({
+            x: nowTime,
+            y: video.latestViews
+        });
+        
+        return dataPoints.sort((a, b) => a.x - b.x);
     }
 
     function renderTrends(videos) {
@@ -568,34 +567,36 @@
                         <i class="ri-play-circle-line" style="vertical-align: text-bottom;"></i> ${video.latestViews.toLocaleString()} ${subStatHtml}
                     </span>
                 </div>
-               `;
+            `;
             list.appendChild(li);
         });
     }
 
-    window.selectVideo = function(id) {
-        const vidKey = Object.keys(allData).find(k => k === id);
-        if (!vidKey) return;
-        currentSelectedVideo = processedVideos.find(v => v.id === vidKey);
+    // グローバル関数として定義
+    window.setGraphMode = function(mode) {
+        currentGraphMode = mode;
         
-        if(currentSelectedVideo) {
-            updateGraph(currentSelectedVideo);
+        // ボタンのスタイル更新
+        document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
+        document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
+
+        if (currentVideoId) {
+            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
+            if (targetVideo) updateGraph(targetVideo);
+        }
+    };
+
+    window.selectVideo = function(id) {
+        currentVideoId = id;
+        const targetVideo = processedVideos.find(v => v.id === id);
+        if(targetVideo) {
+            updateGraph(targetVideo);
             document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
             const rankItem = document.getElementById(`rank-${id}`);
             if(rankItem) {
                 rankItem.classList.add('active');
                 rankItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
-        }
-    }
-    
-    window.setGraphMode = function(mode) {
-        currentGraphMode = mode;
-        document.getElementById('btn1m').classList.toggle('active', mode === '1m');
-        document.getElementById('btnAll').classList.toggle('active', mode === 'all');
-        
-        if (currentSelectedVideo) {
-            updateGraph(currentSelectedVideo);
         }
     }
 
@@ -687,7 +688,9 @@
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        const graphDataPoints = generateGraphData(video.history, currentGraphMode);
+        // モードに応じたデータ生成
+        const graphDataPoints = generateGraphData(video, currentGraphMode);
+        
         const rgb = hexToRgb(activeColor);
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
@@ -697,12 +700,12 @@
             type: 'line',
             data: {
                 datasets: [{
-                    label: '再生回数(予測)',
+                    label: '再生回数',
                     data: graphDataPoints,
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
-                    pointRadius: 4,
+                    pointRadius: currentGraphMode === 'all' ? 2 : 4, // 全期間表示時はポイントを小さく
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: activeColor,
                     tension: 0.1,
@@ -739,6 +742,9 @@
                             maxTicksLimit: 8,
                             callback: function(value) {
                                 const d = new Date(value);
+                                if (currentGraphMode === 'all') {
+                                    return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+                                }
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
                             }
                         } 
