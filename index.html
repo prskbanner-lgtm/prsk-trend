@@ -597,16 +597,19 @@
             chartInstance.destroy();
         }
 
-        // Python側で既にJSTのISOフォーマットになっているため、JSでパースして表示
+        // --- 時間のフォーマット処理 (日本時間固定) ---
         const labels = video.history.map(h => {
             const d = new Date(h.timestamp);
-            const minutes = d.getMinutes().toString().padStart(2, '0');
-            const hours = d.getHours().toString().padStart(2, '0');
-            const month = d.getMonth() + 1;
-            const date = d.getDate();
             
-            // グラフのラベル：「月/日 時:分」
-            return `${month}/${date} ${hours}:${minutes}`;
+            // ブラウザのタイムゾーンに関係なく日本時間 (Asia/Tokyo) で文字列化
+            // 例: "11/22 15:30"
+            return d.toLocaleString('ja-JP', {
+                timeZone: 'Asia/Tokyo',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         });
         
         const dataPoints = video.history.map(h => h.views);
@@ -625,7 +628,6 @@
                     borderColor: '#ff4b4b',
                     backgroundColor: gradient,
                     borderWidth: 3,
-                    // ポイントの装飾: 最新点のみ大きく表示
                     pointRadius: (ctx) => {
                         const index = ctx.dataIndex;
                         const count = ctx.dataset.data.length;
