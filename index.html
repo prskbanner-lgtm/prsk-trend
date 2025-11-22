@@ -726,50 +726,50 @@
             return;
         }
 
-
         let tableHtml = `
             <table class="prediction-table">
                 <thead>
                     <tr>
-                        <th>再生数</th>
-                
-                        <th>現在の再生数</th>
+                        <th>目標再生数</th>
+                        <th>到達までの日数</th>
                         <th>到達予想日時 (JST)</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
+        
+        // 現在時刻を取得
+        const now = new Date().getTime();
+
         TARGET_VIEWS.forEach(target => {
             const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
             let displayTime = '';
-            let currentViewsFormatted = '';
-
+            let daysRemaining = '-';
 
             if (video.latestViews >= target) {
                 displayTime = `<span style="color:#4caf50; font-weight:700;">達成済み</span>`;
-            } else if 
-            (predictedDate) {
+                daysRemaining = `<span style="color:#4caf50;">-</span>`;
+            } else if (predictedDate) {
                 const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' };
                 displayTime = predictedDate.toLocaleString('ja-JP', dateOptions);
+                
+                // 日数計算
+                const diffMs = predictedDate.getTime() - now;
+                if (diffMs > 0) {
+                    const days = diffMs / (24 * 60 * 60 * 1000);
+                    daysRemaining = `あと ${days.toFixed(1)} 日`;
+                } else {
+                    daysRemaining = 'まもなく';
+                }
             } else {
                 displayTime = `<span style="color:var(--text-secondary);">データ不足/伸び率低</span>`;
             }
 
-
-   
-            if (video.latestViews < target) {
-                currentViewsFormatted = video.latestViews.toLocaleString();
-            } else {
-                currentViewsFormatted = `<span style="color:#4caf50; font-weight:700;">${video.latestViews.toLocaleString()}</span>`;
-            }
-
-
             tableHtml += `
                 <tr>
                     <td>${target.toLocaleString()}</td>
-                    <td>${currentViewsFormatted}</td>
+                    <td>${daysRemaining}</td>
                     <td>${displayTime}</td>
-          
                 </tr>
             `;
         });
