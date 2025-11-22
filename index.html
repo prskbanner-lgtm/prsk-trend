@@ -258,7 +258,7 @@
 
             <div id="predictionArea" style="display:none;">
                 <div class="stats-container" style="border-top: none; padding-top: 0;">
-                    <p class="prediction-label">※直近30日の再生数の伸びを基に、線形回帰により予測しています。</p>
+                    <p class="prediction-label">※直近30日の再生数の伸びを基に、より新しいデータに重み付けをした線形回帰により予測しています。</p>
                     <div id="predictionContent">
                         <p class="prediction-notice">動画を選択すると、到達予想日時が表示されます。</p>
                     </div>
@@ -443,10 +443,11 @@
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
     }
 
-    // --- 再生数到達予想関連の関数 ---
+    // --- 再生数到達予想 (重み付け線形回帰) の関数 ---
 
     /**
-     * 再生数到達予想日時の計算 (線形回帰)
+     * 再生数到達予想日時の計算 (重み付け線形回帰)
+     * 直近のデータに重み (w = timeProgress^2) を適用し、勢いを反映させる。
      * @param {number} currentViews 現在の再生数
      * @param {Array<Object>} history 過去30日間の履歴
      * @param {number} targetViews 目標再生数
@@ -459,48 +460,71 @@
 
         const ms30d = 30 * 24 * 60 * 60 * 1000;
         const now = new Date().getTime();
-        
+        const startTimeLimit = now - ms30d;
+
         const recentHistory = history
             .map(h => ({ 
-                x: new Date(h.timestamp).getTime(), 
-                y: h.views 
+                x: new Date(h.timestamp).getTime(), // タイムスタンプ (ms)
+                y: h.views                         // 再生数 (views)
             }))
-            .filter(h => h.x > (now - ms30d))
+            .filter(h => h.x >= startTimeLimit) // 30日以上前のデータは除く
             .sort((a, b) => a.x - b.x);
 
         if (recentHistory.length < 5) {
-            return null;
+            return null; // データが少なすぎる
         }
 
-        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-        const n = recentHistory.length;
+        // 1. 重みの計算
+        const tMin = recentHistory[0].x;
+        const tMax = recentHistory[recentHistory.length - 1].x;
+        const tRange = tMax - tMin;
         
-        recentHistory.forEach(p => {
-            sumX += p.x;
-            sumY += p.y;
-            sumXY += p.x * p.y;
-            sumXX += p.x * p.x;
+        if (tRange <= 1000) { // 1秒未満のデータ範囲は予測不可として扱う
+            return null; 
+        }
+
+        const weightedPoints = recentHistory.map(p => {
+            const timeProgress = (p.x - tMin) / tRange; // 0 (最も古い) から 1 (最も新しい)
+            // 重み: 2乗することで、より最近のデータに強い重み付けをする
+            const weight = Math.pow(timeProgress, 2); 
+            return { ...p, w: weight };
         });
 
-        const meanX = sumX / n;
-        const meanY = sumY / n;
+        // 2. 重み付き合計の計算
+        let sumW = 0, sumWX = 0, sumWY = 0, sumWXX = 0, sumWXY = 0;
+        
+        weightedPoints.forEach(p => {
+            sumW += p.w;
+            sumWX += p.w * p.x;
+            sumWY += p.w * p.y;
+            sumWXX += p.w * p.x * p.x;
+            sumWXY += p.w * p.x * p.y;
+        });
 
-        // 傾き a (views/ms)
-        const numerator = sumXY - n * meanX * meanY;
-        const denominator = sumXX - n * meanX * meanX;
+        // 3. 傾き a (slopeA) の計算
+        // a = [Sum(w*x*y) - (Sum(w*x) * Sum(w*y)) / Sum(w)] / [Sum(w*x*x) - (Sum(w*x)^2 / Sum(w))]
+        const numerator = sumWXY - (sumWX * sumWY) / sumW;
+        const denominator = sumWXX - (sumWX * sumWX) / sumW;
         
-        const slopeA = denominator !== 0 ? numerator / denominator : 0;
+        const slopeA = denominator !== 0 ? numerator / denominator : 0; // views/ms
         
-        // 切片 b
-        const interceptB = meanY - slopeA * meanX;
+        // 4. 切片 b (interceptB) の計算
+        // Weighted Mean: meanXw = sumWX / sumW, meanYw = sumWY / sumW
+        // b = meanYw - a * meanXw
+        const meanXw = sumWX / sumW;
+        const meanYw = sumWY / sumW;
+        const interceptB = meanYw - slopeA * meanXw;
 
         if (slopeA <= 0) {
-            return null;
+            return null; // 再生数の伸びがゼロまたはマイナス
         }
 
+        // 5. 到達時間 (X) の予測: X = (Y - b) / a
         const targetTimeMs = (targetViews - interceptB) / slopeA;
 
-        if (targetTimeMs > now && targetTimeMs < now + 5 * 365 * ms30d) {
+        // 6. 結果の検証: 予測日時が未来であり、かつ遠すぎないこと (5年以内)
+        const msMaxFuture = 5 * 365 * 24 * 60 * 60 * 1000;
+        if (targetTimeMs > now && targetTimeMs < now + msMaxFuture) {
              return new Date(targetTimeMs);
         }
 
@@ -517,18 +541,15 @@
         const ms24h = 24 * 60 * 60 * 1000;
         
         for (const video of videos) {
-            // データが十分かチェック
             if (video.latestViews === 0 || video.recent_history.length < 5) continue;
 
             for (const target of TARGET_VIEWS) {
-                // 目標達成済みの場合はスキップ
                 if (video.latestViews >= target) continue;
 
                 const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
                 
                 if (predictedDate) {
                     const predictedTime = predictedDate.getTime();
-                    // 予測日時が現在から24時間以内の場合
                     if (predictedTime > now && predictedTime <= now + ms24h) {
                         return {
                             video: video,
@@ -732,7 +753,6 @@
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
         
-        // 1. 新しい急接近動画をチェック
         const approaching = findApproachingMilestone(videos);
         
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
@@ -741,7 +761,6 @@
 
         let cardConfig = [];
         
-        // 2. 急接近動画があれば先頭に追加
         if (approaching) {
             const targetViewLabel = (approaching.targetViews / 10000).toLocaleString() + '万';
             cardConfig.push({ 
@@ -753,7 +772,6 @@
             });
         }
 
-        // 3. 既存のトレンドを追加（急接近動画と重複する場合はスキップ）
         if (newest && (!approaching || newest.id !== approaching.video.id)) {
             cardConfig.push({ data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' });
         }
@@ -764,12 +782,11 @@
             cardConfig.push({ data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' });
         }
 
-        // 4. HTMLをレンダリング
         let html = '';
         if (cardConfig.length === 0) {
             html = '<div class="trend-card"><div class="trend-content">トレンドデータが見つかりませんでした。</div></div>';
         } else {
-            cardConfig.slice(0, 4).forEach(card => { // 最大4つ表示
+            cardConfig.slice(0, 4).forEach(card => { 
                 if(!card.data) return;
                 
                 const labelText = card.isMilestone ? card.label : card.label;
