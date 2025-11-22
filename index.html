@@ -15,10 +15,10 @@
     
     <style>
         :root {
-            /* カラーパレット - モダンで清潔感のある配色 */
+            /* カラーパレット */
             --bg-body: #f0f2f5;
             --bg-card: #ffffff;
-            --primary: #ff4b4b;       /* Youtube的な赤 */
+            --primary: #ff4b4b;
             --primary-soft: #fff0f0;
             --text-main: #1a1a1a;
             --text-secondary: #65676b;
@@ -71,7 +71,7 @@
             font-weight: 700;
         }
 
-        /* --- 1. トレンドセクション (カード) --- */
+        /* --- 1. トレンドセクション --- */
         .trend-section {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -100,7 +100,6 @@
             border-color: var(--primary-soft);
         }
 
-        /* カード内のアイコン装飾 */
         .trend-icon-box {
             width: 48px;
             height: 48px;
@@ -112,7 +111,6 @@
             flex-shrink: 0;
         }
 
-        /* タイプ別の色設定 */
         .type-new { background: #e3f2fd; color: #2196f3; }
         .type-trend { background: #e8f5e9; color: #4caf50; }
         .type-top { background: #fff8e1; color: #ffc107; }
@@ -151,7 +149,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* --- メインレイアウト (グラフ + ランキング) --- */
+        /* --- メインレイアウト --- */
         .main-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -160,7 +158,7 @@
 
         @media (min-width: 960px) {
             .main-grid {
-                grid-template-columns: 2.5fr 1fr; /* グラフエリアを広めに */
+                grid-template-columns: 2.5fr 1fr;
                 align-items: start;
             }
         }
@@ -257,7 +255,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            max-height: 600px; /* 高さを固定してスクロールさせる */
+            max-height: 600px;
             overflow: hidden;
         }
 
@@ -281,7 +279,6 @@
             flex: 1;
         }
         
-        /* カスタムスクロールバー */
         .ranking-scroll::-webkit-scrollbar { width: 6px; }
         .ranking-scroll::-webkit-scrollbar-track { background: transparent; }
         .ranking-scroll::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
@@ -311,7 +308,6 @@
             position: relative;
         }
         
-        /* アクティブ時の左ボーダーアクセント */
         .rank-item.active::before {
             content: '';
             position: absolute;
@@ -339,7 +335,6 @@
             flex-shrink: 0;
         }
 
-        /* 上位3位の装飾 */
         .rank-item:nth-child(1) .rank-badge { background: var(--rank-1); color: #fff; box-shadow: 0 2px 5px rgba(255, 215, 0, 0.4); }
         .rank-item:nth-child(2) .rank-badge { background: var(--rank-2); color: #fff; }
         .rank-item:nth-child(3) .rank-badge { background: var(--rank-3); color: #fff; }
@@ -373,7 +368,6 @@
             color: var(--text-secondary);
         }
 
-        /* モバイル対応 */
         @media (max-width: 768px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -395,9 +389,7 @@
     </div>
 
     <div class="trend-section" id="trendSection">
-        <div class="trend-card">
-            <div class="trend-content">読み込み中...</div>
-        </div>
+        <div class="trend-card"><div class="trend-content">読み込み中...</div></div>
     </div>
 
     <div class="main-grid">
@@ -423,7 +415,7 @@
                     <span class="value" id="currentViews">-</span>
                 </div>
                 <div class="stat-item">
-                    <span class="label">前回比 (30min Growth)</span>
+                    <span class="label">前回比 (30min)</span>
                     <span class="value up" id="currentGrowth">-</span>
                 </div>
                 <div class="stat-item">
@@ -439,8 +431,7 @@
                 <h3>再生数ランキング</h3>
             </div>
             <div class="ranking-scroll">
-                <ul class="rank-list" id="rankingList">
-                    </ul>
+                <ul class="rank-list" id="rankingList"></ul>
             </div>
         </div>
 
@@ -460,14 +451,13 @@
         })
         .catch(err => {
             console.error('Data load error:', err);
-            document.getElementById('trendSection').innerHTML = '<p style="color:red; padding:20px;">データ読み込みエラー。JSONファイルを確認してください。</p>';
+            document.getElementById('trendSection').innerHTML = '<p style="color:red; padding:20px;">データ読み込みエラー。</p>';
         });
 
     function initApp(data) {
         const videoArray = Object.keys(data).map(key => {
-            const history = data[key].history; // Pythonで整形されたデータを使用
+            const history = data[key].history;
             
-            // データが空の場合のガード
             if (!history || history.length === 0) return null;
 
             const latest = history[history.length - 1];
@@ -478,21 +468,20 @@
                 id: key,
                 info: data[key].info,
                 latestViews: latest.views,
-                growth: latest.views - prev.views, // 直近30分の伸び
+                growth: latest.views - prev.views, 
                 history: history,
                 uploadDateObj: new Date(data[key].info.uploadDate)
             };
-        }).filter(item => item !== null); // nullを除外
+        }).filter(item => item !== null); 
 
         renderTrends(videoArray);
-
+        
         // 再生数順にソート
         videoArray.sort((a, b) => b.latestViews - a.latestViews);
         renderRanking(videoArray);
 
         if (videoArray.length > 0) {
             updateGraph(videoArray[0]);
-            // ランキング1位を初期アクティブに
             setTimeout(() => {
                 const firstRank = document.getElementById(`rank-${videoArray[0].id}`);
                 if(firstRank) firstRank.classList.add('active');
@@ -511,7 +500,6 @@
         const trending = [...videos].sort((a, b) => b.growth - a.growth)[0];
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
 
-        // アイコン定義 (Remix Icon)
         const cardConfig = [
             { data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' },
             { data: trending, label: 'Best Growth (30m)', icon: 'ri-line-chart-line', colorClass: 'type-trend' },
@@ -563,7 +551,6 @@
     }
 
     window.selectVideo = function(id) {
-        // データ検索
         const vidKey = Object.keys(allData).find(k => k === id);
         if (!vidKey) return;
 
@@ -582,7 +569,6 @@
 
         updateGraph(videoObj);
         
-        // ランキングのハイライト更新
         document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
         const rankItem = document.getElementById(`rank-${id}`);
         if(rankItem) {
@@ -592,37 +578,39 @@
     }
 
     function updateGraph(video) {
-        // テキスト情報更新
         document.getElementById('currentUnit').innerHTML = `<i class="ri-team-line"></i> ${video.info.unit || '-'}`;
         document.getElementById('currentChar').innerHTML = `<i class="ri-user-smile-line"></i> ${video.info.character || '-'}`;
         document.getElementById('currentTitle').textContent = video.info.title;
-
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
         
         const growthEl = document.getElementById('currentGrowth');
         const growthVal = video.growth;
         growthEl.textContent = (growthVal >= 0 ? '+' : '') + growthVal.toLocaleString();
-        // 増加なら赤(primary)、減少や0ならグレーなどのクラス切り替え
         growthEl.className = growthVal > 0 ? 'value up' : 'value neutral';
         
         const dateStr = video.uploadDateObj.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
         document.getElementById('currentDate').textContent = dateStr;
 
-        // チャート描画
         const ctx = document.getElementById('viewChart').getContext('2d');
         
         if (chartInstance) {
             chartInstance.destroy();
         }
 
+        // Python側で既にJSTのISOフォーマットになっているため、JSでパースして表示
         const labels = video.history.map(h => {
             const d = new Date(h.timestamp);
             const minutes = d.getMinutes().toString().padStart(2, '0');
-            return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${minutes}`;
+            const hours = d.getHours().toString().padStart(2, '0');
+            const month = d.getMonth() + 1;
+            const date = d.getDate();
+            
+            // グラフのラベル：「月/日 時:分」
+            return `${month}/${date} ${hours}:${minutes}`;
         });
+        
         const dataPoints = video.history.map(h => h.views);
 
-        // グラデーション作成 (上から下へ赤～透明)
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, 'rgba(255, 75, 75, 0.2)');
         gradient.addColorStop(1, 'rgba(255, 75, 75, 0.0)');
@@ -637,17 +625,17 @@
                     borderColor: '#ff4b4b',
                     backgroundColor: gradient,
                     borderWidth: 3,
+                    // ポイントの装飾: 最新点のみ大きく表示
                     pointRadius: (ctx) => {
-                        // 最新の点だけ大きくする
                         const index = ctx.dataIndex;
                         const count = ctx.dataset.data.length;
-                        return index === count - 1 ? 5 : 0;
+                        return index === count - 1 ? 5 : 0; 
                     },
                     pointHoverRadius: 6,
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: '#ff4b4b',
                     pointBorderWidth: 3,
-                    tension: 0.3, // カーブを滑らかに
+                    tension: 0.3,
                     fill: true
                 }]
             },
