@@ -16,7 +16,7 @@
         :root {
             --bg-body: #f0f2f5;
             --bg-card: #ffffff;
-            --primary: #ff4b4b; /* デフォルトカラー */
+            --primary: #ff4b4b;
             --primary-soft: #fff0f0;
             --text-main: #1a1a1a;
             --text-secondary: #65676b;
@@ -64,7 +64,6 @@
         .video-meta { flex: 1; }
         .tags { display: flex; gap: 8px; margin-bottom: 10px; }
         
-        /* Tag Style Updated for dynamic coloring */
         .tag { 
             background: var(--bg-body); 
             color: var(--text-secondary); 
@@ -93,7 +92,7 @@
         .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
         .comp-item .value { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; display: block; }
         
-        .val-up { color: var(--primary); } /* JSで動的に色が変わる場合はstyle属性で上書きされますが、デフォルトとして保持 */
+        .val-up { color: var(--primary); }
         .val-neutral { color: var(--text-secondary); }
         .val-down { color: #4169e1; }
 
@@ -201,7 +200,7 @@
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
                         <option value="all">全ユニット</option>
-                        </select>
+                    </select>
                     <select id="sortOrder" class="custom-select">
                         <option value="views">総再生数順</option>
                         <option value="date">投稿日が新しい順</option>
@@ -253,8 +252,6 @@
         default: "#ff4b4b"
     };
 
-    // --- ユニット並び順定義 (表示名またはデータ上のユニット名) ---
-    // データのユニット名が公式英語名か略称か不明なため両方に対応できるように定義
     const UNIT_SORT_ORDER = [
         "Leo/need", "レオニ",
         "MORE MORE JUMP!", "モモジャン",
@@ -267,7 +264,6 @@
     let allData = {};
     let processedVideos = [];
 
-    // JSONデータの読み込み
     fetch('stats_history.json')
         .then(response => response.json())
         .then(data => {
@@ -319,21 +315,16 @@
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
     }
 
-    // ユニットフィルター生成（カスタムソート順適用）
     function populateUnitFilter(videos) {
         const select = document.getElementById('unitFilter');
         const units = new Set();
         videos.forEach(v => { if(v.info.unit) units.add(v.info.unit); });
         
-        // 定義された順序に基づいてソート
         const sortedUnits = Array.from(units).sort((a, b) => {
             let indexA = UNIT_SORT_ORDER.indexOf(a);
             let indexB = UNIT_SORT_ORDER.indexOf(b);
-            
-            // リストにないものは末尾へ
             if (indexA === -1) indexA = 999;
             if (indexB === -1) indexB = 999;
-            
             return indexA - indexB;
         });
 
@@ -367,7 +358,6 @@
         renderRanking(filtered, sortOrder);
     }
 
-    // 予測ロジック
     function calculateValueAt(history, targetTime) {
         if (!history || history.length === 0) return 0;
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
@@ -411,9 +401,10 @@
         return calculateValueAt(history, targetTime);
     }
 
+    // グラフ用データ生成：X軸をタイムスタンプ(数値)として保持する
     function generateGraphData(history) {
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
-        if(sortedHistory.length === 0) return { labels: [], points: [] };
+        if(sortedHistory.length === 0) return [];
 
         const startTime = sortedHistory[0].time;
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
@@ -425,22 +416,27 @@
         iterTime.setMilliseconds(0);
         let iterTs = iterTime.getTime();
 
-        const labels = [], points = [];
+        const dataPoints = [];
+        
+        // 30分ごとの履歴点
         while (iterTs <= nowTime) {
             if (iterTs >= startTime) {
-                const d = new Date(iterTs);
-                labels.push(`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes() === 0 ? '00' : '30'}`);
-                points.push(Math.round(calculateValueAt(history, iterTs)));
+                dataPoints.push({
+                    x: iterTs, // X座標をタイムスタンプ(数値)にする
+                    y: Math.round(calculateValueAt(history, iterTs))
+                });
             }
             iterTs += 30 * 60 * 1000;
         }
-        const dNow = new Date(nowTime);
-        labels.push(`Current (${dNow.getHours()}:${dNow.getMinutes().toString().padStart(2,'0')})`);
-        points.push(Math.round(calculateValueAt(history, nowTime)));
-        return { labels, points };
-    }
 
-    // --- 描画関連 ---
+        // 現在時刻の点を追加
+        dataPoints.push({
+            x: nowTime,
+            y: Math.round(calculateValueAt(history, nowTime))
+        });
+
+        return dataPoints;
+    }
 
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
@@ -527,14 +523,12 @@
         const sign = diff >= 0 ? '+' : '';
         el.textContent = sign + diff.toLocaleString();
         
-        // 色のリセット（JS制御ではなくクラス依存に戻すならクラス付け替え）
         el.className = 'value';
         if (diff > 0) el.classList.add('val-up');
         else if (diff < 0) el.classList.add('val-down');
         else el.classList.add('val-neutral');
     }
 
-    // カラー変換ヘルパー (Hex -> R,G,B)
     function hexToRgb(hex) {
         const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
         hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
@@ -547,7 +541,6 @@
     }
 
     function updateGraph(video) {
-        // 基本情報
         const unitTag = document.getElementById('currentUnit');
         const charTag = document.getElementById('currentChar');
         
@@ -557,67 +550,49 @@
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
-        // --- 色の決定ロジック ---
         let activeColor = COLOR_CONFIG.default;
         let charKey = video.info.character;
         let unitKey = video.info.unit;
 
-        // キャラクターカラーがあれば採用
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
             activeColor = COLOR_CONFIG.characters[charKey];
-        } 
-        // なければユニットカラー
-        else if (unitKey && COLOR_CONFIG.units[unitKey]) {
+        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
             activeColor = COLOR_CONFIG.units[unitKey];
         }
 
-        // タグの色を更新 (CharタグとUnitタグ)
-        // バナーキャラクターに関連するのは主にCharタグだが、統一感を出すため両方またはメインの方を変える
-        // ここではリクエスト通り「グラフ画面の動画タイトルの上にあるタグの色」を変更
         const setTagColor = (el, color) => {
             el.style.borderColor = color;
             el.style.color = color;
-            // 背景を非常に薄くつける
             const rgb = hexToRgb(color);
             el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
         };
 
         setTagColor(charTag, activeColor);
-        // ユニットタグも合わせるか、あるいはユニット固有の色にするか。
-        // 「バナーキャラクターによって変化」なので、Charタグを優先して色を変え、UnitタグはUnit色にするのが自然ですが
-        // リクエスト文脈的に「テーマカラー」として扱うため、両方に適用します。
         setTagColor(unitTag, activeColor);
 
-        // 差分更新
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
         updateDiffElement('diff-1m', video.growth1m);
 
-        // 差分値の色もテーマに合わせる場合（オプション）
-        // 今回は .val-up クラスのCSSで制御されているため、そこはデフォルトのままにします。
-        // もし差分テキストの色もキャラカラーにしたい場合は以下を有効化
-        // document.querySelectorAll('.val-up').forEach(el => el.style.color = activeColor);
-
-        // チャート描画
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        const graphData = generateGraphData(video.history);
+        // データを取得 ({x: timestamp, y: views} の配列)
+        const graphDataPoints = generateGraphData(video.history);
         const rgb = hexToRgb(activeColor);
 
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`); // 上部 (少し濃く)
-        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`); // 下部 (透明)
+        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
+        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
 
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: graphData.labels,
                 datasets: [{
                     label: '再生回数(予測)',
-                    data: graphData.points,
-                    borderColor: activeColor, // 線の色
-                    backgroundColor: gradient, // 塗りつぶしグラデーション
+                    data: graphDataPoints, // {x, y}形式のデータを直接渡す
+                    borderColor: activeColor,
+                    backgroundColor: gradient,
                     borderWidth: 3,
                     pointRadius: 4,
                     pointBackgroundColor: '#ffffff',
@@ -629,13 +604,18 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
+                interaction: { intersect: false, mode: 'nearest', axis: 'x' }, // X軸に近い点にスナップさせる
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(20, 20, 20, 0.9)',
                         titleFont: { family: 'Noto Sans JP', size: 13 },
                         callbacks: {
+                            // ツールチップのタイトルを日付形式に戻す
+                            title: function(context) {
+                                const d = new Date(context[0].parsed.x);
+                                return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+                            },
                             label: function(context) {
                                 return context.parsed.y.toLocaleString() + ' views';
                             }
@@ -643,8 +623,24 @@
                     }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: '#9ca3af', maxTicksLimit: 8 } },
-                    y: { grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, ticks: { color: '#9ca3af', callback: function(value) { if(value >= 10000) return (value/10000) + '万'; return value; } } }
+                    x: { 
+                        type: 'linear', // 線形スケールを使用 (時間を数値として扱う)
+                        grid: { display: false },
+                        ticks: { 
+                            font: { size: 11, family: 'Inter' }, 
+                            color: '#9ca3af', 
+                            maxTicksLimit: 8,
+                            // X軸のラベルを日付形式に戻す
+                            callback: function(value) {
+                                const d = new Date(value);
+                                return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+                            }
+                        } 
+                    },
+                    y: { 
+                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
+                        ticks: { color: '#9ca3af', callback: function(value) { if(value >= 10000) return (value/10000) + '万'; return value; } } 
+                    }
                 }
             }
         });
