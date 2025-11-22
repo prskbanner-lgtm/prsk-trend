@@ -66,49 +66,22 @@
         
         /* Tags & Images Area */
         .tags { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px; }
-        
-        .tag { 
-            background: var(--bg-body); color: var(--text-secondary); 
-            padding: 4px 12px; border-radius: 20px; 
-            font-size: 0.75rem; font-weight: 700; 
-            display: flex; align-items: center; gap: 4px; border: 1px solid transparent;
-            transition: all 0.3s ease;
-        }
-
+        .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; transition: all 0.3s ease; }
         .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block; }
         .tag-wrapper { display: flex; align-items: center; }
 
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
         
-        /* --- 追加: 日付とリンクのスタイル --- */
-        .meta-row {
-            display: flex;
-            gap: 16px;
-            margin-top: 8px;
-            align-items: center;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            flex-wrap: wrap;
-        }
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .youtube-link {
-            color: #ff0000;
-            text-decoration: none;
-            font-weight: 600;
-            background: rgba(255, 0, 0, 0.05);
-            padding: 4px 10px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-        .youtube-link:hover {
-            background: rgba(255, 0, 0, 0.1);
-            transform: translateY(-1px);
-        }
-        /* -------------------------------- */
+        .meta-row { display: flex; gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap; }
+        .meta-item { display: flex; align-items: center; gap: 6px; }
+        .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
+        .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
+
+        /* Chart Controls */
+        .chart-controls { display: flex; gap: 8px; align-items: center; }
+        .chart-btn { border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-jp); }
+        .chart-btn:hover { background: #e4e6eb; }
+        .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
         .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
         
@@ -134,12 +107,8 @@
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .ranking-title-row i { color: var(--rank-1); }
 
-        /* Ranking Controls */
         .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .custom-select {
-            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
-            background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer; outline: none; transition: border-color 0.2s;
-        }
+        .custom-select { width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer; outline: none; transition: border-color 0.2s; }
         .custom-select:focus { border-color: var(--text-secondary); }
 
         .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1; }
@@ -188,20 +157,23 @@
                         <div id="currentChar" class="tag-wrapper"></div>
                     </div>
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
-                    
                     <div class="meta-row">
                         <span class="meta-item" id="currentDate">
-                            <i class="ri-calendar-line"></i> -
+                             <i class="ri-calendar-line"></i> -
                         </span>
                         <a id="currentLink" href="#" target="_blank" class="meta-item youtube-link" style="display:none;">
                             <i class="ri-youtube-fill"></i> YouTubeで見る
                         </a>
                     </div>
-                    </div>
+                </div>
+                <div class="chart-controls">
+                    <button class="chart-btn active" onclick="setGraphMode('1m')" id="btn1m">直近1ヶ月</button>
+                    <button class="chart-btn" onclick="setGraphMode('all')" id="btnAll">全期間</button>
+                </div>
             </div>
 
             <div class="chart-area-wrapper">
-                <canvas id="viewChart"></canvas>
+                 <canvas id="viewChart"></canvas>
             </div>
 
             <div class="stats-container">
@@ -217,7 +189,7 @@
                     <div class="comp-item">
                         <span class="label">前週比 (1 Week)</span>
                         <span class="value" id="diff-1w">-</span>
-                    </div>
+                     </div>
                     <div class="comp-item">
                         <span class="label">前月比 (1 Month)</span>
                         <span class="value" id="diff-1m">-</span>
@@ -229,12 +201,12 @@
         <div class="ranking-card">
             <div class="ranking-header">
                 <div class="ranking-title-row">
-                    <i class="ri-trophy-line"></i>
+                     <i class="ri-trophy-line"></i>
                     <h3>再生数ランキング</h3>
                 </div>
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
-                        <option value="all">全ユニット</option>
+                         <option value="all">全ユニット</option>
                     </select>
                     <select id="sortOrder" class="custom-select">
                         <option value="views">総再生数順</option>
@@ -286,7 +258,6 @@
         },
         default: "#ff4b4b"
     };
-
     // --- 画像設定 ---
     const IMAGE_CONFIG = {
         units: {
@@ -319,7 +290,6 @@
             "瑞希": "./images/chars/54logo_mizuki.png"
         }
     };
-
     const UNIT_SORT_ORDER = [
         "Leo/need", "レオニ",
         "MORE MORE JUMP!", "モモジャン",
@@ -331,6 +301,8 @@
     let chartInstance = null;
     let allData = {};
     let processedVideos = [];
+    let currentGraphMode = '1m'; // '1m' or 'all'
+    let currentSelectedVideo = null;
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -376,7 +348,7 @@
 
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
-            updateGraph(newestVideo);
+            selectVideo(newestVideo.id);
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -387,7 +359,6 @@
         const select = document.getElementById('unitFilter');
         const units = new Set();
         videos.forEach(v => { if(v.info.unit) units.add(v.info.unit); });
-
         const sortedUnits = Array.from(units).sort((a, b) => {
             let indexA = UNIT_SORT_ORDER.indexOf(a);
             let indexB = UNIT_SORT_ORDER.indexOf(b);
@@ -395,7 +366,6 @@
             if (indexB === -1) indexB = 999;
             return indexA - indexB;
         });
-
         sortedUnits.forEach(unit => {
             const option = document.createElement('option');
             option.value = unit;
@@ -422,14 +392,12 @@
                 case 'views': default: return b.latestViews - a.latestViews;
             }
         });
-
         renderRanking(filtered, sortOrder);
     }
 
     function calculateValueAt(history, targetTime) {
         if (!history || history.length === 0) return 0;
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
-
         const firstTime = sortedHistory[0].time;
         const lastTime = sortedHistory[sortedHistory.length - 1].time;
 
@@ -470,36 +438,73 @@
         return calculateValueAt(history, targetTime);
     }
 
-    function generateGraphData(history) {
+    function generateGraphData(history, mode) {
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
         if(sortedHistory.length === 0) return [];
 
-        const startTime = sortedHistory[0].time;
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
         const nowTime = new Date(nowJST).getTime();
-
-        let iterTime = new Date(startTime);
-        iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
-        iterTime.setSeconds(0);
-        iterTime.setMilliseconds(0);
-        let iterTs = iterTime.getTime();
-
         const dataPoints = [];
-        
-        while (iterTs <= nowTime) {
-            if (iterTs >= startTime) {
+
+        if (mode === 'all') {
+            // 全期間: 毎日00:00の予測値 + 現在値
+            // 最初のデータの日付を取得
+            const start = new Date(sortedHistory[0].time);
+            start.setHours(0, 0, 0, 0); // JST 00:00相当(ローカル設定がJST前提、またはブラウザ時間に依存。Dashboard利用者はほぼ日本想定)
+            
+            // データループ: 開始日から昨日まで
+            let iterDate = new Date(start);
+            while (iterDate.getTime() < nowTime) {
+                 // 未来の日付になったら終了
+                 if (iterDate.getTime() > nowTime) break;
+
+                 const ts = iterDate.getTime();
+                 // 履歴の範囲内(または少し前)であれば計算
+                 if (ts >= sortedHistory[0].time) {
+                     dataPoints.push({
+                         x: ts,
+                         y: Math.round(calculateValueAt(history, ts))
+                     });
+                 }
+                 // 翌日の00:00へ
+                 iterDate.setDate(iterDate.getDate() + 1);
+            }
+            // 最後に現在値
+            dataPoints.push({
+                x: nowTime,
+                y: Math.round(calculateValueAt(history, nowTime))
+            });
+
+        } else {
+            // 直近1ヶ月: 30分刻みの詳細
+            const ms30d = 30 * 24 * 60 * 60 * 1000;
+            let startTime = nowTime - ms30d;
+            
+            // 実際の履歴開始点より前には遡らない
+            if (startTime < sortedHistory[0].time) {
+                startTime = sortedHistory[0].time;
+            }
+
+            let iterTime = new Date(startTime);
+            iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
+            iterTime.setSeconds(0);
+            iterTime.setMilliseconds(0);
+            let iterTs = iterTime.getTime();
+
+            while (iterTs <= nowTime) {
                 dataPoints.push({
                     x: iterTs, 
                     y: Math.round(calculateValueAt(history, iterTs))
                 });
+                iterTs += 30 * 60 * 1000;
             }
-            iterTs += 30 * 60 * 1000;
+            
+            // 最後に現在値を追加
+            dataPoints.push({
+                x: nowTime,
+                y: Math.round(calculateValueAt(history, nowTime))
+            });
         }
-
-        dataPoints.push({
-            x: nowTime,
-            y: Math.round(calculateValueAt(history, nowTime))
-        });
 
         return dataPoints;
     }
@@ -515,7 +520,6 @@
             { data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' },
             { data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' }
         ];
-
         let html = '';
         cardConfig.forEach(card => {
             if(!card.data) return;
@@ -564,7 +568,7 @@
                         <i class="ri-play-circle-line" style="vertical-align: text-bottom;"></i> ${video.latestViews.toLocaleString()} ${subStatHtml}
                     </span>
                 </div>
-            `;
+               `;
             list.appendChild(li);
         });
     }
@@ -572,15 +576,26 @@
     window.selectVideo = function(id) {
         const vidKey = Object.keys(allData).find(k => k === id);
         if (!vidKey) return;
-        const targetVideo = processedVideos.find(v => v.id === vidKey);
-        if(targetVideo) {
-            updateGraph(targetVideo);
+        currentSelectedVideo = processedVideos.find(v => v.id === vidKey);
+        
+        if(currentSelectedVideo) {
+            updateGraph(currentSelectedVideo);
             document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
             const rankItem = document.getElementById(`rank-${id}`);
             if(rankItem) {
                 rankItem.classList.add('active');
                 rankItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+        }
+    }
+    
+    window.setGraphMode = function(mode) {
+        currentGraphMode = mode;
+        document.getElementById('btn1m').classList.toggle('active', mode === '1m');
+        document.getElementById('btnAll').classList.toggle('active', mode === 'all');
+        
+        if (currentSelectedVideo) {
+            updateGraph(currentSelectedVideo);
         }
     }
 
@@ -638,7 +653,6 @@
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
-        // --- 追加: 日付とリンクの更新処理 ---
         const d = new Date(video.info.uploadDate);
         const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
@@ -646,10 +660,8 @@
         const linkEl = document.getElementById('currentLink');
         linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
         linkEl.style.display = 'inline-flex';
-        // ---------------------------------
 
         let activeColor = COLOR_CONFIG.default;
-
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
             activeColor = COLOR_CONFIG.characters[charKey];
         } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
@@ -675,7 +687,7 @@
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        const graphDataPoints = generateGraphData(video.history);
+        const graphDataPoints = generateGraphData(video.history, currentGraphMode);
         const rgb = hexToRgb(activeColor);
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
