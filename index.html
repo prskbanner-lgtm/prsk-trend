@@ -59,7 +59,6 @@
         @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr; align-items: start; } }
 
         /* Chart Card */
-        /* 修正: paddingを少し減らしてグラフ領域を確保 */
         .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
         
         .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
@@ -69,16 +68,10 @@
         .tags { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px; }
         
         .tag { 
-            background: var(--bg-body);
-            color: var(--text-secondary); 
-            padding: 4px 12px; 
-            border-radius: 20px; 
-            font-size: 0.75rem; 
-            font-weight: 700; 
-            display: flex; 
-            align-items: center; 
-            gap: 4px;
-            border: 1px solid transparent;
+            background: var(--bg-body); color: var(--text-secondary); 
+            padding: 4px 12px; border-radius: 20px; 
+            font-size: 0.75rem; font-weight: 700; 
+            display: flex; align-items: center; gap: 4px; border: 1px solid transparent;
             transition: all 0.3s ease;
         }
 
@@ -87,7 +80,36 @@
 
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
         
-        /* 修正: チャートエリアのレスポンシブ対応 */
+        /* --- 追加: 日付とリンクのスタイル --- */
+        .meta-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .youtube-link {
+            color: #ff0000;
+            text-decoration: none;
+            font-weight: 600;
+            background: rgba(255, 0, 0, 0.05);
+            padding: 4px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .youtube-link:hover {
+            background: rgba(255, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+        /* -------------------------------- */
+
         .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
         
         /* Stats Grid */
@@ -115,17 +137,8 @@
         /* Ranking Controls */
         .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .custom-select {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: var(--radius-s);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: var(--font-jp);
-            font-size: 0.85rem;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
+            background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer; outline: none; transition: border-color 0.2s;
         }
         .custom-select:focus { border-color: var(--text-secondary); }
 
@@ -149,9 +162,7 @@
         
         @media (max-width: 768px) { 
             .ranking-card { max-height: 500px; } 
-            /* 修正: スマホサイズではカードの余白をさらに詰める */
             .chart-card { padding: 16px; }
-            /* 修正: スマホサイズではグラフの高さを抑えて縦長感を解消 */
             .chart-area-wrapper { height: 250px; }
         }
     </style>
@@ -177,7 +188,16 @@
                         <div id="currentChar" class="tag-wrapper"></div>
                     </div>
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
-                </div>
+                    
+                    <div class="meta-row">
+                        <span class="meta-item" id="currentDate">
+                            <i class="ri-calendar-line"></i> -
+                        </span>
+                        <a id="currentLink" href="#" target="_blank" class="meta-item youtube-link" style="display:none;">
+                            <i class="ri-youtube-fill"></i> YouTubeで見る
+                        </a>
+                    </div>
+                    </div>
             </div>
 
             <div class="chart-area-wrapper">
@@ -355,12 +375,8 @@
         updateRankingDisplay();
 
         if (processedVideos.length > 0) {
-            // 修正: 投稿日が一番新しい動画をデフォルトで選択
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
-            
-            // 修正: ランキングリストの選択状態を作らずにグラフだけ更新する
             updateGraph(newestVideo);
-            // selectVideo(newestVideo.id); を呼ぶとランキングがハイライトされるので、ここでは呼ばない
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -431,7 +447,6 @@
             const lastPoint = sortedHistory[sortedHistory.length - 1];
             let weightedSlope = 0, totalWeight = 0;
             const sampleCount = Math.min(3, sortedHistory.length - 1);
-            
             if (sampleCount > 0) {
                 for (let i = 0; i < sampleCount; i++) {
                     const idx = sortedHistory.length - 1 - i;
@@ -485,6 +500,7 @@
             x: nowTime,
             y: Math.round(calculateValueAt(history, nowTime))
         });
+
         return dataPoints;
     }
 
@@ -622,6 +638,16 @@
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
+        // --- 追加: 日付とリンクの更新処理 ---
+        const d = new Date(video.info.uploadDate);
+        const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
+
+        const linkEl = document.getElementById('currentLink');
+        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
+        linkEl.style.display = 'inline-flex';
+        // ---------------------------------
+
         let activeColor = COLOR_CONFIG.default;
 
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
@@ -696,7 +722,6 @@
                         type: 'linear',
                         grid: { display: false },
                         ticks: { 
-                            // 修正: フォントサイズを11から9へ縮小
                             font: { size: 9, family: 'Inter' }, 
                             color: '#9ca3af', 
                             maxTicksLimit: 8,
@@ -708,7 +733,6 @@
                     },
                     y: { 
                         grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
-                        // 修正: Y軸にもフォントサイズ指定を追加し縮小
                         ticks: { 
                             font: { size: 9, family: 'Inter' },
                             color: '#9ca3af', 
