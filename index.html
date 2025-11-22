@@ -738,6 +738,7 @@
                 <tbody>
         `;
         
+        // 現在時刻を取得
         const now = new Date().getTime();
 
         TARGET_VIEWS.forEach(target => {
@@ -752,6 +753,7 @@
                 const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' };
                 displayTime = predictedDate.toLocaleString('ja-JP', dateOptions);
                 
+                // 日数計算
                 const diffMs = predictedDate.getTime() - now;
                 if (diffMs > 0) {
                     const days = diffMs / (24 * 60 * 60 * 1000);
@@ -1209,29 +1211,12 @@
 
         const rgb = hexToRgb(activeColor);
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        // グラデーションの修正: 上を少し濃く(0.5)、下を完全に透明にせず(0.15)残す
-        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`);
-        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
+        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
+        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
         
+        // 直近のデータポイントのX値（＝現在時刻）を取得
         const maxTimeX = graphDataPoints.length > 0 ? graphDataPoints[graphDataPoints.length - 1].x : undefined;
-        const minTimeX = graphDataPoints.length > 0 ? graphDataPoints[0].x : undefined;
 
-        // キリの良い時間を計算するための stepSize 設定
-        let stepSizeVal = undefined;
-        if (minTimeX && maxTimeX) {
-            const duration = maxTimeX - minTimeX;
-            const ms1h = 3600 * 1000;
-            const ms1d = 24 * ms1h;
-
-            // 期間に応じて目盛り間隔を調整
-            if (duration <= 2 * ms1d) {
-                stepSizeVal = 6 * ms1h; // 2日以内なら6時間ごと
-            } else if (duration <= 7 * ms1d) {
-                stepSizeVal = 1 * ms1d; // 1週間以内なら1日ごと
-            } else {
-                stepSizeVal = 5 * ms1d; // それ以上なら5日ごと
-            }
-        }
 
         chartInstance = new Chart(ctx, {
             type: 'line',
@@ -1277,17 +1262,16 @@
                 scales: {
                     x: { 
                         type: 'linear',
+                        // ここで最大値を現在時刻に固定し、未来の余白を表示しないようにする
                         max: maxTimeX, 
                         grid: { display: false },
                         ticks: { 
                             font: { size: 9, family: 'Inter' }, 
                             color: '#9ca3af', 
-                            maxTicksLimit: 12, // 少し多めに許容
-                            stepSize: stepSizeVal, // ここでキリの良い間隔を強制
+                            maxTicksLimit: 8,
                             
                             callback: function(value) {
                                 const d = new Date(value);
-                                // 全期間モードでなければ時間を表示、ただし00:00などは日付を優先したい場合など調整可
                                 if (currentGraphMode === 'all') {
                                     return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
                                 }
