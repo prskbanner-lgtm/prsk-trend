@@ -299,7 +299,7 @@
             .chart-header { flex-direction: column;
             }
             .chart-controls { width: 100%; justify-content: flex-start;
-            margin-top: 10px;}
+                margin-top: 10px;}
         }
     </style>
 </head>
@@ -389,7 +389,8 @@
 
             <div id="predictionArea" style="display:none;">
  
-                <div class="stats-container" style="border-top: none; padding-top: 0;">
+                <div class="stats-container" style="border-top: none;
+                    padding-top: 0;">
                     <p class="prediction-label">※直近30日の再生数の伸びを基に、より新しいデータに重み付けをした線形回帰により予測しています。</p>
                     <div id="predictionContent">
                         <p class="prediction-notice">動画を選択すると、到達予想日時が表示されます。</p>
@@ -821,7 +822,7 @@
                 case 'growth1d': return b.growth1d - a.growth1d;
                 case 'growth1w': return b.growth1w - a.growth1w;
                 case 'growth1m': return b.growth1m 
-                - a.growth1m;
+                    - a.growth1m;
                 case 'views': default: return b.latestViews - a.latestViews;
             }
         });
@@ -880,8 +881,7 @@
 
 
         if (mode === '1m') {
-            const hist = video.recent_history ||
-            [];
+            const hist = video.recent_history || [];
             if(hist.length === 0) return [];
             
             const sortedHistory = hist.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
@@ -900,14 +900,13 @@
                     dataPoints.push({
                         x: iterTs, 
                         y: Math.round(calculateValueAt(hist, 
-                        iterTs))
+                            iterTs))
                     });
                 }
                 iterTs += 30 * 60 * 1000;
             }
         } else {
-            const hist = video.daily_history ||
-            [];
+            const hist = video.daily_history || [];
             hist.forEach(h => {
                 dataPoints.push({
                     x: new Date(h.timestamp).getTime(),
@@ -1198,10 +1197,6 @@
         if (chartInstance) chartInstance.destroy();
 
 
-        // 現在時刻を取得してX軸の最大値（max）に使用する準備
-        const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
-        const nowTime = new Date(nowJST).getTime();
-
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
         let activeColor = COLOR_CONFIG.default;
@@ -1218,6 +1213,11 @@
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
         gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
+        
+        // 直近のデータポイントのX値（＝現在時刻）を取得
+        const maxTimeX = graphDataPoints.length > 0 ? graphDataPoints[graphDataPoints.length - 1].x : undefined;
+
+
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1262,7 +1262,8 @@
                 scales: {
                     x: { 
                         type: 'linear',
-                        max: nowTime, /* ここでX軸の右端を現在時刻に固定 */
+                        // ここで最大値を現在時刻に固定し、未来の余白を表示しないようにする
+                        max: maxTimeX, 
                         grid: { display: false },
                         ticks: { 
                             font: { size: 9, family: 'Inter' }, 
