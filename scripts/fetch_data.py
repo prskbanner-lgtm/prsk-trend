@@ -1,7 +1,6 @@
 import os
 import json
 import datetime
-from dateutil import parser
 from googleapiclient.discovery import build
 
 # 設定
