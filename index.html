@@ -60,8 +60,24 @@
 
         /* Chart Card */
         .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
-        
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+
+        /* Tab Controls */
+        .tab-controls { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
+        .tab-btn {
+            background: transparent; border: none; padding: 10px 20px; 
+            font-size: 1rem; font-weight: 700; color: var(--text-secondary); 
+            cursor: pointer; transition: color 0.2s; position: relative;
+            font-family: var(--font-jp);
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--primary); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; 
+            height: 3px; background: var(--primary); border-radius: 1px 1px 0 0;
+        }
+
+        /* Content Area Header */
+        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
         .video-meta { flex: 1; }
         
         /* Tags & Images Area */
@@ -77,18 +93,6 @@
         .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
         .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
 
-        /* Controls Area */
-        .controls-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;}
-        
-        /* Tab Switcher */
-        .view-tabs { display: flex; gap: 4px; background: var(--bg-body); padding: 4px; border-radius: var(--radius-s); }
-        .tab-btn {
-            border: none; background: transparent; padding: 6px 16px; border-radius: 6px;
-            font-family: var(--font-jp); font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);
-            cursor: pointer; transition: all 0.2s;
-        }
-        .tab-btn.active { background: #fff; color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-
         /* Chart Controls */
         .chart-controls { display: flex; gap: 8px; }
         .chart-btn {
@@ -100,35 +104,7 @@
         .chart-btn:hover { background: var(--primary-soft); color: var(--primary); }
         .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-        /* Display Areas */
-        .display-area { display: none; width: 100%; height: 350px; position: relative; }
-        .display-area.active { display: block; }
-
-        /* Prediction Styles */
-        .prediction-container { height: 100%; overflow-y: auto; padding: 0 4px; }
-        .milestone-item { 
-            display: flex; align-items: center; justify-content: space-between; 
-            padding: 16px; border-bottom: 1px solid var(--border-color);
-            transition: background 0.2s;
-        }
-        .milestone-item:last-child { border-bottom: none; }
-        .milestone-item:hover { background: var(--bg-body); border-radius: var(--radius-m); }
-        
-        .ms-info { display: flex; align-items: center; gap: 12px; }
-        .ms-badge { 
-            background: var(--bg-body); color: var(--text-secondary); 
-            padding: 4px 8px; border-radius: 6px; font-weight: 700; font-family: var(--font-num); font-size: 0.9rem;
-            min-width: 80px; text-align: center;
-        }
-        .ms-reached .ms-badge { background: #e8f5e9; color: #4caf50; }
-        
-        .ms-details { display: flex; flex-direction: column; }
-        .ms-date { font-weight: 700; font-size: 1rem; }
-        .ms-days { font-size: 0.8rem; color: var(--text-secondary); }
-        
-        .ms-status { font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); }
-        .ms-reached .ms-status { color: #4caf50; }
-
+        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
         
         /* Stats Grid */
         .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
@@ -144,6 +120,27 @@
         .val-up { color: var(--primary); }
         .val-neutral { color: var(--text-secondary); }
         .val-down { color: #4169e1; }
+
+        /* Prediction Table */
+        .prediction-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: 20px; }
+        .prediction-table th, .prediction-table td { padding: 12px; text-align: left; }
+        .prediction-table th { 
+            font-size: 0.8rem; color: var(--text-secondary); font-weight: 700;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .prediction-table tbody tr {
+            background: var(--bg-body); border-radius: var(--radius-m); 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .prediction-table td { 
+            font-size: 1rem; font-weight: 500;
+            color: var(--text-main);
+            font-family: var(--font-num);
+        }
+        .prediction-table td:first-child { border-radius: var(--radius-m) 0 0 var(--radius-m); font-weight: 700; }
+        .prediction-table td:last-child { border-radius: 0 var(--radius-m) var(--radius-m) 0; font-family: var(--font-jp); font-weight: 600;}
+        .prediction-label { font-family: var(--font-jp); font-size: 0.9rem; font-weight: 500; }
+        .prediction-notice { padding: 30px; text-align: center; color: var(--text-secondary); font-style: italic; }
 
         /* Ranking */
         .ranking-card { background: var(--bg-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden; }
@@ -182,12 +179,9 @@
         @media (max-width: 768px) { 
             .ranking-card { max-height: 500px; } 
             .chart-card { padding: 16px; }
-            .display-area { height: 250px; }
+            .chart-area-wrapper { height: 250px; }
             .chart-header { flex-direction: column; }
-            .controls-area { flex-direction: column; gap: 10px; align-items: flex-start;}
-            .view-tabs { width: 100%; }
-            .tab-btn { flex: 1; text-align: center; }
-            .chart-controls { width: 100%; justify-content: flex-start;}
+            .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
         }
     </style>
 </head>
@@ -205,6 +199,12 @@
 
     <div class="main-grid">
         <div class="chart-card">
+            
+            <div class="tab-controls">
+                <button class="tab-btn active" id="tab-graph" onclick="switchTab('graph')">再生数グラフ</button>
+                <button class="tab-btn" id="tab-prediction" onclick="switchTab('prediction')">到達予想</button>
+            </div>
+
             <div class="chart-header">
                 <div class="video-meta">
                     <div class="tags">
@@ -223,47 +223,45 @@
                 </div>
             </div>
 
-            <div class="controls-area">
-                <div class="view-tabs">
-                    <button class="tab-btn active" id="tabChart" onclick="switchView('chart')">グラフ</button>
-                    <button class="tab-btn" id="tabPredict" onclick="switchView('predict')">到達予想</button>
-                </div>
-                
-                <div class="chart-controls" id="chartControls">
+            <div id="chartArea">
+                <div class="chart-controls">
                     <button class="chart-btn active" id="btnMode1m" onclick="setGraphMode('1m')">直近1ヶ月</button>
                     <button class="chart-btn" id="btnModeAll" onclick="setGraphMode('all')">全期間</button>
                 </div>
-            </div>
-
-            <div id="chartArea" class="display-area active">
-                <canvas id="viewChart"></canvas>
-            </div>
-
-            <div id="predictArea" class="display-area">
-                <div class="prediction-container" id="predictionList">
-                    </div>
-            </div>
-
-            <div class="stats-container">
-                <div class="main-stat">
-                    <span class="label">現在の予測再生数 (Now)</span>
-                    <span class="value" id="currentViews">-</span>
+                <div class="chart-area-wrapper">
+                    <canvas id="viewChart"></canvas>
                 </div>
-                <div class="comparison-grid">
-                    <div class="comp-item">
-                        <span class="label">前日比 (1 Day)</span>
-                        <span class="value" id="diff-1d">-</span>
+                <div class="stats-container">
+                    <div class="main-stat">
+                        <span class="label">現在の予測再生数 (Now)</span>
+                        <span class="value" id="currentViews">-</span>
                     </div>
-                    <div class="comp-item">
-                        <span class="label">前週比 (1 Week)</span>
-                        <span class="value" id="diff-1w">-</span>
-                    </div>
-                    <div class="comp-item">
-                        <span class="label">前月比 (1 Month)</span>
-                        <span class="value" id="diff-1m">-</span>
+                    <div class="comparison-grid">
+                        <div class="comp-item">
+                            <span class="label">前日比 (1 Day)</span>
+                            <span class="value" id="diff-1d">-</span>
+                        </div>
+                        <div class="comp-item">
+                            <span class="label">前週比 (1 Week)</span>
+                            <span class="value" id="diff-1w">-</span>
+                        </div>
+                        <div class="comp-item">
+                            <span class="label">前月比 (1 Month)</span>
+                            <span class="value" id="diff-1m">-</span>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div id="predictionArea" style="display:none;">
+                <div class="stats-container" style="border-top: none; padding-top: 0;">
+                    <p class="prediction-label">※直近30日の再生数の伸びを基に、線形回帰により予測しています。</p>
+                    <div id="predictionContent">
+                        <p class="prediction-notice">動画を選択すると、到達予想日時が表示されます。</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div class="ranking-card">
@@ -366,6 +364,7 @@
         "25-ji, Nightcord de.", "ニーゴ"
     ];
 
+    // --- ランキング表示用の設定 ---
     const SORT_DISPLAY_CONFIG = {
         'views': { label: '総再生数ランキング', icon: 'ri-trophy-line' },
         'date': { label: '新着動画ランキング', icon: 'ri-time-line' },
@@ -374,12 +373,16 @@
         'growth1m': { label: '急上昇ランキング (月間)', icon: 'ri-line-chart-line' }
     };
 
+    const TARGET_VIEWS = [
+        1000000, 5000000, 10000000, 15000000, 20000000
+    ];
+
     let chartInstance = null;
     let allData = {};
     let processedVideos = [];
     let currentVideoId = null;
-    let currentGraphMode = '1m';
-    let currentViewType = 'chart'; // 'chart' or 'predict'
+    let currentGraphMode = '1m'; 
+    let currentTab = 'graph'; // 初期タブ
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -430,7 +433,7 @@
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
             currentVideoId = newestVideo.id;
-            updateMainDisplay(newestVideo);
+            updateDisplay(newestVideo); // グラフと予想の表示を更新
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -460,6 +463,7 @@
         const unitFilter = document.getElementById('unitFilter').value;
         const sortOrder = document.getElementById('sortOrder').value;
 
+        // --- タイトルとアイコンの更新ロジック ---
         const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
         document.getElementById('rankingTitle').textContent = displayConfig.label;
         document.getElementById('rankingIcon').className = displayConfig.icon;
@@ -568,97 +572,6 @@
         return dataPoints.sort((a, b) => a.x - b.x);
     }
 
-    // --- 予測ロジック ---
-    function calculatePredictions(video) {
-        const milestones = [1000000, 5000000, 10000000, 15000000, 20000000];
-        const results = [];
-        const currentViews = video.latestViews;
-        
-        // 直近の増加ペースを計算 (recent_historyを使用)
-        const hist = video.recent_history || [];
-        if (hist.length < 2) return milestones.map(m => ({ val: m, status: currentViews >= m ? 'reached' : 'unknown' }));
-
-        // 直近数日間の平均増加数/日を算出
-        const sorted = hist.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
-        const latest = sorted[sorted.length - 1];
-        const oldest = sorted[0];
-        
-        const timeDiffDay = (latest.time - oldest.time) / (24 * 60 * 60 * 1000);
-        const viewDiff = latest.views - oldest.views;
-        const viewsPerDay = timeDiffDay > 0 ? viewDiff / timeDiffDay : 0;
-
-        milestones.forEach(milestone => {
-            if (currentViews >= milestone) {
-                results.push({ val: milestone, status: 'reached' });
-            } else if (viewsPerDay <= 0) {
-                results.push({ val: milestone, status: 'stalled' }); // 伸びていない
-            } else {
-                const needed = milestone - currentViews;
-                const daysLeft = needed / viewsPerDay;
-                
-                // あまりに遠い未来(20年後など)は除外してもいいが、一旦計算する
-                const futureDate = new Date();
-                futureDate.setDate(futureDate.getDate() + daysLeft);
-                
-                results.push({
-                    val: milestone,
-                    status: 'future',
-                    date: futureDate,
-                    days: Math.ceil(daysLeft)
-                });
-            }
-        });
-        return results;
-    }
-
-    function renderPredictions(video) {
-        const container = document.getElementById('predictionList');
-        const preds = calculatePredictions(video);
-        
-        let html = '';
-        preds.forEach(p => {
-            const valStr = (p.val / 10000) + '万回';
-            let statusHtml = '';
-            
-            if (p.status === 'reached') {
-                statusHtml = `
-                    <div class="milestone-item ms-reached">
-                        <div class="ms-info">
-                            <span class="ms-badge">${valStr}</span>
-                            <span class="ms-status"><i class="ri-check-line"></i> 達成済み</span>
-                        </div>
-                    </div>
-                `;
-            } else if (p.status === 'stalled') {
-                statusHtml = `
-                    <div class="milestone-item">
-                        <div class="ms-info">
-                            <span class="ms-badge">${valStr}</span>
-                            <span class="ms-status">-</span>
-                        </div>
-                    </div>
-                `;
-            } else {
-                const y = p.date.getFullYear();
-                const m = p.date.getMonth() + 1;
-                const d = p.date.getDate();
-                statusHtml = `
-                    <div class="milestone-item">
-                        <div class="ms-info">
-                            <span class="ms-badge">${valStr}</span>
-                            <div class="ms-details">
-                                <span class="ms-date">${y}/${m}/${d} 頃</span>
-                                <span class="ms-days">あと約 ${p.days.toLocaleString()} 日</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            html += statusHtml;
-        });
-        container.innerHTML = html;
-    }
-
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
@@ -721,39 +634,47 @@
             `;
             list.appendChild(li);
         });
+        // 最初の動画が選択されていなければアクティブにする
+        if(currentVideoId) {
+            const rankItem = document.getElementById(`rank-${currentVideoId}`);
+            if(rankItem) rankItem.classList.add('active');
+        }
     }
 
-    // --- 表示切り替え ---
-    window.switchView = function(viewType) {
-        currentViewType = viewType;
-        
-        // タブのアクティブ切り替え
-        document.getElementById('tabChart').classList.toggle('active', viewType === 'chart');
-        document.getElementById('tabPredict').classList.toggle('active', viewType === 'predict');
-        
-        // エリアの表示切り替え
-        document.getElementById('chartArea').classList.toggle('active', viewType === 'chart');
-        document.getElementById('predictArea').classList.toggle('active', viewType === 'predict');
-        
-        // グラフ操作ボタンはグラフ表示時のみ表示
-        document.getElementById('chartControls').style.visibility = viewType === 'chart' ? 'visible' : 'hidden';
+    window.switchTab = function(tabName) {
+        currentTab = tabName;
+        document.getElementById('tab-graph').classList.remove('active');
+        document.getElementById('tab-prediction').classList.remove('active');
+        document.getElementById('chartArea').style.display = 'none';
+        document.getElementById('predictionArea').style.display = 'none';
 
-        if (currentVideoId) {
-            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
-            if (targetVideo) updateMainDisplay(targetVideo);
+        if (tabName === 'graph') {
+            document.getElementById('tab-graph').classList.add('active');
+            document.getElementById('chartArea').style.display = 'block';
+            // グラフを再描画してキャンバスのサイズをリセット
+            if (currentVideoId) {
+                const targetVideo = processedVideos.find(v => v.id === currentVideoId);
+                if (targetVideo) updateGraph(targetVideo);
+            }
+        } else if (tabName === 'prediction') {
+            document.getElementById('tab-prediction').classList.add('active');
+            document.getElementById('predictionArea').style.display = 'block';
+            if (currentVideoId) {
+                const targetVideo = processedVideos.find(v => v.id === currentVideoId);
+                if (targetVideo) renderPrediction(targetVideo);
+            }
         }
-    };
+    }
 
     window.setGraphMode = function(mode) {
         currentGraphMode = mode;
+        
         document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
         document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
 
         if (currentVideoId) {
             const targetVideo = processedVideos.find(v => v.id === currentVideoId);
-            if (targetVideo && currentViewType === 'chart') {
-                drawChart(targetVideo);
-            }
+            if (targetVideo) updateGraph(targetVideo);
         }
     };
 
@@ -761,7 +682,8 @@
         currentVideoId = id;
         const targetVideo = processedVideos.find(v => v.id === id);
         if(targetVideo) {
-            updateMainDisplay(targetVideo);
+            updateDisplay(targetVideo);
+
             document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
             const rankItem = document.getElementById(`rank-${id}`);
             if(rankItem) {
@@ -771,30 +693,19 @@
         }
     }
 
-    function updateDiffElement(elementId, diff) {
-        const el = document.getElementById(elementId);
-        const sign = diff >= 0 ? '+' : '';
-        el.textContent = sign + diff.toLocaleString();
-        el.className = 'value';
-        if (diff > 0) el.classList.add('val-up');
-        else if (diff < 0) el.classList.add('val-down');
-        else el.classList.add('val-neutral');
+    function updateDisplay(video) {
+        // メタデータの更新
+        updateMetaData(video);
+
+        // タブに応じた表示の更新
+        if (currentTab === 'graph') {
+            updateGraph(video);
+        } else if (currentTab === 'prediction') {
+            renderPrediction(video);
+        }
     }
 
-    function hexToRgb(hex) {
-        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 255, g: 75, b: 75 };
-    }
-
-    // メイン表示更新（グラフor予測）
-    function updateMainDisplay(video) {
-        // 共通部分（タイトル、タグ、統計）の更新
+    function updateMetaData(video) {
         const unitTag = document.getElementById('currentUnit');
         const charTag = document.getElementById('currentChar');
         
@@ -834,7 +745,6 @@
         linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
         linkEl.style.display = 'inline-flex';
 
-        // タグの色設定
         let activeColor = COLOR_CONFIG.default;
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
             activeColor = COLOR_CONFIG.characters[charKey];
@@ -850,40 +760,56 @@
                 el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
             }
         };
+
         setTagStyleIfText(charTag, activeColor);
         setTagStyleIfText(unitTag, activeColor);
 
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
         updateDiffElement('diff-1m', video.growth1m);
-
-        // 表示モードに応じて描画
-        if (currentViewType === 'chart') {
-            drawChart(video, activeColor);
-        } else {
-            renderPredictions(video);
-        }
     }
 
-    function drawChart(video, color) {
-        if(!color) {
-            // colorが渡されなかった場合の再取得
-             const unitKey = video.info.unit;
-             const charKey = video.info.character;
-             color = COLOR_CONFIG.default;
-             if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
-                 color = COLOR_CONFIG.characters[charKey];
-             } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
-                 color = COLOR_CONFIG.units[unitKey];
-             }
-        }
+    function updateDiffElement(elementId, diff) {
+        const el = document.getElementById(elementId);
+        const sign = diff >= 0 ? '+' : '';
+        el.textContent = sign + diff.toLocaleString();
+        
+        el.className = 'value';
+        if (diff > 0) el.classList.add('val-up');
+        else if (diff < 0) el.classList.add('val-down');
+        else el.classList.add('val-neutral');
+    }
+
+    function hexToRgb(hex) {
+        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 255, g: 75, b: 75 };
+    }
+
+    function updateGraph(video) {
+        // predictionAreaが非表示であることを確認 (念のため)
+        if(currentTab !== 'graph') return;
 
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
-        const rgb = hexToRgb(color);
+        let activeColor = COLOR_CONFIG.default;
+        const charKey = video.info.character;
+        const unitKey = video.info.unit;
+        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
+            activeColor = COLOR_CONFIG.characters[charKey];
+        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
+            activeColor = COLOR_CONFIG.units[unitKey];
+        }
+
+        const rgb = hexToRgb(activeColor);
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
         gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
@@ -894,12 +820,12 @@
                 datasets: [{
                     label: '再生回数',
                     data: graphDataPoints,
-                    borderColor: color,
+                    borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
                     pointRadius: currentGraphMode === 'all' ? 2 : 4,
                     pointBackgroundColor: '#ffffff',
-                    pointBorderColor: color,
+                    pointBorderColor: activeColor,
                     tension: 0.1,
                     fill: true
                 }]
@@ -955,6 +881,135 @@
                 }
             }
         });
+    }
+
+    /**
+     * 再生数到達予想日時の計算
+     * @param {number} currentViews 現在の再生数
+     * @param {Array<Object>} history 過去30日間の履歴
+     * @param {number} targetViews 目標再生数
+     * @returns {Date | null} 予想到達日時、または null
+     */
+    function calculateTargetTime(currentViews, history, targetViews) {
+        if (targetViews <= currentViews || history.length < 5) {
+            return null; // 目標達成済み、またはデータ不足
+        }
+
+        // 直近30日の履歴のみを使用
+        const ms30d = 30 * 24 * 60 * 60 * 1000;
+        const now = new Date().getTime();
+        
+        const recentHistory = history
+            .map(h => ({ 
+                x: new Date(h.timestamp).getTime(), 
+                y: h.views 
+            }))
+            .filter(h => h.x > (now - ms30d))
+            .sort((a, b) => a.x - b.x);
+
+        if (recentHistory.length < 5) {
+            return null; // 30日以内のデータが少なすぎる
+        }
+
+        // --- 線形回帰 (Linear Regression) ---
+        // Y = aX + b の式を求める。X=時間(ms)、Y=再生数
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        const n = recentHistory.length;
+        
+        recentHistory.forEach(p => {
+            sumX += p.x;
+            sumY += p.y;
+            sumXY += p.x * p.y;
+            sumXX += p.x * p.x;
+        });
+
+        const meanX = sumX / n;
+        const meanY = sumY / n;
+
+        // 傾き a (views/ms)
+        const numerator = sumXY - n * meanX * meanY;
+        const denominator = sumXX - n * meanX * meanX;
+        
+        const slopeA = denominator !== 0 ? numerator / denominator : 0;
+        
+        // 切片 b
+        const interceptB = meanY - slopeA * meanX;
+
+        if (slopeA <= 0) {
+            return null; // 再生数の伸びがゼロまたはマイナス
+        }
+
+        // 目標再生数 (Y) に到達する時間 (X) を予測: X = (Y - b) / a
+        const targetTimeMs = (targetViews - interceptB) / slopeA;
+
+        // 予測日時が未来であること、かつ遠すぎないこと (例: 5年以内)
+        if (targetTimeMs > now && targetTimeMs < now + 5 * 365 * ms30d) {
+             return new Date(targetTimeMs);
+        }
+
+        return null;
+    }
+
+    /**
+     * 予測結果を表示
+     */
+    function renderPrediction(video) {
+        const container = document.getElementById('predictionContent');
+        if(video.latestViews === 0) {
+            container.innerHTML = '<p class="prediction-notice">動画の再生数が0のため、予想はできません。</p>';
+            return;
+        }
+
+        let tableHtml = `
+            <table class="prediction-table">
+                <thead>
+                    <tr>
+                        <th>再生数</th>
+                        <th>現在の再生数</th>
+                        <th>到達予想日時 (JST)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        let hasPrediction = false;
+
+        TARGET_VIEWS.forEach(target => {
+            const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
+            let displayTime = '';
+            let currentViewsFormatted = '';
+
+            if (video.latestViews >= target) {
+                displayTime = `<span style="color:#4caf50; font-weight:700;">達成済み</span>`;
+            } else if (predictedDate) {
+                const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' };
+                displayTime = predictedDate.toLocaleString('ja-JP', dateOptions);
+                hasPrediction = true;
+            } else {
+                // slopeA <= 0 またはデータ不足
+                displayTime = `<span style="color:var(--text-secondary);">データ不足/伸び率低</span>`;
+            }
+
+            // 現在の再生数を目標と比較
+            if (video.latestViews < target) {
+                currentViewsFormatted = video.latestViews.toLocaleString();
+            } else {
+                currentViewsFormatted = `<span style="color:#4caf50; font-weight:700;">${video.latestViews.toLocaleString()}</span>`;
+            }
+
+            tableHtml += `
+                <tr>
+                    <td>${target.toLocaleString()}</td>
+                    <td>${currentViewsFormatted}</td>
+                    <td>${displayTime}</td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `
+                </tbody>
+            </table>
+        `;
+        container.innerHTML = tableHtml;
     }
 </script>
 
