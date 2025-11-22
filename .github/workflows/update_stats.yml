@@ -3,7 +3,12 @@ name: Update YouTube Stats
 on:
   schedule:
     - cron: '0 */6 * * *' # 6時間ごとに実行
-  workflow_dispatch:      # 手動実行ボタンも有効化
+  workflow_dispatch:      # 手動実行ボタン
+
+# --- 追加箇所ここから ---
+permissions:
+  contents: write
+# --- 追加箇所ここまで ---
 
 jobs:
   build:
@@ -14,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.11' # 先ほどのアドバイス通り3.11推奨
           
       - name: Install dependencies
         run: pip install google-api-python-client
