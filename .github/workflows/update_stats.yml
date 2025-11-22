@@ -2,7 +2,8 @@ name: Update YouTube Stats
 
 on:
   schedule:
-    - cron: '*/20 * * * *' # 20分ごとに実行 (00, 20, 40)
+    # 20分ごとに実行 (0分, 20分, 40分)
+    - cron: '*/20 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,9 +21,10 @@ jobs:
           python-version: '3.11'
           
       - name: Install dependencies
+        # 数値計算用にnumpyを入れることもできますが、今回は標準ライブラリで軽量に実装しています
         run: pip install google-api-python-client
         
-      - name: Fetch Data
+      - name: Fetch and Process Data
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python scripts/fetch_data.py
@@ -33,5 +35,5 @@ jobs:
           git config --global user.email 'action@github.com'
           git add stats_history.json
           # 変更がない場合はエラーにしない
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update stats (Normalized)"
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update stats [skip ci]"
           git push
