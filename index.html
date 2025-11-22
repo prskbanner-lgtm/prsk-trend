@@ -66,6 +66,7 @@
         .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; }
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
         .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+        .data-timestamp { font-size: 0.8rem; color: var(--text-secondary); text-align: right; margin-top: -10px; margin-bottom: 10px; display: block; }
 
         /* Updated Stats Grid (Main + 3 Comparisons) */
         .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
@@ -135,12 +136,13 @@
             </div>
 
             <div class="chart-area-wrapper">
+                <span class="data-timestamp" id="dataTimestamp"></span>
                 <canvas id="viewChart"></canvas>
             </div>
 
             <div class="stats-container">
                 <div class="main-stat">
-                    <span class="label">現在の予測再生数 (Now)</span>
+                    <span class="label">現在の再生数 (Latest)</span>
                     <span class="value" id="currentViews">-</span>
                 </div>
                 <div class="comparison-grid">
@@ -175,6 +177,7 @@
 <script>
     let chartInstance = null;
     let allData = {}; 
+    let latestDataTimestamp = 0; // グローバルな基準時間（端末時間に依存させない）
 
     // JSONデータの読み込み
     fetch('stats_history.json')
@@ -189,18 +192,36 @@
         });
 
     function initApp(data) {
-        // 日本時間現在時刻のタイムスタンプ
-        const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
-        const currentTimestamp = new Date(nowJST).getTime();
+        // 1. データセット内の「最も新しいタイムスタンプ」を探し、それを「現在」として定義する
+        // これにより、誰が見ても、どの端末で見ても、同じ「最新データ時刻」が基準になる
+        let maxTs = 0;
+        Object.values(data).forEach(video => {
+            if (video.history && video.history.length > 0) {
+                const lastEntry = video.history[video.history.length - 1];
+                const ts = new Date(lastEntry.timestamp).getTime();
+                if (ts > maxTs) maxTs = ts;
+            }
+        });
+        
+        // データが空の場合のフォールバック（通常はここには来ない）
+        latestDataTimestamp = maxTs > 0 ? maxTs : new Date().getTime();
+
+        // データ更新日時の表示
+        const dateObj = new Date(latestDataTimestamp);
+        const dateStr = dateObj.toLocaleString("ja-JP", { 
+            month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+        document.getElementById('dataTimestamp').textContent = `データ更新: ${dateStr}`;
 
         const videoArray = Object.keys(data).map(key => {
             const history = data[key].history;
             
-            // 1. 現在の予測値
-            const currentPredicted = calculateValueAt(history, currentTimestamp);
+            // 基準時刻（latestDataTimestamp）における値を計算
+            // 実際には最終データポイントと同じ値になるはず
+            const currentPredicted = calculateValueAt(history, latestDataTimestamp);
 
-            // 2. ソートやトレンド判定用（例: 1日前との比較をgrowthとする）
-            const oneDayAgo = currentTimestamp - (24 * 60 * 60 * 1000);
+            // 比較用の時刻（基準時刻から逆算）
+            const oneDayAgo = latestDataTimestamp - (24 * 60 * 60 * 1000);
             const prevPredicted = calculateValueAtWithFallback(history, oneDayAgo);
             
             return {
@@ -230,7 +251,7 @@
 
     /* --- コアロジック: 予測と正規化 --- */
 
-    // 指定時刻の値を計算（線形補間 or 加重平均外挿）
+    // 指定時刻の値を計算
     function calculateValueAt(history, targetTime) {
         if (!history || history.length === 0) return 0;
 
@@ -249,15 +270,23 @@
                 const p1 = sortedHistory[i];
                 const p2 = sortedHistory[i + 1];
                 if (targetTime >= p1.time && targetTime <= p2.time) {
+                    // ゼロ除算対策（データ重複時）
+                    if (p2.time === p1.time) return p2.views;
                     const ratio = (targetTime - p1.time) / (p2.time - p1.time);
                     return p1.views + (p2.views - p1.views) * ratio;
                 }
             }
+            // ループを抜けた場合は最後の値を返す（計算誤差対策）
+            return sortedHistory[sortedHistory.length - 1].views;
         }
 
-        // ケース2: 最新より未来 -> 加重平均で予測
+        // ケース2: 最新より未来 -> 加重平均で予測（今回は基準時刻＝最新データ時刻なので基本使われないが維持）
         if (targetTime > lastTime) {
             const lastPoint = sortedHistory[sortedHistory.length - 1];
+            
+            // 基準時刻が最終データとほぼ同じなら、予測せずにその値を返す（ズレ防止）
+            if (targetTime - lastTime < 1000) return lastPoint.views;
+
             let weightedSlope = 0;
             let totalWeight = 0;
             const sampleCount = Math.min(3, sortedHistory.length - 1);
@@ -267,21 +296,23 @@
                     const idx = sortedHistory.length - 1 - i;
                     const pCurrent = sortedHistory[idx];
                     const pPrev = sortedHistory[idx - 1];
-                    const slope = (pCurrent.views - pPrev.views) / (pCurrent.time - pPrev.time);
+                    const dt = pCurrent.time - pPrev.time;
+                    if (dt === 0) continue; // 時間差がないデータはスキップ
+                    
+                    const slope = (pCurrent.views - pPrev.views) / dt;
                     const weight = sampleCount - i; 
                     weightedSlope += slope * weight;
                     totalWeight += weight;
                 }
-                const averageSlope = weightedSlope / totalWeight;
+                const averageSlope = totalWeight > 0 ? weightedSlope / totalWeight : 0;
                 return lastPoint.views + averageSlope * (targetTime - lastTime);
             }
         }
 
-        // ケース3: データより過去 -> 一番古い値を返す（ここは素直に返す）
+        // ケース3: データより過去 -> 一番古い値を返す
         return sortedHistory[0].views;
     }
 
-    // 「データがない場合は一番古い値との差を表示」を実現するラッパー
     function calculateValueAtWithFallback(history, targetTime) {
         if (!history || history.length === 0) return 0;
         
@@ -292,12 +323,10 @@
 
         const firstTime = sortedHistory[0].time;
 
-        // 要求された時間が、データ開始時間より前の場合
         if (targetTime < firstTime) {
-            return sortedHistory[0].views; // 一番古い値を返す
+            return sortedHistory[0].views; 
         }
         
-        // それ以外は通常の計算
         return calculateValueAt(history, targetTime);
     }
 
@@ -310,8 +339,9 @@
         if(sortedHistory.length === 0) return { labels: [], points: [] };
 
         const startTime = sortedHistory[0].time;
-        const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
-        const nowTime = new Date(nowJST).getTime();
+        
+        // グラフの終点は「端末の現在時刻」ではなく「データの最終更新時刻」にする
+        const endTime = latestDataTimestamp;
 
         let iterTime = new Date(startTime);
         iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
@@ -322,7 +352,7 @@
         const labels = [];
         const points = [];
 
-        while (iterTs <= nowTime) {
+        while (iterTs <= endTime) {
             if (iterTs >= startTime) {
                 const d = new Date(iterTs);
                 labels.push(`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes() === 0 ? '00' : '30'}`);
@@ -331,10 +361,11 @@
             iterTs += 30 * 60 * 1000;
         }
 
-        const dNow = new Date(nowTime);
-        const minStr = dNow.getMinutes().toString().padStart(2, '0');
-        labels.push(`Current (${dNow.getHours()}:${minStr})`);
-        points.push(Math.round(calculateValueAt(history, nowTime)));
+        // 最後のデータポイントを追加
+        const dEnd = new Date(endTime);
+        const minStr = dEnd.getMinutes().toString().padStart(2, '0');
+        labels.push(`Latest (${dEnd.getHours()}:${minStr})`);
+        points.push(Math.round(calculateValueAt(history, endTime)));
 
         return { labels, points };
     }
@@ -344,7 +375,7 @@
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
-        const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0]; // トレンドは前日比で判定
+        const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0]; 
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
 
         const cardConfig = [
@@ -399,12 +430,10 @@
         const vidKey = Object.keys(allData).find(k => k === id);
         if (!vidKey) return;
 
-        // データを再計算して渡す
         const history = allData[vidKey].history;
-        const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
-        const currentTimestamp = new Date(nowJST).getTime();
         
-        const currentPredicted = calculateValueAt(history, currentTimestamp);
+        // ここでも固定された latestDataTimestamp を使用
+        const currentPredicted = calculateValueAt(history, latestDataTimestamp);
 
         const videoObj = {
             id: vidKey,
@@ -424,7 +453,6 @@
         }
     }
 
-    // 差分表示用のヘルパー関数
     function updateDiffElement(elementId, currentVal, pastVal) {
         const diff = currentVal - pastVal;
         const el = document.getElementById(elementId);
@@ -437,31 +465,26 @@
     }
 
     function updateGraph(video) {
-        // 基本情報更新
         document.getElementById('currentUnit').innerHTML = `<i class="ri-team-line"></i> ${video.info.unit || '-'}`;
         document.getElementById('currentChar').innerHTML = `<i class="ri-user-smile-line"></i> ${video.info.character || '-'}`;
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
-        // --- 比較データの計算 ---
-        const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
-        const currentTimestamp = new Date(nowJST).getTime();
+        // --- 比較データの計算 (固定時刻基準) ---
+        const currentTimestamp = latestDataTimestamp;
 
-        // 1日, 1週間, 1ヶ月のミリ秒
         const ms1d = 24 * 60 * 60 * 1000;
         const ms1w = 7 * ms1d;
-        const ms1m = 30 * ms1d; // 概算
+        const ms1m = 30 * ms1d;
 
         const val1dAgo = calculateValueAtWithFallback(video.history, currentTimestamp - ms1d);
         const val1wAgo = calculateValueAtWithFallback(video.history, currentTimestamp - ms1w);
         const val1mAgo = calculateValueAtWithFallback(video.history, currentTimestamp - ms1m);
 
-        // UI更新
         updateDiffElement('diff-1d', video.latestViews, Math.round(val1dAgo));
         updateDiffElement('diff-1w', video.latestViews, Math.round(val1wAgo));
         updateDiffElement('diff-1m', video.latestViews, Math.round(val1mAgo));
 
-        // チャート描画
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
@@ -476,7 +499,7 @@
             data: {
                 labels: graphData.labels,
                 datasets: [{
-                    label: '再生回数(予測)',
+                    label: '再生回数',
                     data: graphData.points,
                     borderColor: '#ff4b4b',
                     backgroundColor: gradient,
