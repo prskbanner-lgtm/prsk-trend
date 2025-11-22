@@ -77,7 +77,7 @@
         .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
         .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
 
-        /* Chart Controls (New) */
+        /* Chart Controls */
         .chart-controls { display: flex; gap: 8px; }
         .chart-btn {
             background: var(--bg-body); border: 1px solid var(--border-color);
@@ -213,8 +213,8 @@
         <div class="ranking-card">
             <div class="ranking-header">
                 <div class="ranking-title-row">
-                    <i class="ri-trophy-line"></i>
-                    <h3>再生数ランキング</h3>
+                    <i id="rankingIcon" class="ri-trophy-line"></i>
+                    <h3 id="rankingTitle">再生数ランキング</h3>
                 </div>
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
@@ -310,11 +310,20 @@
         "25-ji, Nightcord de.", "ニーゴ"
     ];
 
+    // --- ランキング表示用の設定 ---
+    const SORT_DISPLAY_CONFIG = {
+        'views': { label: '総再生数ランキング', icon: 'ri-trophy-line' },
+        'date': { label: '新着動画ランキング', icon: 'ri-time-line' },
+        'growth1d': { label: '急上昇ランキング (24H)', icon: 'ri-line-chart-line' },
+        'growth1w': { label: '急上昇ランキング (週間)', icon: 'ri-line-chart-line' },
+        'growth1m': { label: '急上昇ランキング (月間)', icon: 'ri-line-chart-line' }
+    };
+
     let chartInstance = null;
     let allData = {};
     let processedVideos = [];
     let currentVideoId = null;
-    let currentGraphMode = '1m'; // '1m' or 'all'
+    let currentGraphMode = '1m'; 
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -337,11 +346,9 @@
 
         processedVideos = Object.keys(data).map(key => {
             const vData = data[key];
-            // 互換性維持：古い形式(historyのみ)と新しい形式(recent_history + daily_history)の両対応
             const recentHist = vData.recent_history || vData.history || [];
             const dailyHist = vData.daily_history || [];
 
-            // 最新の予測値計算には詳細なrecent_historyを使う
             const currentPredicted = calculateValueAt(recentHist, currentTimestamp);
             const val1dAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1d);
             const val1wAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1w);
@@ -397,6 +404,11 @@
         const unitFilter = document.getElementById('unitFilter').value;
         const sortOrder = document.getElementById('sortOrder').value;
 
+        // --- タイトルとアイコンの更新ロジック ---
+        const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
+        document.getElementById('rankingTitle').textContent = displayConfig.label;
+        document.getElementById('rankingIcon').className = displayConfig.icon;
+
         let filtered = processedVideos.filter(v => {
             if (unitFilter === 'all') return true;
             return v.info.unit === unitFilter;
@@ -429,7 +441,6 @@
                 }
             }
         }
-        // 未来の予測 (線形回帰)
         if (targetTime > lastTime) {
             const lastPoint = sortedHistory[sortedHistory.length - 1];
             let weightedSlope = 0, totalWeight = 0;
@@ -457,14 +468,12 @@
         return calculateValueAt(history, targetTime);
     }
 
-    // グラフデータの生成（モードによる分岐）
     function generateGraphData(video, mode) {
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
         const nowTime = new Date(nowJST).getTime();
         const dataPoints = [];
 
         if (mode === '1m') {
-            // 直近1ヶ月：recent_historyを使用（高解像度）
             const hist = video.recent_history || [];
             if(hist.length === 0) return [];
             
@@ -472,7 +481,6 @@
             const startTime = sortedHistory[0].time;
 
             let iterTime = new Date(startTime);
-            // 30分刻みでプロット
             iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
             iterTime.setSeconds(0);
             iterTime.setMilliseconds(0);
@@ -488,9 +496,7 @@
                 iterTs += 30 * 60 * 1000;
             }
         } else {
-            // 全期間：daily_historyを使用（00:00の点のみ） + 現在値
             const hist = video.daily_history || [];
-            // daily_historyをそのままプロット
             hist.forEach(h => {
                 dataPoints.push({
                     x: new Date(h.timestamp).getTime(),
@@ -499,7 +505,6 @@
             });
         }
 
-        // 最後に現在の予測値を追加
         dataPoints.push({
             x: nowTime,
             y: video.latestViews
@@ -572,11 +577,9 @@
         });
     }
 
-    // グローバル関数として定義
     window.setGraphMode = function(mode) {
         currentGraphMode = mode;
         
-        // ボタンのスタイル更新
         document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
         document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
 
@@ -688,7 +691,6 @@
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        // モードに応じたデータ生成
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
         const rgb = hexToRgb(activeColor);
@@ -705,7 +707,7 @@
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
-                    pointRadius: currentGraphMode === 'all' ? 2 : 4, // 全期間表示時はポイントを小さく
+                    pointRadius: currentGraphMode === 'all' ? 2 : 4,
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: activeColor,
                     tension: 0.1,
