@@ -56,10 +56,22 @@
 
         /* Main Layout */
         .main-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-        @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr; align-items: start; } }
+        @media (min-width: 960px) { 
+            .main-grid { 
+                /* 【修正】グラフエリアの比率を増やして右側まで伸ばす (2.5fr -> 3.5fr) */
+                grid-template-columns: 3.5fr 1fr; 
+                align-items: start; 
+            } 
+        }
 
         /* Chart Card */
-        .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 30px; box-shadow: var(--shadow-card); }
+        .chart-card { 
+            background: var(--bg-card); 
+            border-radius: var(--radius-l); 
+            /* 【修正】paddingを少し減らしてグラフ領域を確保 */
+            padding: 24px; 
+            box-shadow: var(--shadow-card); 
+        }
         .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .video-meta { flex: 1; }
         
@@ -68,7 +80,7 @@
         
         /* テキスト表示時のスタイル */
         .tag { 
-            background: var(--bg-body); 
+            background: var(--bg-body);
             color: var(--text-secondary); 
             padding: 4px 12px; 
             border-radius: 20px; 
@@ -76,28 +88,31 @@
             font-weight: 700; 
             display: flex; 
             align-items: center; 
-            gap: 4px; 
+            gap: 4px;
             border: 1px solid transparent;
             transition: all 0.3s ease;
         }
 
         /* 画像表示時のスタイル */
-        .tag-image {
-            height: 40px; /* 画像の高さ制限 */
-            width: auto;
-            object-fit: contain;
-            border-radius: 4px;
-            display: block;
-        }
-        
-        /* 画像ラッパー（レイアウト崩れ防止） */
-        .tag-wrapper {
-            display: flex;
-            align-items: center;
-        }
+        .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block; }
+        .tag-wrapper { display: flex; align-items: center; }
 
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
-        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+        
+        /* 【修正】グラフエリアの高さ設定 */
+        .chart-area-wrapper { 
+            position: relative; 
+            height: 350px; 
+            width: 100%; 
+            margin-bottom: 30px; 
+        }
+        
+        /* 【修正】スマホ表示時のグラフ高さ調整 */
+        @media (max-width: 768px) {
+            .chart-area-wrapper {
+                height: 240px; /* スマホでは高さを抑えて縦長になりすぎないようにする */
+            }
+        }
 
         /* Stats Grid */
         .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
@@ -124,17 +139,7 @@
         /* Ranking Controls */
         .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .custom-select {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: var(--radius-s);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: var(--font-jp);
-            font-size: 0.85rem;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer; outline: none; transition: border-color 0.2s;
         }
         .custom-select:focus { border-color: var(--text-secondary); }
 
@@ -372,8 +377,9 @@
         updateRankingDisplay();
 
         if (processedVideos.length > 0) {
-            const topVideo = [...processedVideos].sort((a, b) => b.latestViews - a.latestViews)[0];
-            selectVideo(topVideo.id);
+            // 【修正】一番最初に表示する動画を「投稿日が一番新しいもの」に変更
+            const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
+            selectVideo(newestVideo.id);
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -426,6 +432,7 @@
     function calculateValueAt(history, targetTime) {
         if (!history || history.length === 0) return 0;
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
+        
         const firstTime = sortedHistory[0].time;
         const lastTime = sortedHistory[sortedHistory.length - 1].time;
 
@@ -443,6 +450,7 @@
             const lastPoint = sortedHistory[sortedHistory.length - 1];
             let weightedSlope = 0, totalWeight = 0;
             const sampleCount = Math.min(3, sortedHistory.length - 1);
+            
             if (sampleCount > 0) {
                 for (let i = 0; i < sampleCount; i++) {
                     const idx = sortedHistory.length - 1 - i;
@@ -612,13 +620,11 @@
         // --- ユニット表示の切り替え処理 ---
         const unitImgSrc = IMAGE_CONFIG.units[unitKey];
         if (unitKey && unitImgSrc) {
-            // 画像がある場合
             unitTag.className = 'tag-wrapper';
             unitTag.innerHTML = `<img src="${unitImgSrc}" class="tag-image" alt="${unitKey}" title="${unitKey}">`;
             unitTag.style.backgroundColor = 'transparent';
             unitTag.style.border = 'none';
         } else {
-            // 画像がない場合（従来のテキスト表示）
             unitTag.className = 'tag';
             unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
         }
@@ -626,13 +632,11 @@
         // --- キャラクター表示の切り替え処理 ---
         const charImgSrc = IMAGE_CONFIG.characters[charKey];
         if (charKey && charImgSrc) {
-            // 画像がある場合
             charTag.className = 'tag-wrapper';
             charTag.innerHTML = `<img src="${charImgSrc}" class="tag-image" alt="${charKey}" title="${charKey}">`;
             charTag.style.backgroundColor = 'transparent';
             charTag.style.border = 'none';
         } else {
-            // 画像がない場合（従来のテキスト表示）
             charTag.className = 'tag';
             charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${charKey || '-'}`;
         }
@@ -648,7 +652,6 @@
             activeColor = COLOR_CONFIG.units[unitKey];
         }
 
-        // テキスト表示のときだけ色を適用するヘルパー関数
         const setTagStyleIfText = (el, color) => {
             if (el.classList.contains('tag')) {
                 el.style.borderColor = color;
@@ -670,7 +673,6 @@
 
         const graphDataPoints = generateGraphData(video.history);
         const rgb = hexToRgb(activeColor);
-
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
         gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
@@ -716,7 +718,8 @@
                         type: 'linear',
                         grid: { display: false },
                         ticks: { 
-                            font: { size: 11, family: 'Inter' }, 
+                            // 【修正】フォントサイズを11から9へ縮小
+                            font: { size: 9, family: 'Inter' }, 
                             color: '#9ca3af', 
                             maxTicksLimit: 8,
                             callback: function(value) {
@@ -727,7 +730,14 @@
                     },
                     y: { 
                         grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
-                        ticks: { color: '#9ca3af', callback: function(value) { if(value >= 10000) return (value/10000) + '万'; return value; } } 
+                        ticks: { 
+                            // 【修正】フォントサイズを9へ縮小
+                            font: { size: 9, family: 'Inter' },
+                            color: '#9ca3af', 
+                            callback: function(value) { if(value >= 10000) return (value/10000) + '万';
+                                return value; 
+                            } 
+                        } 
                     }
                 }
             }
