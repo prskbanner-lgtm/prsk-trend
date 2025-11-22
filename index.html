@@ -68,24 +68,14 @@
             background: var(--bg-body); 
             color: var(--text-secondary); 
             padding: 4px 12px; 
-            padding-right: 16px; /* 文字数確保のため少し広めに */
-            border-radius: 30px; /* 丸みを強く */
-            font-size: 0.8rem; 
+            border-radius: 20px; 
+            font-size: 0.75rem; 
             font-weight: 700; 
             display: flex; 
             align-items: center; 
-            gap: 8px; 
+            gap: 4px; 
             border: 1px solid transparent;
             transition: all 0.3s ease;
-        }
-        
-        /* 画像表示用のスタイル */
-        .tag-icon-img {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            object-fit: cover;
-            background-color: rgba(255,255,255,0.5); /* 背景が透ける場合用 */
         }
 
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
@@ -262,61 +252,12 @@
         default: "#ff4b4b"
     };
 
-    // --- 画像設定 ---
-    // 画像は index.html と同じ階層にある images フォルダに入れてください
-    const IMAGE_CONFIG = {
-        characters: {
-            // Leo/need
-            "一歌": "./images/ichika.png", "Hoshino Ichika": "./images/ichika.png",
-            "咲希": "./images/saki.png", "Tenma Saki": "./images/saki.png",
-            "穂波": "./images/honami.png", "Mochizuki Honami": "./images/honami.png",
-            "志歩": "./images/shiho.png", "Hinomori Shiho": "./images/shiho.png",
-            
-            // MORE MORE JUMP!
-            "みのり": "./images/minori.png", "Hanasato Minori": "./images/minori.png",
-            "遥": "./images/haruka.png", "Kiritani Haruka": "./images/haruka.png",
-            "愛莉": "./images/airi.png", "Momoi Airi": "./images/airi.png",
-            "雫": "./images/shizuku.png", "Hinomori Shizuku": "./images/shizuku.png",
-            
-            // Vivid BAD SQUAD
-            "こはね": "./images/kohane.png", "Azusawa Kohane": "./images/kohane.png",
-            "杏": "./images/an.png", "Shiraishi An": "./images/an.png",
-            "彰人": "./images/akito.png", "Shinonome Akito": "./images/akito.png",
-            "冬弥": "./images/toya.png", "Aoyagi Toya": "./images/toya.png",
-            
-            // Wonderlands x Showtime
-            "司": "./images/tsukasa.png", "Tenma Tsukasa": "./images/tsukasa.png",
-            "えむ": "./images/emu.png", "Otori Emu": "./images/emu.png",
-            "寧々": "./images/nene.png", "Kusanagi Nene": "./images/nene.png",
-            "類": "./images/rui.png", "Kamishiro Rui": "./images/rui.png",
-            
-            // 25-ji, Nightcord de.
-            "奏": "./images/kanade.png", "Yoisaki Kanade": "./images/kanade.png",
-            "まふゆ": "./images/mafuyu.png", "Asahina Mafuyu": "./images/mafuyu.png",
-            "絵名": "./images/ena.png", "Shinonome Ena": "./images/ena.png",
-            "瑞希": "./images/mizuki.png", "Akiyama Mizuki": "./images/mizuki.png",
-
-            // デフォルト（画像がない場合などの予備アイコン）
-            "default": "ri-user-smile-line"
-        },
-        units: {
-            "Leo/need": "./images/leoneed_icon.png", "レオニ": "./images/leoneed_icon.png",
-            "MORE MORE JUMP!": "./images/mmj_icon.png", "モモジャン": "./images/mmj_icon.png",
-            "Vivid BAD SQUAD": "./images/vbs_icon.png", "ビビバス": "./images/vbs_icon.png",
-            "Wonderlands x Showtime": "./images/wxs_icon.png", "ワンダショ": "./images/wxs_icon.png",
-            "25-ji, Nightcord de.": "./images/25_icon.png", "ニーゴ": "./images/25_icon.png",
-            
-            // デフォルト（画像がない場合などの予備アイコン）
-            "default": "ri-team-line"
-        }
-    };
-
     const UNIT_SORT_ORDER = [
         "Leo/need", "レオニ",
         "MORE MORE JUMP!", "モモジャン",
         "Vivid BAD SQUAD", "ビビバス",
         "Wonderlands x Showtime", "ワンダショ",
-        "25-ji, Nightcord de.": "ニーゴ"
+        "25-ji, Nightcord de.", "ニーゴ"
     ];
 
     let chartInstance = null;
@@ -460,6 +401,7 @@
         return calculateValueAt(history, targetTime);
     }
 
+    // グラフ用データ生成：X軸をタイムスタンプ(数値)として保持する
     function generateGraphData(history) {
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
         if(sortedHistory.length === 0) return [];
@@ -476,16 +418,18 @@
 
         const dataPoints = [];
         
+        // 30分ごとの履歴点
         while (iterTs <= nowTime) {
             if (iterTs >= startTime) {
                 dataPoints.push({
-                    x: iterTs, 
+                    x: iterTs, // X座標をタイムスタンプ(数値)にする
                     y: Math.round(calculateValueAt(history, iterTs))
                 });
             }
             iterTs += 30 * 60 * 1000;
         }
 
+        // 現在時刻の点を追加
         dataPoints.push({
             x: nowTime,
             y: Math.round(calculateValueAt(history, nowTime))
@@ -600,21 +544,8 @@
         const unitTag = document.getElementById('currentUnit');
         const charTag = document.getElementById('currentChar');
         
-        // --- 画像生成ロジック ---
-        const generateTagContent = (key, type, fallbackIcon) => {
-            // IMAGE_CONFIGから画像URLを探す
-            const imgUrl = IMAGE_CONFIG[type][key];
-            if (imgUrl) {
-                // 画像があればimgタグを返す
-                return `<img src="${imgUrl}" class="tag-icon-img" alt="${key}"> ${key}`;
-            } else {
-                // なければデフォルトのアイコンを返す
-                return `<i class="${fallbackIcon}"></i> ${key || '-'}`;
-            }
-        };
-
-        unitTag.innerHTML = generateTagContent(video.info.unit, 'units', IMAGE_CONFIG.units.default);
-        charTag.innerHTML = generateTagContent(video.info.character, 'characters', IMAGE_CONFIG.characters.default);
+        unitTag.innerHTML = `<i class="ri-team-line"></i> ${video.info.unit || '-'}`;
+        charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${video.info.character || '-'}`;
         
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
@@ -646,6 +577,7 @@
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
+        // データを取得 ({x: timestamp, y: views} の配列)
         const graphDataPoints = generateGraphData(video.history);
         const rgb = hexToRgb(activeColor);
 
@@ -658,7 +590,7 @@
             data: {
                 datasets: [{
                     label: '再生回数(予測)',
-                    data: graphDataPoints,
+                    data: graphDataPoints, // {x, y}形式のデータを直接渡す
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
@@ -672,13 +604,14 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+                interaction: { intersect: false, mode: 'nearest', axis: 'x' }, // X軸に近い点にスナップさせる
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(20, 20, 20, 0.9)',
                         titleFont: { family: 'Noto Sans JP', size: 13 },
                         callbacks: {
+                            // ツールチップのタイトルを日付形式に戻す
                             title: function(context) {
                                 const d = new Date(context[0].parsed.x);
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
@@ -691,12 +624,13 @@
                 },
                 scales: {
                     x: { 
-                        type: 'linear', 
+                        type: 'linear', // 線形スケールを使用 (時間を数値として扱う)
                         grid: { display: false },
                         ticks: { 
                             font: { size: 11, family: 'Inter' }, 
                             color: '#9ca3af', 
                             maxTicksLimit: 8,
+                            // X軸のラベルを日付形式に戻す
                             callback: function(value) {
                                 const d = new Date(value);
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
@@ -715,3 +649,5 @@
 
 </body>
 </html>
+
+
