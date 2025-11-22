@@ -11,6 +11,46 @@ HISTORY_PATH = 'stats_history.json'
 # JSTタイムゾーンの定義
 JST = datetime.timezone(datetime.timedelta(hours=9))
 
+def clean_history_data(history):
+    """
+    履歴データを整理する関数
+    - 直近35日以内のデータ: すべて保持
+    - 35日より前のデータ: 1日につき最初の1件(日付が変わった直後のデータ)のみ保持
+    """
+    if not history:
+        return []
+
+    # 時刻順にソート
+    history.sort(key=lambda x: x['timestamp'])
+
+    now_jst = datetime.datetime.now(JST)
+    cutoff_date = now_jst - datetime.timedelta(days=35)
+
+    cleaned = []
+    seen_dates = set()
+
+    for entry in history:
+        # タイムスタンプ文字列をdatetimeオブジェクトに変換
+        try:
+            entry_dt = datetime.datetime.fromisoformat(entry['timestamp'])
+        except ValueError:
+            continue
+
+        if entry_dt > cutoff_date:
+            # 直近のデータはすべて保持
+            cleaned.append(entry)
+        else:
+            # 古いデータは1日1件（その日の最初のデータ）のみ保持
+            # JSTでの日付文字列を取得
+            date_str = entry_dt.date().isoformat()
+            if date_str not in seen_dates:
+                cleaned.append(entry)
+                seen_dates.add(date_str)
+    
+    # 再度ソートして返す
+    cleaned.sort(key=lambda x: x['timestamp'])
+    return cleaned
+
 def main():
     # マスターデータの読み込み
     with open(VIDEO_LIST_PATH, 'r', encoding='utf-8') as f:
@@ -80,9 +120,8 @@ def main():
             "views": view_count
         })
         
-        # ※重要: 1ヶ月比などを出すため、履歴は安易に削除しない。
-        # データサイズが大きくなりすぎた場合のみ、古いデータをアーカイブする処理を検討してください。
-        # history_data[vid]["history"] = history_data[vid]["history"][-5000:]
+        # 容量削減: 古いデータを間引く
+        history_data[vid]["history"] = clean_history_data(history_data[vid]["history"])
 
     # 保存
     with open(HISTORY_PATH, 'w', encoding='utf-8') as f:
