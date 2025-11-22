@@ -59,9 +59,9 @@
         @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr; align-items: start; } }
 
         /* Chart Card */
-        .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
+        .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); display: flex; flex-direction: column;}
         
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 16px; }
+        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .video-meta { flex: 1; }
         
         /* Tags & Images Area */
@@ -77,14 +77,21 @@
         .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
         .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
 
-        /* View Switcher Tabs */
-        .view-switcher { display: flex; gap: 4px; background: var(--bg-body); padding: 4px; border-radius: var(--radius-m); margin-bottom: 20px; width: fit-content; }
-        .view-tab { padding: 8px 16px; border-radius: var(--radius-s); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border: none; background: transparent; transition: all 0.2s; font-family: var(--font-jp); }
+        /* View Switcher (Graph / Forecast) */
+        .view-switcher-row {
+            display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color);
+        }
+        .view-tab {
+            padding: 10px 0; font-weight: 600; color: var(--text-secondary); cursor: pointer; position: relative; transition: color 0.2s;
+        }
         .view-tab:hover { color: var(--text-main); }
-        .view-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .view-tab.active { color: var(--primary); }
+        .view-tab.active::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--primary);
+        }
 
         /* Chart Controls */
-        .chart-controls { display: flex; gap: 8px; margin-top: 4px; }
+        .chart-controls { display: flex; gap: 8px; }
         .chart-btn {
             background: var(--bg-body); border: 1px solid var(--border-color);
             color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s);
@@ -95,27 +102,25 @@
         .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
         /* Content Areas */
-        .content-area { min-height: 350px; width: 100%; position: relative; }
-        .hidden { display: none !important; }
+        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+        .forecast-area-wrapper { position: relative; min-height: 350px; width: 100%; margin-bottom: 30px; display: none; }
+        .forecast-area-wrapper.active { display: block; }
 
-        .chart-area-wrapper { height: 350px; width: 100%; }
-        
-        /* Prediction Area Styles */
-        .prediction-area { height: 350px; overflow-y: auto; padding-right: 4px; }
-        .prediction-area::-webkit-scrollbar { width: 6px; }
-        .prediction-area::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
-        
-        .prediction-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-        .prediction-table th { text-align: left; padding: 12px; color: var(--text-secondary); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-card); z-index: 10; }
-        .prediction-table td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); font-family: var(--font-num); font-weight: 600; }
-        .prediction-row:last-child td { border-bottom: none; }
-        .pred-target { color: var(--text-main); font-size: 1rem; }
-        .pred-date { color: var(--text-main); }
-        .pred-days { color: var(--text-secondary); font-size: 0.85rem; margin-left: 8px; font-weight: 400; }
-        .milestone-badge { background: var(--primary-soft); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 8px; }
+        /* Forecast Styles */
+        .forecast-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .forecast-item { 
+            background: var(--bg-body); border-radius: var(--radius-m); padding: 16px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .forecast-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 700; display: flex; justify-content: space-between;}
+        .forecast-badge { background: #e0e0e0; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
+        .forecast-date { font-family: var(--font-num); font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+        .forecast-remaining { font-size: 0.9rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 4px; }
+        .forecast-done .forecast-date { color: var(--text-secondary); text-decoration: line-through; opacity: 0.6; }
+        .forecast-done .forecast-remaining { color: #4caf50; }
 
         /* Stats Grid */
-        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: 24px; }
+        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: auto;}
         .main-stat { text-align: center; margin-bottom: 24px; }
         .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block; }
         .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main); line-height: 1; letter-spacing: -1px; }
@@ -130,7 +135,7 @@
         .val-down { color: #4169e1; }
 
         /* Ranking */
-        .ranking-card { background: var(--bg-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden; }
+        .ranking-card { background: var(--bg-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 800px; overflow: hidden; }
         .ranking-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
         .ranking-title-row { display: flex; align-items: center; gap: 8px; }
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
@@ -166,9 +171,7 @@
         @media (max-width: 768px) { 
             .ranking-card { max-height: 500px; } 
             .chart-card { padding: 16px; }
-            .content-area { min-height: 250px; }
-            .chart-area-wrapper { height: 250px; }
-            .prediction-area { height: 250px; }
+            .chart-area-wrapper, .forecast-area-wrapper { min-height: 250px; height: auto;}
             .chart-header { flex-direction: column; }
             .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
         }
@@ -206,27 +209,21 @@
                 </div>
             </div>
 
-            <div class="view-switcher">
-                <button class="view-tab active" id="tabGraph" onclick="switchMainTab('graph')">
-                    <i class="ri-line-chart-line" style="margin-right:4px; vertical-align:text-bottom;"></i>推移グラフ
-                </button>
-                <button class="view-tab" id="tabPred" onclick="switchMainTab('prediction')">
-                    <i class="ri-magic-line" style="margin-right:4px; vertical-align:text-bottom;"></i>到達予想
-                </button>
+            <div class="view-switcher-row">
+                <div class="view-tab active" id="tabGraph" onclick="switchView('graph')">推移グラフ</div>
+                <div class="view-tab" id="tabForecast" onclick="switchView('forecast')">到達予想</div>
             </div>
 
-            <div id="graphView" class="content-area">
-                <div class="chart-controls">
+            <div id="chartContainer" class="chart-area-wrapper">
+                <div style="position: absolute; right: 0; top: -40px; z-index: 10;" class="chart-controls">
                     <button class="chart-btn active" id="btnMode1m" onclick="setGraphMode('1m')">直近1ヶ月</button>
                     <button class="chart-btn" id="btnModeAll" onclick="setGraphMode('all')">全期間</button>
                 </div>
-                <div class="chart-area-wrapper" style="margin-top: 16px;">
-                    <canvas id="viewChart"></canvas>
-                </div>
+                <canvas id="viewChart"></canvas>
             </div>
 
-            <div id="predictionView" class="content-area hidden">
-                <div class="prediction-area" id="predictionContent">
+            <div id="forecastContainer" class="forecast-area-wrapper">
+                <div id="forecastList" class="forecast-list">
                     </div>
             </div>
 
@@ -312,6 +309,7 @@
         },
         default: "#ff4b4b"
     };
+    
     // --- 画像設定 ---
     const IMAGE_CONFIG = {
         units: {
@@ -344,6 +342,7 @@
             "瑞希": "./images/chars/54logo_mizuki.png"
         }
     };
+    
     const UNIT_SORT_ORDER = [
         "Leo/need", "レオニ",
         "MORE MORE JUMP!", "モモジャン",
@@ -365,7 +364,7 @@
     let processedVideos = [];
     let currentVideoId = null;
     let currentGraphMode = '1m';
-    let activeTab = 'graph'; // 'graph' or 'prediction'
+    let currentViewType = 'graph'; // 'graph' or 'forecast'
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -416,13 +415,14 @@
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
             currentVideoId = newestVideo.id;
-            updateMainContent(newestVideo);
+            updateDisplay(newestVideo);
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
     }
 
+    // --- Helper Functions ---
     function populateUnitFilter(videos) {
         const select = document.getElementById('unitFilter');
         const units = new Set();
@@ -440,30 +440,6 @@
             option.textContent = unit;
             select.appendChild(option);
         });
-    }
-
-    function updateRankingDisplay() {
-        const unitFilter = document.getElementById('unitFilter').value;
-        const sortOrder = document.getElementById('sortOrder').value;
-
-        const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
-        document.getElementById('rankingTitle').textContent = displayConfig.label;
-        document.getElementById('rankingIcon').className = displayConfig.icon;
-
-        let filtered = processedVideos.filter(v => {
-            if (unitFilter === 'all') return true;
-            return v.info.unit === unitFilter;
-        });
-        filtered.sort((a, b) => {
-            switch (sortOrder) {
-                case 'date': return b.uploadDateObj - a.uploadDateObj;
-                case 'growth1d': return b.growth1d - a.growth1d;
-                case 'growth1w': return b.growth1w - a.growth1w;
-                case 'growth1m': return b.growth1m - a.growth1m;
-                case 'views': default: return b.latestViews - a.latestViews;
-            }
-        });
-        renderRanking(filtered, sortOrder);
     }
 
     function calculateValueAt(history, targetTime) {
@@ -509,108 +485,162 @@
         return calculateValueAt(history, targetTime);
     }
 
-    // --- 予測計算ロジック ---
-    function calculateRegression(history) {
-        // 最近のデータのみを使用（最大30日分）
-        if (!history || history.length < 2) return null;
-        const sorted = history.map(h => ({ x: new Date(h.timestamp).getTime(), y: h.views })).sort((a, b) => a.x - b.x);
+    // --- UI Update & Display ---
+
+    window.switchView = function(viewName) {
+        currentViewType = viewName;
         
-        let n = sorted.length;
-        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-        
-        sorted.forEach(p => {
-            sumX += p.x;
-            sumY += p.y;
-            sumXY += p.x * p.y;
-            sumXX += p.x * p.x;
-        });
-        
-        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-        const intercept = (sumY - slope * sumX) / n;
-        
-        return { slope, intercept }; // slope: views per millisecond
+        // Tab UI
+        document.getElementById('tabGraph').classList.toggle('active', viewName === 'graph');
+        document.getElementById('tabForecast').classList.toggle('active', viewName === 'forecast');
+
+        // Content Visibility
+        document.getElementById('chartContainer').style.display = viewName === 'graph' ? 'block' : 'none';
+        document.getElementById('forecastContainer').style.display = viewName === 'forecast' ? 'block' : 'none';
+
+        if (currentVideoId) {
+            const video = processedVideos.find(v => v.id === currentVideoId);
+            if (viewName === 'graph') {
+                updateGraph(video);
+            } else {
+                updateForecast(video);
+            }
+        }
     }
 
-    function renderPredictionView(video) {
-        const container = document.getElementById('predictionContent');
-        container.innerHTML = '';
+    function updateDisplay(video) {
+        // Update header info (common for both views)
+        updateHeader(video);
         
-        const currentViews = video.latestViews;
-        // 回帰分析 (recent_historyを使用)
-        const regression = calculateRegression(video.recent_history);
-        
-        // ターゲットのマイルストーン生成
-        // 100万ごと、または500万ごとの節目
-        const targets = [];
-        let nextMilestone = 0;
-        
-        // 次の100万単位
-        nextMilestone = Math.ceil((currentViews + 1) / 1000000) * 1000000;
-        
-        for (let i = 0; i < 10; i++) {
-            targets.push(nextMilestone);
-            // 1000万未満は100万刻み、それ以降は状況に応じて（ここでは100万刻みで統一）
-            nextMilestone += 1000000;
-        }
+        // Update Diff Stats
+        updateDiffElement('diff-1d', video.growth1d);
+        updateDiffElement('diff-1w', video.growth1w);
+        updateDiffElement('diff-1m', video.growth1m);
 
-        // 特別な大きな節目（500万, 1000万, 1500万...）を追加してソート
-        for(let m = 5000000; m <= 50000000; m+=5000000) {
-            if(m > currentViews && !targets.includes(m)) {
-                targets.push(m);
-            }
-        }
-        targets.sort((a, b) => a - b);
-        
-        // ユニーク化
-        const uniqueTargets = [...new Set(targets)].slice(0, 15); // 最大15件
-
-        let tableHtml = `<table class="prediction-table"><thead><tr><th>目標再生数</th><th>到達予想日時</th></tr></thead><tbody>`;
-        
-        const nowMs = Date.now();
-
-        uniqueTargets.forEach(target => {
-            let predictionText = "予測不能";
-            let daysText = "";
-            let badge = "";
-
-            if (regression && regression.slope > 0) {
-                const msNeeded = (target - currentViews) / regression.slope;
-                const predictedDate = new Date(nowMs + msNeeded);
-                
-                // 表示フォーマット
-                predictionText = `${predictedDate.getFullYear()}/${predictedDate.getMonth()+1}/${predictedDate.getDate()} ${predictedDate.getHours()}:${String(predictedDate.getMinutes()).padStart(2,'0')}`;
-                
-                const daysLeft = Math.ceil(msNeeded / (24 * 60 * 60 * 1000));
-                daysText = `<span class="pred-days">(あと約${daysLeft.toLocaleString()}日)</span>`;
-            } else {
-                daysText = `<span class="pred-days" style="color:#999">-</span>`;
-            }
-
-            // 大きな節目にバッジ
-            if (target % 5000000 === 0) {
-                badge = `<span class="milestone-badge">記念</span>`;
-            }
-
-            tableHtml += `
-                <tr class="prediction-row">
-                    <td>
-                        <span class="pred-target">${(target/10000).toLocaleString()}万回</span>${badge}
-                    </td>
-                    <td>
-                        <span class="pred-date">${predictionText}</span>${daysText}
-                    </td>
-                </tr>
-            `;
-        });
-        
-        tableHtml += `</tbody></table>`;
-        if(!regression || regression.slope <= 0) {
-             tableHtml += `<p style="padding:16px; color:var(--text-secondary); text-align:center;">※ 現在の増加傾向からは予測できません（データ不足または減少傾向）</p>`;
+        if (currentViewType === 'graph') {
+            updateGraph(video);
         } else {
-             tableHtml += `<p style="padding:16px; color:var(--text-secondary); font-size:0.8rem; text-align:right;">※ 直近の増加ペースが続いた場合の単純予測です</p>`;
+            updateForecast(video);
+        }
+    }
+
+    function updateHeader(video) {
+        const unitTag = document.getElementById('currentUnit');
+        const charTag = document.getElementById('currentChar');
+        
+        const unitKey = video.info.unit;
+        const charKey = video.info.character;
+
+        // Tags
+        if (unitKey && IMAGE_CONFIG.units[unitKey]) {
+            unitTag.className = 'tag-wrapper';
+            unitTag.innerHTML = `<img src="${IMAGE_CONFIG.units[unitKey]}" class="tag-image" alt="${unitKey}" title="${unitKey}">`;
+            unitTag.style.backgroundColor = 'transparent';
+            unitTag.style.border = 'none';
+        } else {
+            unitTag.className = 'tag';
+            unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
+        }
+        if (charKey && IMAGE_CONFIG.characters[charKey]) {
+            charTag.className = 'tag-wrapper';
+            charTag.innerHTML = `<img src="${IMAGE_CONFIG.characters[charKey]}" class="tag-image" alt="${charKey}" title="${charKey}">`;
+            charTag.style.backgroundColor = 'transparent';
+            charTag.style.border = 'none';
+        } else {
+            charTag.className = 'tag';
+            charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${charKey || '-'}`;
         }
 
-        container.innerHTML = tableHtml;
+        document.getElementById('currentTitle').textContent = video.info.title;
+        document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
+
+        const d = new Date(video.info.uploadDate);
+        const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
+
+        const linkEl = document.getElementById('currentLink');
+        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
+        linkEl.style.display = 'inline-flex';
+
+        // Colorizing tags
+        let activeColor = COLOR_CONFIG.default;
+        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
+            activeColor = COLOR_CONFIG.characters[charKey];
+        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
+            activeColor = COLOR_CONFIG.units[unitKey];
+        }
+        const setTagStyleIfText = (el, color) => {
+            if (el.classList.contains('tag')) {
+                el.style.borderColor = color;
+                el.style.color = color;
+                const rgb = hexToRgb(color);
+                el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
+            }
+        };
+        setTagStyleIfText(charTag, activeColor);
+        setTagStyleIfText(unitTag, activeColor);
+    }
+
+    // --- Graph Logic ---
+    function updateGraph(video) {
+        const ctx = document.getElementById('viewChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        const graphDataPoints = generateGraphData(video, currentGraphMode);
+        
+        // Determine Color
+        let activeColor = COLOR_CONFIG.default;
+        if (video.info.character && COLOR_CONFIG.characters[video.info.character]) activeColor = COLOR_CONFIG.characters[video.info.character];
+        else if (video.info.unit && COLOR_CONFIG.units[video.info.unit]) activeColor = COLOR_CONFIG.units[video.info.unit];
+        const rgb = hexToRgb(activeColor);
+
+        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
+        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: '再生回数',
+                    data: graphDataPoints,
+                    borderColor: activeColor,
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    pointRadius: currentGraphMode === 'all' ? 2 : 4,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: activeColor,
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+                plugins: { legend: { display: false }, tooltip: { /* omitted for brevity */ } },
+                scales: {
+                    x: { 
+                        type: 'linear', grid: { display: false },
+                        ticks: { 
+                            font: { size: 9, family: 'Inter' }, color: '#9ca3af', maxTicksLimit: 8,
+                            callback: function(value) {
+                                const d = new Date(value);
+                                if (currentGraphMode === 'all') return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+                                return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+                            }
+                        } 
+                    },
+                    y: { 
+                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
+                        ticks: { 
+                            font: { size: 9, family: 'Inter' }, color: '#9ca3af', 
+                            callback: function(value) { if(value >= 10000) return (value/10000) + '万'; return value; } 
+                        } 
+                    }
+                }
+            }
+        });
     }
 
     function generateGraphData(video, mode) {
@@ -621,69 +651,184 @@
         if (mode === '1m') {
             const hist = video.recent_history || [];
             if(hist.length === 0) return [];
-            
             const sortedHistory = hist.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
             const startTime = sortedHistory[0].time;
-
             let iterTime = new Date(startTime);
             iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
             iterTime.setSeconds(0);
             iterTime.setMilliseconds(0);
             let iterTs = iterTime.getTime();
-
             while (iterTs <= nowTime) {
                 if (iterTs >= startTime) {
-                    dataPoints.push({
-                        x: iterTs, 
-                        y: Math.round(calculateValueAt(hist, iterTs))
-                    });
+                    dataPoints.push({ x: iterTs, y: Math.round(calculateValueAt(hist, iterTs)) });
                 }
                 iterTs += 30 * 60 * 1000;
             }
         } else {
             const hist = video.daily_history || [];
-            hist.forEach(h => {
-                dataPoints.push({
-                    x: new Date(h.timestamp).getTime(),
-                    y: h.views
-                });
-            });
+            hist.forEach(h => { dataPoints.push({ x: new Date(h.timestamp).getTime(), y: h.views }); });
         }
-
-        dataPoints.push({
-            x: nowTime,
-            y: video.latestViews
-        });
-        
+        dataPoints.push({ x: nowTime, y: video.latestViews });
         return dataPoints.sort((a, b) => a.x - b.x);
     }
 
-    function renderTrends(videos) {
-        const section = document.getElementById('trendSection');
-        const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
-        const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0];
-        const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
+    window.setGraphMode = function(mode) {
+        currentGraphMode = mode;
+        document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
+        document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
+        if (currentVideoId && currentViewType === 'graph') {
+            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
+            if (targetVideo) updateGraph(targetVideo);
+        }
+    };
 
-        const cardConfig = [
-            { data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' },
-            { data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' },
-            { data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' }
-        ];
-        let html = '';
-        cardConfig.forEach(card => {
-            if(!card.data) return;
-            html += `
-                <div class="trend-card" onclick="selectVideo('${card.data.id}')">
-                    <div class="trend-icon-box ${card.colorClass}"><i class="${card.icon}"></i></div>
-                    <div class="trend-content">
-                        <span class="trend-label">${card.label}</span>
-                        <p class="trend-title">${card.data.info.title}</p>
+    // --- Forecast Logic ---
+
+    function calculateGrowthRate(video) {
+        // Calculate average growth per millisecond based on recent history (last 7 days max)
+        const hist = video.recent_history || [];
+        if (hist.length < 2) return 0;
+        
+        const sorted = hist.map(h => ({ t: new Date(h.timestamp).getTime(), v: h.views })).sort((a, b) => a.t - b.t);
+        const latest = sorted[sorted.length - 1];
+        
+        // Use up to 7 days ago
+        const sevenDaysAgo = latest.t - (7 * 24 * 60 * 60 * 1000);
+        let startPoint = sorted[0];
+        
+        for (let i = sorted.length - 2; i >= 0; i--) {
+            if (sorted[i].t < sevenDaysAgo) {
+                startPoint = sorted[i+1] || sorted[i]; // Approximate
+                break;
+            }
+            startPoint = sorted[i];
+        }
+
+        const timeDiff = latest.t - startPoint.t;
+        const viewDiff = latest.v - startPoint.v;
+
+        if (timeDiff <= 0 || viewDiff <= 0) return 0;
+        return viewDiff / timeDiff; // views per ms
+    }
+
+    function updateForecast(video) {
+        const listEl = document.getElementById('forecastList');
+        listEl.innerHTML = '';
+
+        const currentViews = video.latestViews;
+        const growthRate = calculateGrowthRate(video); // views per ms
+        const now = new Date().getTime();
+
+        // Define milestones
+        let milestones = [];
+        
+        // Base milestones: 100k increments up to 1M, then 1M increments
+        if (currentViews < 1000000) {
+            for(let i=1; i<=10; i++) milestones.push(i * 100000);
+        } else {
+            // Already over 1M. Add past milestones every 5M just for reference?
+            // Let's focus on "Next" milestones.
+            // Add previous big milestone
+            const floor1M = Math.floor(currentViews / 1000000) * 1000000;
+            if (floor1M > 0) milestones.push(floor1M);
+            
+            // Add next 5 milestones (1M steps)
+            for(let i=1; i<=5; i++) milestones.push(floor1M + (i * 1000000));
+            
+            // Add major milestones (5M, 10M, 15M, 20M) if not covered
+            [5000000, 10000000, 15000000, 20000000, 30000000].forEach(m => {
+                if (m > floor1M + 5000000) milestones.push(m);
+            });
+        }
+        
+        // Sort and unique
+        milestones = [...new Set(milestones)].sort((a, b) => a - b);
+        // Filter out too small ones if list is too long (keep around current)
+        milestones = milestones.filter(m => m >= currentViews * 0.5); 
+
+        milestones.forEach(target => {
+            let itemHtml = '';
+            const isReached = currentViews >= target;
+            const displayTarget = target >= 10000 ? (target/10000) + '万' : target;
+
+            if (isReached) {
+                // Already reached
+                itemHtml = `
+                    <div class="forecast-item forecast-done">
+                        <span class="forecast-label">MILESTONE <span class="forecast-badge">達成済</span></span>
+                        <div class="forecast-date">${displayTarget}回</div>
+                        <div class="forecast-remaining"><i class="ri-check-double-line"></i> Reached</div>
                     </div>
-                    <img src="${card.data.info.thumbnail}" class="trend-thumb-mini" alt="thumb">
-                </div>
-            `;
+                `;
+            } else {
+                // Future prediction
+                if (growthRate > 0) {
+                    const diffViews = target - currentViews;
+                    const msToTarget = diffViews / growthRate;
+                    const targetDate = new Date(now + msToTarget);
+                    const daysRemaining = Math.ceil(msToTarget / (24 * 60 * 60 * 1000));
+                    
+                    const y = targetDate.getFullYear();
+                    const m = targetDate.getMonth() + 1;
+                    const d = targetDate.getDate();
+                    
+                    // Cap prediction at 5 years
+                    if (daysRemaining > 1825) {
+                        itemHtml = `
+                            <div class="forecast-item">
+                                <span class="forecast-label">MILESTONE</span>
+                                <div class="forecast-date">${displayTarget}回</div>
+                                <div class="forecast-remaining" style="color:var(--text-secondary)">予測範囲外 (5年以上)</div>
+                            </div>
+                        `;
+                    } else {
+                        itemHtml = `
+                            <div class="forecast-item">
+                                <span class="forecast-label">MILESTONE <span class="forecast-badge" style="background:#fff8e1; color:#f57f17">未達成</span></span>
+                                <div class="forecast-date">${y}/${m}/${d}</div>
+                                <div class="forecast-remaining">あと ${daysRemaining.toLocaleString()}日 (${displayTarget}回)</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                     // Growth is 0 or negative
+                     itemHtml = `
+                        <div class="forecast-item">
+                            <span class="forecast-label">MILESTONE</span>
+                            <div class="forecast-date">${displayTarget}回</div>
+                            <div class="forecast-remaining" style="color:var(--text-secondary)">測定不能</div>
+                        </div>
+                    `;
+                }
+            }
+            listEl.innerHTML += itemHtml;
         });
-        section.innerHTML = html;
+    }
+
+    // --- Ranking & Misc ---
+
+    function updateRankingDisplay() {
+        const unitFilter = document.getElementById('unitFilter').value;
+        const sortOrder = document.getElementById('sortOrder').value;
+
+        const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
+        document.getElementById('rankingTitle').textContent = displayConfig.label;
+        document.getElementById('rankingIcon').className = displayConfig.icon;
+
+        let filtered = processedVideos.filter(v => {
+            if (unitFilter === 'all') return true;
+            return v.info.unit === unitFilter;
+        });
+        filtered.sort((a, b) => {
+            switch (sortOrder) {
+                case 'date': return b.uploadDateObj - a.uploadDateObj;
+                case 'growth1d': return b.growth1d - a.growth1d;
+                case 'growth1w': return b.growth1w - a.growth1w;
+                case 'growth1m': return b.growth1m - a.growth1m;
+                case 'views': default: return b.latestViews - a.latestViews;
+            }
+        });
+        renderRanking(filtered, sortOrder);
     }
 
     function renderRanking(videos, sortType = 'views') {
@@ -722,50 +867,39 @@
         });
     }
 
-    // --- Tab Switching Logic ---
-    window.switchMainTab = function(tabName) {
-        activeTab = tabName;
-        
-        // Tab UI
-        document.getElementById('tabGraph').classList.toggle('active', tabName === 'graph');
-        document.getElementById('tabPred').classList.toggle('active', tabName === 'prediction');
-        
-        // Content Visibility
-        const graphView = document.getElementById('graphView');
-        const predView = document.getElementById('predictionView');
-        
-        if (tabName === 'graph') {
-            graphView.classList.remove('hidden');
-            predView.classList.add('hidden');
-        } else {
-            graphView.classList.add('hidden');
-            predView.classList.remove('hidden');
-        }
-        
-        // Update content if needed
-        if (currentVideoId) {
-            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
-            updateMainContent(targetVideo);
-        }
+    function renderTrends(videos) {
+        const section = document.getElementById('trendSection');
+        const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
+        const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0];
+        const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
+
+        const cardConfig = [
+            { data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' },
+            { data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' },
+            { data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' }
+        ];
+        let html = '';
+        cardConfig.forEach(card => {
+            if(!card.data) return;
+            html += `
+                <div class="trend-card" onclick="selectVideo('${card.data.id}')">
+                    <div class="trend-icon-box ${card.colorClass}"><i class="${card.icon}"></i></div>
+                    <div class="trend-content">
+                        <span class="trend-label">${card.label}</span>
+                        <p class="trend-title">${card.data.info.title}</p>
+                    </div>
+                    <img src="${card.data.info.thumbnail}" class="trend-thumb-mini" alt="thumb">
+                </div>
+            `;
+        });
+        section.innerHTML = html;
     }
-
-    window.setGraphMode = function(mode) {
-        currentGraphMode = mode;
-        
-        document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
-        document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
-
-        if (currentVideoId && activeTab === 'graph') {
-            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
-            if (targetVideo) updateGraph(targetVideo);
-        }
-    };
 
     window.selectVideo = function(id) {
         currentVideoId = id;
         const targetVideo = processedVideos.find(v => v.id === id);
         if(targetVideo) {
-            updateMainContent(targetVideo);
+            updateDisplay(targetVideo); // Replaces updateGraph
             document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
             const rankItem = document.getElementById(`rank-${id}`);
             if(rankItem) {
@@ -773,81 +907,6 @@
                 rankItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
-    }
-
-    // 共通の更新関数
-    function updateMainContent(video) {
-        updateHeaderAndStats(video);
-        
-        if (activeTab === 'graph') {
-            updateGraph(video);
-        } else {
-            renderPredictionView(video);
-        }
-    }
-
-    function updateHeaderAndStats(video) {
-        const unitTag = document.getElementById('currentUnit');
-        const charTag = document.getElementById('currentChar');
-        
-        const unitKey = video.info.unit;
-        const charKey = video.info.character;
-
-        const unitImgSrc = IMAGE_CONFIG.units[unitKey];
-        if (unitKey && unitImgSrc) {
-            unitTag.className = 'tag-wrapper';
-            unitTag.innerHTML = `<img src="${unitImgSrc}" class="tag-image" alt="${unitKey}" title="${unitKey}">`;
-            unitTag.style.backgroundColor = 'transparent';
-            unitTag.style.border = 'none';
-        } else {
-            unitTag.className = 'tag';
-            unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
-        }
-
-        const charImgSrc = IMAGE_CONFIG.characters[charKey];
-        if (charKey && charImgSrc) {
-            charTag.className = 'tag-wrapper';
-            charTag.innerHTML = `<img src="${charImgSrc}" class="tag-image" alt="${charKey}" title="${charKey}">`;
-            charTag.style.backgroundColor = 'transparent';
-            charTag.style.border = 'none';
-        } else {
-            charTag.className = 'tag';
-            charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${charKey || '-'}`;
-        }
-        
-        document.getElementById('currentTitle').textContent = video.info.title;
-        document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
-
-        const d = new Date(video.info.uploadDate);
-        const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
-        document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
-
-        const linkEl = document.getElementById('currentLink');
-        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
-        linkEl.style.display = 'inline-flex';
-
-        // Tag Coloring
-        let activeColor = COLOR_CONFIG.default;
-        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
-            activeColor = COLOR_CONFIG.characters[charKey];
-        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
-            activeColor = COLOR_CONFIG.units[unitKey];
-        }
-
-        const setTagStyleIfText = (el, color) => {
-            if (el.classList.contains('tag')) {
-                el.style.borderColor = color;
-                el.style.color = color;
-                const rgb = hexToRgb(color);
-                el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-            }
-        };
-        setTagStyleIfText(charTag, activeColor);
-        setTagStyleIfText(unitTag, activeColor);
-
-        updateDiffElement('diff-1d', video.growth1d);
-        updateDiffElement('diff-1w', video.growth1w);
-        updateDiffElement('diff-1m', video.growth1m);
     }
 
     function updateDiffElement(elementId, diff) {
@@ -870,96 +929,6 @@
             g: parseInt(result[2], 16),
             b: parseInt(result[3], 16)
         } : { r: 255, g: 75, b: 75 };
-    }
-
-    function updateGraph(video) {
-        const ctx = document.getElementById('viewChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-
-        // グラフ用カラー取得（header更新時にセットする手もあるが、ここでは再計算）
-        const charKey = video.info.character;
-        const unitKey = video.info.unit;
-        let activeColor = COLOR_CONFIG.default;
-        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
-            activeColor = COLOR_CONFIG.characters[charKey];
-        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
-            activeColor = COLOR_CONFIG.units[unitKey];
-        }
-
-        const graphDataPoints = generateGraphData(video, currentGraphMode);
-        
-        const rgb = hexToRgb(activeColor);
-        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
-        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
-
-        chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: '再生回数',
-                    data: graphDataPoints,
-                    borderColor: activeColor,
-                    backgroundColor: gradient,
-                    borderWidth: 3,
-                    pointRadius: currentGraphMode === 'all' ? 2 : 4,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: activeColor,
-                    tension: 0.1,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'nearest', axis: 'x' },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
-                        titleFont: { family: 'Noto Sans JP', size: 13 },
-                        callbacks: {
-                            title: function(context) {
-                                const d = new Date(context[0].parsed.x);
-                                return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
-                            },
-                            label: function(context) {
-                                return context.parsed.y.toLocaleString() + ' views';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { 
-                        type: 'linear',
-                        grid: { display: false },
-                        ticks: { 
-                            font: { size: 9, family: 'Inter' }, 
-                            color: '#9ca3af', 
-                            maxTicksLimit: 8,
-                            callback: function(value) {
-                                const d = new Date(value);
-                                if (currentGraphMode === 'all') {
-                                    return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-                                }
-                                return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
-                            }
-                        } 
-                    },
-                    y: { 
-                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
-                        ticks: { 
-                            font: { size: 9, family: 'Inter' },
-                            color: '#9ca3af', 
-                            callback: function(value) { 
-                                if(value >= 10000) return (value/10000) + '万';
-                                return value; 
-                            } 
-                        } 
-                    }
-                }
-            }
-        });
     }
 </script>
 
