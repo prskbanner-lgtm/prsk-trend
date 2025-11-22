@@ -1,0 +1,12 @@
+[
+  {
+    "id": "動画ID (例: dQw4w9WgXcQ)",
+    "unit": "ユニットA",
+    "character": "キャラ名A"
+  },
+  {
+    "id": "別の動画ID",
+    "unit": "ユニットB",
+    "character": "キャラ名B"
+  }
+]
