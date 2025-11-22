@@ -1,13 +1,16 @@
 import os
 import json
 import datetime
-import time
+import math
 from googleapiclient.discovery import build
 
 # 設定
 API_KEY = os.environ['YOUTUBE_API_KEY']
 VIDEO_LIST_PATH = 'data/video_list.json'
 HISTORY_PATH = 'stats_history.json'
+
+# 日本時間 (JST) の定義
+JST = datetime.timezone(datetime.timedelta(hours=9), 'JST')
 
 def main():
     # マスターデータの読み込み
@@ -22,6 +25,7 @@ def main():
     all_items = []
     chunk_size = 50
     
+    # 動画データ取得
     for i in range(0, len(video_ids), chunk_size):
         batch_ids = video_ids[i:i + chunk_size]
         try:
@@ -42,9 +46,12 @@ def main():
     else:
         history_data = {}
 
-    current_time_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    
-    # データ更新処理
+    # 現在時刻 (JST)
+    now_jst = datetime.datetime.now(JST)
+    now_ts = now_jst.timestamp()
+    now_iso = now_jst.isoformat()
+
+    # データの更新・整形
     for item in all_items:
         vid = item['id']
         stats = item['statistics']
@@ -53,16 +60,17 @@ def main():
         
         view_count = int(stats.get('viewCount', 0))
 
-        # 初期化
+        # データ構造の初期化
         if vid not in history_data:
             history_data[vid] = {
                 "info": {},
-                "_raw_history": [], # 生データ保存用（隠しフィールド）
-                "history": []       # グラフ表示用（整形済み）
+                "_raw_history": [], # 計算用の生データ（不定期）
+                "history": []       # 表示用の整形データ（00分, 30分, 現在のみ）
             }
-            # 旧データ構造からの移行対応（あれば）
+            # 旧データからの移行用
             if "history" in history_data[vid] and len(history_data[vid]["history"]) > 0:
-                 history_data[vid]["_raw_history"] = history_data[vid]["history"]
+                 if not history_data[vid]["_raw_history"]:
+                     history_data[vid]["_raw_history"] = history_data[vid]["history"]
 
         # 基本情報の更新
         history_data[vid]["info"] = {
@@ -74,81 +82,84 @@ def main():
         }
 
         # 1. 生データ(_raw_history)に追加
-        # タイムスタンプをUnixTime(秒)でも持っておくと計算しやすい
-        now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
-        
         history_data[vid]["_raw_history"].append({
-            "timestamp": current_time_iso,
+            "timestamp": now_iso,
             "ts_val": now_ts, 
             "views": view_count
         })
 
-        # 生データの間引き（保存容量節約のため直近1週間程度または300件程度を残す）
-        # ただし補間のために古すぎるものだけ消す
+        # 生データの間引き（計算用に直近500件程度保持）
         if len(history_data[vid]["_raw_history"]) > 500:
              history_data[vid]["_raw_history"] = history_data[vid]["_raw_history"][-500:]
 
-        # 2. 整形データ(history)の再生成
-        # 生データをもとに、00分と30分のデータを計算して生成する
-        clean_history = generate_clean_history(history_data[vid]["_raw_history"])
+        # 2. 表示用データ(history)の完全再生成
+        # 「毎時00分」「毎時30分」と「現在」のみで構成する
+        clean_history = generate_clean_history(history_data[vid]["_raw_history"], now_ts)
         history_data[vid]["history"] = clean_history
 
-    # 保存
+    # JSON保存
     with open(HISTORY_PATH, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, indent=2, ensure_ascii=False)
 
-def generate_clean_history(raw_data):
+def generate_clean_history(raw_data, current_ts):
     """
-    生データから毎時00分、30分、および現在の予測値を生成する
+    生データから 00分, 30分の固定点 と Current(現在予測値) のみを生成する
     """
     if not raw_data:
         return []
 
-    # 日付順にソート
+    # 時刻順ソート
     sorted_raw = sorted(raw_data, key=lambda x: x['ts_val'])
     
-    # 開始時刻：最初のデータの時刻を30分単位に切り下げ
+    # 最初のデータの時刻を取得し、その直後の 00分 or 30分 を開始点とする
     first_ts = sorted_raw[0]['ts_val']
-    start_dt = datetime.datetime.fromtimestamp(first_ts, datetime.timezone.utc)
-    # 分を0か30に丸める
-    if start_dt.minute < 30:
-        start_dt = start_dt.replace(minute=0, second=0, microsecond=0)
-    else:
-        start_dt = start_dt.replace(minute=30, second=0, microsecond=0)
-        
-    result_history = []
-    current_dt = start_dt
-    now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    start_dt = datetime.datetime.fromtimestamp(first_ts, JST)
     
-    # 30分刻みでループし、現在時刻の直前まで埋める
-    while current_dt.timestamp() <= now_ts:
-        target_ts = current_dt.timestamp()
+    # 分を0か30に丸め上げる処理
+    if start_dt.minute == 0 and start_dt.second == 0:
+        # ちょうど00分ならそのまま
+        pass
+    elif start_dt.minute < 30:
+        start_dt = start_dt.replace(minute=30, second=0, microsecond=0)
+    else:
+        # 次の時間の00分へ
+        start_dt = start_dt.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=1)
+
+    result_history = []
+    
+    # ループ用変数
+    grid_dt = start_dt
+    
+    # 現在時刻より手前の 00分/30分 をすべて埋める
+    while grid_dt.timestamp() <= current_ts:
+        target_ts = grid_dt.timestamp()
         
-        # 予測/補間値を計算
-        predicted_views = get_value_at_timestamp(target_ts, sorted_raw)
-        
-        if predicted_views is not None:
+        # 補間値を取得
+        val = get_interpolated_value(target_ts, sorted_raw)
+        if val is not None:
             result_history.append({
-                "timestamp": current_dt.isoformat(),
-                "views": int(predicted_views),
+                "timestamp": grid_dt.isoformat(),
+                "views": int(val),
                 "type": "fixed" # 固定点
             })
         
         # 30分進める
-        current_dt += datetime.timedelta(minutes=30)
+        grid_dt += datetime.timedelta(minutes=30)
 
     # 最後に「現在(Current)」の予測値を追加
-    # 直近の傾向を加味して予測する
-    latest_val = get_weighted_prediction(now_ts, sorted_raw)
+    # 直近の増加傾向から算出
+    predicted_current = get_weighted_prediction(current_ts, sorted_raw)
+    
+    current_dt_jst = datetime.datetime.fromtimestamp(current_ts, JST)
     result_history.append({
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "views": int(latest_val),
+        "timestamp": current_dt_jst.isoformat(),
+        "views": int(predicted_current),
         "type": "current" # 最新予測
     })
 
     return result_history
 
-def get_value_at_timestamp(target_ts, raw_data):
+def get_interpolated_value(target_ts, raw_data):
     """指定時刻の値を線形補間で求める"""
     # target_tsの前後のデータを探す
     prev_point = None
@@ -161,40 +172,38 @@ def get_value_at_timestamp(target_ts, raw_data):
             next_point = point
             break
             
-    # 過去データの中に挟まれている場合（補間）
+    # 過去データの中に挟まれている場合（線形補間）
     if prev_point and next_point:
         t1, y1 = prev_point['ts_val'], prev_point['views']
         t2, y2 = next_point['ts_val'], next_point['views']
         if t2 == t1: return y1
-        # 線形補間計算: y = y1 + (y2-y1) * (t-t1)/(t2-t1)
         return y1 + (y2 - y1) * ((target_ts - t1) / (t2 - t1))
     
-    # データがまだない未来、あるいは一番古いデータより前の場合
-    # ここでは、最も近い過去データを返すか、Noneを返す
-    if prev_point:
-        return prev_point['views']
-    if next_point:
-        return next_point['views']
-        
+    # 範囲外（データ不足）の場合はNoneを返す（グラフにプロットしない）
     return None
 
 def get_weighted_prediction(target_ts, raw_data):
     """
-    現在または未来の値を予測する。
-    直近のデータに重みをつけて増加ペース（傾き）を算出し、それを適用する。
+    現在値を予測する。
+    最新の実データより時間が進んでいる場合、直近の傾きを使って未来予測する。
     """
     if not raw_data:
         return 0
+    
+    last_point = raw_data[-1]
+    
+    # もし生データがターゲット時刻と同じ、あるいは未来ならその値を使う
+    if last_point['ts_val'] >= target_ts:
+        return last_point['views']
+
     if len(raw_data) == 1:
         return raw_data[0]['views']
 
-    # 直近3点を使って傾向を見る（データが少なければ2点）
+    # 直近3点を使って増加ペース（傾き）を計算
     recent_points = raw_data[-3:] 
     
-    # 加重平均で「1秒あたりの増加数(velocity)」を計算
-    # 直近の区間ほど重みを大きくする
-    total_weight = 0
     weighted_velocity = 0
+    total_weight = 0
     
     for i in range(len(recent_points) - 1):
         p1 = recent_points[i]
@@ -206,23 +215,17 @@ def get_weighted_prediction(target_ts, raw_data):
         if dt <= 0: continue
         
         velocity = dy / dt
-        
-        # より新しい区間に高い重み (iが大きくなるほど重くなる)
-        weight = (i + 1) * 2 
+        weight = (i + 1) * 2 # 直近ほど重く
         
         weighted_velocity += velocity * weight
         total_weight += weight
         
-    if total_weight == 0:
-        avg_velocity = 0
-    else:
-        avg_velocity = weighted_velocity / total_weight
+    avg_velocity = weighted_velocity / total_weight if total_weight > 0 else 0
 
-    # 最後の実データから経過時間分だけ伸ばす
-    last_point = raw_data[-1]
+    # 予測計算: 最後の実測値 + (速度 * 経過時間)
     time_diff = target_ts - last_point['ts_val']
-    
     predicted_view = last_point['views'] + (avg_velocity * time_diff)
+    
     return int(predicted_view)
 
 if __name__ == '__main__':
