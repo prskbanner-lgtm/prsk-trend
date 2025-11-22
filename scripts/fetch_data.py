@@ -80,8 +80,9 @@ def main():
             "views": view_count
         })
         
-        # 履歴の間引き（任意：過去1000件のみ保持など）
-        # history_data[vid]["history"] = history_data[vid]["history"][-1000:]
+        # ※重要: 1ヶ月比などを出すため、履歴は安易に削除しない。
+        # データサイズが大きくなりすぎた場合のみ、古いデータをアーカイブする処理を検討してください。
+        # history_data[vid]["history"] = history_data[vid]["history"][-5000:]
 
     # 保存
     with open(HISTORY_PATH, 'w', encoding='utf-8') as f:
