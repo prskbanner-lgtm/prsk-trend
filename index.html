@@ -62,8 +62,11 @@
         .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 30px; box-shadow: var(--shadow-card); }
         .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .video-meta { flex: 1; }
-        .tags { display: flex; gap: 8px; margin-bottom: 10px; }
         
+        /* Tags & Images Area */
+        .tags { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px; }
+        
+        /* テキスト表示時のスタイル */
         .tag { 
             background: var(--bg-body); 
             color: var(--text-secondary); 
@@ -76,6 +79,21 @@
             gap: 4px; 
             border: 1px solid transparent;
             transition: all 0.3s ease;
+        }
+
+        /* 画像表示時のスタイル */
+        .tag-image {
+            height: 40px; /* 画像の高さ制限 */
+            width: auto;
+            object-fit: contain;
+            border-radius: 4px;
+            display: block;
+        }
+        
+        /* 画像ラッパー（レイアウト崩れ防止） */
+        .tag-wrapper {
+            display: flex;
+            align-items: center;
         }
 
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
@@ -158,8 +176,8 @@
             <div class="chart-header">
                 <div class="video-meta">
                     <div class="tags">
-                        <span class="tag" id="currentUnit"><i class="ri-team-line"></i> -</span>
-                        <span class="tag" id="currentChar"><i class="ri-user-smile-line"></i> -</span>
+                        <div id="currentUnit" class="tag-wrapper"></div>
+                        <div id="currentChar" class="tag-wrapper"></div>
                     </div>
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
                 </div>
@@ -250,6 +268,24 @@
             "25-ji, Nightcord de.": "#884499", "ニーゴ": "#884499"
         },
         default: "#ff4b4b"
+    };
+
+    // --- 画像設定 (重要: ここを任意の画像パスに変更してください) ---
+    // GitHub Pagesのリポジトリ内にある画像パスを指定します。
+    // 例: "./images/units/leoneed_logo.png" など
+    const IMAGE_CONFIG = {
+        units: {
+            "Leo/need": "", // パスを入力してください
+            "MORE MORE JUMP!": "",
+            "Vivid BAD SQUAD": "",
+            "Wonderlands x Showtime": "",
+            "25-ji, Nightcord de.": ""
+        },
+        characters: {
+            "一歌": "", // キャラクターアイコンのパスを入力
+            "咲希": "",
+            // 必要に応じて追加...
+        }
     };
 
     const UNIT_SORT_ORDER = [
@@ -401,7 +437,6 @@
         return calculateValueAt(history, targetTime);
     }
 
-    // グラフ用データ生成：X軸をタイムスタンプ(数値)として保持する
     function generateGraphData(history) {
         const sortedHistory = history.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
         if(sortedHistory.length === 0) return [];
@@ -418,18 +453,16 @@
 
         const dataPoints = [];
         
-        // 30分ごとの履歴点
         while (iterTs <= nowTime) {
             if (iterTs >= startTime) {
                 dataPoints.push({
-                    x: iterTs, // X座標をタイムスタンプ(数値)にする
+                    x: iterTs, 
                     y: Math.round(calculateValueAt(history, iterTs))
                 });
             }
             iterTs += 30 * 60 * 1000;
         }
 
-        // 現在時刻の点を追加
         dataPoints.push({
             x: nowTime,
             y: Math.round(calculateValueAt(history, nowTime))
@@ -544,15 +577,41 @@
         const unitTag = document.getElementById('currentUnit');
         const charTag = document.getElementById('currentChar');
         
-        unitTag.innerHTML = `<i class="ri-team-line"></i> ${video.info.unit || '-'}`;
-        charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${video.info.character || '-'}`;
+        const unitKey = video.info.unit;
+        const charKey = video.info.character;
+
+        // --- ユニット表示の切り替え処理 ---
+        const unitImgSrc = IMAGE_CONFIG.units[unitKey];
+        if (unitKey && unitImgSrc) {
+            // 画像がある場合
+            unitTag.className = 'tag-wrapper';
+            unitTag.innerHTML = `<img src="${unitImgSrc}" class="tag-image" alt="${unitKey}" title="${unitKey}">`;
+            unitTag.style.backgroundColor = 'transparent';
+            unitTag.style.border = 'none';
+        } else {
+            // 画像がない場合（従来のテキスト表示）
+            unitTag.className = 'tag';
+            unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
+        }
+
+        // --- キャラクター表示の切り替え処理 ---
+        const charImgSrc = IMAGE_CONFIG.characters[charKey];
+        if (charKey && charImgSrc) {
+            // 画像がある場合
+            charTag.className = 'tag-wrapper';
+            charTag.innerHTML = `<img src="${charImgSrc}" class="tag-image" alt="${charKey}" title="${charKey}">`;
+            charTag.style.backgroundColor = 'transparent';
+            charTag.style.border = 'none';
+        } else {
+            // 画像がない場合（従来のテキスト表示）
+            charTag.className = 'tag';
+            charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${charKey || '-'}`;
+        }
         
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
         let activeColor = COLOR_CONFIG.default;
-        let charKey = video.info.character;
-        let unitKey = video.info.unit;
 
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
             activeColor = COLOR_CONFIG.characters[charKey];
@@ -560,15 +619,18 @@
             activeColor = COLOR_CONFIG.units[unitKey];
         }
 
-        const setTagColor = (el, color) => {
-            el.style.borderColor = color;
-            el.style.color = color;
-            const rgb = hexToRgb(color);
-            el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
+        // テキスト表示のときだけ色を適用するヘルパー関数
+        const setTagStyleIfText = (el, color) => {
+            if (el.classList.contains('tag')) {
+                el.style.borderColor = color;
+                el.style.color = color;
+                const rgb = hexToRgb(color);
+                el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
+            }
         };
 
-        setTagColor(charTag, activeColor);
-        setTagColor(unitTag, activeColor);
+        setTagStyleIfText(charTag, activeColor);
+        setTagStyleIfText(unitTag, activeColor);
 
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
@@ -577,7 +639,6 @@
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        // データを取得 ({x: timestamp, y: views} の配列)
         const graphDataPoints = generateGraphData(video.history);
         const rgb = hexToRgb(activeColor);
 
@@ -590,7 +651,7 @@
             data: {
                 datasets: [{
                     label: '再生回数(予測)',
-                    data: graphDataPoints, // {x, y}形式のデータを直接渡す
+                    data: graphDataPoints,
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
@@ -604,14 +665,13 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'nearest', axis: 'x' }, // X軸に近い点にスナップさせる
+                interaction: { intersect: false, mode: 'nearest', axis: 'x' },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(20, 20, 20, 0.9)',
                         titleFont: { family: 'Noto Sans JP', size: 13 },
                         callbacks: {
-                            // ツールチップのタイトルを日付形式に戻す
                             title: function(context) {
                                 const d = new Date(context[0].parsed.x);
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
@@ -624,13 +684,12 @@
                 },
                 scales: {
                     x: { 
-                        type: 'linear', // 線形スケールを使用 (時間を数値として扱う)
+                        type: 'linear',
                         grid: { display: false },
                         ticks: { 
                             font: { size: 11, family: 'Inter' }, 
                             color: '#9ca3af', 
                             maxTicksLimit: 8,
-                            // X軸のラベルを日付形式に戻す
                             callback: function(value) {
                                 const d = new Date(value);
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
@@ -649,5 +708,3 @@
 
 </body>
 </html>
-
-
