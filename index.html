@@ -61,7 +61,7 @@
         /* Chart Card */
         .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
         
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 16px; }
         .video-meta { flex: 1; }
         
         /* Tags & Images Area */
@@ -77,8 +77,14 @@
         .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
         .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
 
+        /* View Switcher Tabs */
+        .view-switcher { display: flex; gap: 4px; background: var(--bg-body); padding: 4px; border-radius: var(--radius-m); margin-bottom: 20px; width: fit-content; }
+        .view-tab { padding: 8px 16px; border-radius: var(--radius-s); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border: none; background: transparent; transition: all 0.2s; font-family: var(--font-jp); }
+        .view-tab:hover { color: var(--text-main); }
+        .view-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
         /* Chart Controls */
-        .chart-controls { display: flex; gap: 8px; }
+        .chart-controls { display: flex; gap: 8px; margin-top: 4px; }
         .chart-btn {
             background: var(--bg-body); border: 1px solid var(--border-color);
             color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s);
@@ -88,10 +94,28 @@
         .chart-btn:hover { background: var(--primary-soft); color: var(--primary); }
         .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+        /* Content Areas */
+        .content-area { min-height: 350px; width: 100%; position: relative; }
+        .hidden { display: none !important; }
+
+        .chart-area-wrapper { height: 350px; width: 100%; }
         
+        /* Prediction Area Styles */
+        .prediction-area { height: 350px; overflow-y: auto; padding-right: 4px; }
+        .prediction-area::-webkit-scrollbar { width: 6px; }
+        .prediction-area::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
+        
+        .prediction-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .prediction-table th { text-align: left; padding: 12px; color: var(--text-secondary); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-card); z-index: 10; }
+        .prediction-table td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); font-family: var(--font-num); font-weight: 600; }
+        .prediction-row:last-child td { border-bottom: none; }
+        .pred-target { color: var(--text-main); font-size: 1rem; }
+        .pred-date { color: var(--text-main); }
+        .pred-days { color: var(--text-secondary); font-size: 0.85rem; margin-left: 8px; font-weight: 400; }
+        .milestone-badge { background: var(--primary-soft); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 8px; }
+
         /* Stats Grid */
-        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
+        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: 24px; }
         .main-stat { text-align: center; margin-bottom: 24px; }
         .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block; }
         .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main); line-height: 1; letter-spacing: -1px; }
@@ -142,7 +166,9 @@
         @media (max-width: 768px) { 
             .ranking-card { max-height: 500px; } 
             .chart-card { padding: 16px; }
+            .content-area { min-height: 250px; }
             .chart-area-wrapper { height: 250px; }
+            .prediction-area { height: 250px; }
             .chart-header { flex-direction: column; }
             .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
         }
@@ -178,14 +204,30 @@
                         </a>
                     </div>
                 </div>
+            </div>
+
+            <div class="view-switcher">
+                <button class="view-tab active" id="tabGraph" onclick="switchMainTab('graph')">
+                    <i class="ri-line-chart-line" style="margin-right:4px; vertical-align:text-bottom;"></i>推移グラフ
+                </button>
+                <button class="view-tab" id="tabPred" onclick="switchMainTab('prediction')">
+                    <i class="ri-magic-line" style="margin-right:4px; vertical-align:text-bottom;"></i>到達予想
+                </button>
+            </div>
+
+            <div id="graphView" class="content-area">
                 <div class="chart-controls">
                     <button class="chart-btn active" id="btnMode1m" onclick="setGraphMode('1m')">直近1ヶ月</button>
                     <button class="chart-btn" id="btnModeAll" onclick="setGraphMode('all')">全期間</button>
                 </div>
+                <div class="chart-area-wrapper" style="margin-top: 16px;">
+                    <canvas id="viewChart"></canvas>
+                </div>
             </div>
 
-            <div class="chart-area-wrapper">
-                <canvas id="viewChart"></canvas>
+            <div id="predictionView" class="content-area hidden">
+                <div class="prediction-area" id="predictionContent">
+                    </div>
             </div>
 
             <div class="stats-container">
@@ -310,7 +352,6 @@
         "25-ji, Nightcord de.", "ニーゴ"
     ];
 
-    // --- ランキング表示用の設定 ---
     const SORT_DISPLAY_CONFIG = {
         'views': { label: '総再生数ランキング', icon: 'ri-trophy-line' },
         'date': { label: '新着動画ランキング', icon: 'ri-time-line' },
@@ -323,7 +364,8 @@
     let allData = {};
     let processedVideos = [];
     let currentVideoId = null;
-    let currentGraphMode = '1m'; 
+    let currentGraphMode = '1m';
+    let activeTab = 'graph'; // 'graph' or 'prediction'
 
     fetch('stats_history.json')
         .then(response => response.json())
@@ -374,7 +416,7 @@
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
             currentVideoId = newestVideo.id;
-            updateGraph(newestVideo);
+            updateMainContent(newestVideo);
         }
 
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
@@ -404,7 +446,6 @@
         const unitFilter = document.getElementById('unitFilter').value;
         const sortOrder = document.getElementById('sortOrder').value;
 
-        // --- タイトルとアイコンの更新ロジック ---
         const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
         document.getElementById('rankingTitle').textContent = displayConfig.label;
         document.getElementById('rankingIcon').className = displayConfig.icon;
@@ -466,6 +507,110 @@
         const firstTime = new Date(history[0].timestamp).getTime();
         if (targetTime < firstTime) return history[0].views;
         return calculateValueAt(history, targetTime);
+    }
+
+    // --- 予測計算ロジック ---
+    function calculateRegression(history) {
+        // 最近のデータのみを使用（最大30日分）
+        if (!history || history.length < 2) return null;
+        const sorted = history.map(h => ({ x: new Date(h.timestamp).getTime(), y: h.views })).sort((a, b) => a.x - b.x);
+        
+        let n = sorted.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        
+        sorted.forEach(p => {
+            sumX += p.x;
+            sumY += p.y;
+            sumXY += p.x * p.y;
+            sumXX += p.x * p.x;
+        });
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / n;
+        
+        return { slope, intercept }; // slope: views per millisecond
+    }
+
+    function renderPredictionView(video) {
+        const container = document.getElementById('predictionContent');
+        container.innerHTML = '';
+        
+        const currentViews = video.latestViews;
+        // 回帰分析 (recent_historyを使用)
+        const regression = calculateRegression(video.recent_history);
+        
+        // ターゲットのマイルストーン生成
+        // 100万ごと、または500万ごとの節目
+        const targets = [];
+        let nextMilestone = 0;
+        
+        // 次の100万単位
+        nextMilestone = Math.ceil((currentViews + 1) / 1000000) * 1000000;
+        
+        for (let i = 0; i < 10; i++) {
+            targets.push(nextMilestone);
+            // 1000万未満は100万刻み、それ以降は状況に応じて（ここでは100万刻みで統一）
+            nextMilestone += 1000000;
+        }
+
+        // 特別な大きな節目（500万, 1000万, 1500万...）を追加してソート
+        for(let m = 5000000; m <= 50000000; m+=5000000) {
+            if(m > currentViews && !targets.includes(m)) {
+                targets.push(m);
+            }
+        }
+        targets.sort((a, b) => a - b);
+        
+        // ユニーク化
+        const uniqueTargets = [...new Set(targets)].slice(0, 15); // 最大15件
+
+        let tableHtml = `<table class="prediction-table"><thead><tr><th>目標再生数</th><th>到達予想日時</th></tr></thead><tbody>`;
+        
+        const nowMs = Date.now();
+
+        uniqueTargets.forEach(target => {
+            let predictionText = "予測不能";
+            let daysText = "";
+            let badge = "";
+
+            if (regression && regression.slope > 0) {
+                const msNeeded = (target - currentViews) / regression.slope;
+                const predictedDate = new Date(nowMs + msNeeded);
+                
+                // 表示フォーマット
+                predictionText = `${predictedDate.getFullYear()}/${predictedDate.getMonth()+1}/${predictedDate.getDate()} ${predictedDate.getHours()}:${String(predictedDate.getMinutes()).padStart(2,'0')}`;
+                
+                const daysLeft = Math.ceil(msNeeded / (24 * 60 * 60 * 1000));
+                daysText = `<span class="pred-days">(あと約${daysLeft.toLocaleString()}日)</span>`;
+            } else {
+                daysText = `<span class="pred-days" style="color:#999">-</span>`;
+            }
+
+            // 大きな節目にバッジ
+            if (target % 5000000 === 0) {
+                badge = `<span class="milestone-badge">記念</span>`;
+            }
+
+            tableHtml += `
+                <tr class="prediction-row">
+                    <td>
+                        <span class="pred-target">${(target/10000).toLocaleString()}万回</span>${badge}
+                    </td>
+                    <td>
+                        <span class="pred-date">${predictionText}</span>${daysText}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += `</tbody></table>`;
+        if(!regression || regression.slope <= 0) {
+             tableHtml += `<p style="padding:16px; color:var(--text-secondary); text-align:center;">※ 現在の増加傾向からは予測できません（データ不足または減少傾向）</p>`;
+        } else {
+             tableHtml += `<p style="padding:16px; color:var(--text-secondary); font-size:0.8rem; text-align:right;">※ 直近の増加ペースが続いた場合の単純予測です</p>`;
+        }
+
+        container.innerHTML = tableHtml;
     }
 
     function generateGraphData(video, mode) {
@@ -577,13 +722,40 @@
         });
     }
 
+    // --- Tab Switching Logic ---
+    window.switchMainTab = function(tabName) {
+        activeTab = tabName;
+        
+        // Tab UI
+        document.getElementById('tabGraph').classList.toggle('active', tabName === 'graph');
+        document.getElementById('tabPred').classList.toggle('active', tabName === 'prediction');
+        
+        // Content Visibility
+        const graphView = document.getElementById('graphView');
+        const predView = document.getElementById('predictionView');
+        
+        if (tabName === 'graph') {
+            graphView.classList.remove('hidden');
+            predView.classList.add('hidden');
+        } else {
+            graphView.classList.add('hidden');
+            predView.classList.remove('hidden');
+        }
+        
+        // Update content if needed
+        if (currentVideoId) {
+            const targetVideo = processedVideos.find(v => v.id === currentVideoId);
+            updateMainContent(targetVideo);
+        }
+    }
+
     window.setGraphMode = function(mode) {
         currentGraphMode = mode;
         
         document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
         document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
 
-        if (currentVideoId) {
+        if (currentVideoId && activeTab === 'graph') {
             const targetVideo = processedVideos.find(v => v.id === currentVideoId);
             if (targetVideo) updateGraph(targetVideo);
         }
@@ -593,7 +765,7 @@
         currentVideoId = id;
         const targetVideo = processedVideos.find(v => v.id === id);
         if(targetVideo) {
-            updateGraph(targetVideo);
+            updateMainContent(targetVideo);
             document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('active'));
             const rankItem = document.getElementById(`rank-${id}`);
             if(rankItem) {
@@ -603,29 +775,18 @@
         }
     }
 
-    function updateDiffElement(elementId, diff) {
-        const el = document.getElementById(elementId);
-        const sign = diff >= 0 ? '+' : '';
-        el.textContent = sign + diff.toLocaleString();
+    // 共通の更新関数
+    function updateMainContent(video) {
+        updateHeaderAndStats(video);
         
-        el.className = 'value';
-        if (diff > 0) el.classList.add('val-up');
-        else if (diff < 0) el.classList.add('val-down');
-        else el.classList.add('val-neutral');
+        if (activeTab === 'graph') {
+            updateGraph(video);
+        } else {
+            renderPredictionView(video);
+        }
     }
 
-    function hexToRgb(hex) {
-        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 255, g: 75, b: 75 };
-    }
-
-    function updateGraph(video) {
+    function updateHeaderAndStats(video) {
         const unitTag = document.getElementById('currentUnit');
         const charTag = document.getElementById('currentChar');
         
@@ -665,6 +826,7 @@
         linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
         linkEl.style.display = 'inline-flex';
 
+        // Tag Coloring
         let activeColor = COLOR_CONFIG.default;
         if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
             activeColor = COLOR_CONFIG.characters[charKey];
@@ -680,16 +842,49 @@
                 el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
             }
         };
-
         setTagStyleIfText(charTag, activeColor);
         setTagStyleIfText(unitTag, activeColor);
 
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
         updateDiffElement('diff-1m', video.growth1m);
+    }
 
+    function updateDiffElement(elementId, diff) {
+        const el = document.getElementById(elementId);
+        const sign = diff >= 0 ? '+' : '';
+        el.textContent = sign + diff.toLocaleString();
+        
+        el.className = 'value';
+        if (diff > 0) el.classList.add('val-up');
+        else if (diff < 0) el.classList.add('val-down');
+        else el.classList.add('val-neutral');
+    }
+
+    function hexToRgb(hex) {
+        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 255, g: 75, b: 75 };
+    }
+
+    function updateGraph(video) {
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
+
+        // グラフ用カラー取得（header更新時にセットする手もあるが、ここでは再計算）
+        const charKey = video.info.character;
+        const unitKey = video.info.unit;
+        let activeColor = COLOR_CONFIG.default;
+        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
+            activeColor = COLOR_CONFIG.characters[charKey];
+        } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
+            activeColor = COLOR_CONFIG.units[unitKey];
+        }
 
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
