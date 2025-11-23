@@ -527,13 +527,14 @@
     }
 
     /**
-     * 24時間以内に節目に到達しそうな動画を検索
+     * 72時間以内に節目に到達しそうな動画を検索
      * @param {Array<Object>} videos 全動画データ
      * @returns {{video: Object, targetViews: number} | null}
      */
     function findApproachingMilestone(videos) {
         const now = new Date().getTime();
-        const ms24h = 24 * 60 * 60 * 1000;
+        // --- 変更点: 24時間から72時間に変更 ---
+        const ms72h = 72 * 60 * 60 * 1000;
         for (const video of videos) {
             if (video.latestViews === 0 || video.recent_history.length < 5) continue;
             for (const target of TARGET_VIEWS) {
@@ -542,7 +543,8 @@
                 
                 if (predictedDate) {
                     const predictedTime = predictedDate.getTime();
-                    if (predictedTime > now && predictedTime <= now + ms24h) {
+                    // --- 変更点: 判定を72時間以内に ---
+                    if (predictedTime > now && predictedTime <= now + ms72h) {
                         return {
                             video: video,
                             targetViews: target
@@ -997,9 +999,10 @@
         }
 
         const rgb = hexToRgb(activeColor);
-        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        // --- 変更点: グラデーションの調整 (高さ300→400, 下端透明度0.0→0.1) ---
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
-        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
+        gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`);
         
         // データ範囲の取得 (X軸の最小値・最大値を設定するため)
         const minTimeX = graphDataPoints.length > 0 ? graphDataPoints[0].x : undefined;
@@ -1014,7 +1017,6 @@
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
-                    // --- 変更点: 点のサイズを小さく ---
                     pointRadius: currentGraphMode === 'all' ? 1 : 2,
                     pointHoverRadius: currentGraphMode === 'all' ? 3 : 4,
                     pointBackgroundColor: '#ffffff',
@@ -1046,7 +1048,6 @@
                 scales: {
                     x: { 
                         type: 'linear',
-                        // --- 変更点: 最小値をデータの開始時刻に設定 ---
                         min: minTimeX,
                         max: maxTimeX, 
                         grid: { display: false },
