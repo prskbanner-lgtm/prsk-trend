@@ -149,6 +149,9 @@
         .ranking-title-row { display: flex; align-items: center; gap: 8px; }
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .ranking-title-row i { color: var(--rank-1); }
+        
+        /* --- 追加: ランキング件数表示用のスタイル --- */
+        .ranking-count { font-family: var(--font-num); font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
 
         /* Ranking Controls */
         .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -278,6 +281,7 @@
                 <div class="ranking-title-row">
                     <i id="rankingIcon" class="ri-trophy-line"></i>
                     <h3 id="rankingTitle">再生数ランキング</h3>
+                    <span id="rankingCount" class="ranking-count"></span>
                 </div>
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
@@ -533,7 +537,6 @@
      */
     function findApproachingMilestone(videos) {
         const now = new Date().getTime();
-        // --- 変更点: 24時間から72時間に変更 ---
         const ms72h = 72 * 60 * 60 * 1000;
         for (const video of videos) {
             if (video.latestViews === 0 || video.recent_history.length < 5) continue;
@@ -543,7 +546,6 @@
                 
                 if (predictedDate) {
                     const predictedTime = predictedDate.getTime();
-                    // --- 変更点: 判定を72時間以内に ---
                     if (predictedTime > now && predictedTime <= now + ms72h) {
                         return {
                             video: video,
@@ -647,6 +649,10 @@
             if (unitFilter === 'all') return true;
             return v.info.unit === unitFilter;
         });
+        
+        // --- 追加: 件数の更新 ---
+        document.getElementById('rankingCount').textContent = `(${filtered.length}件)`;
+
         filtered.sort((a, b) => {
             switch (sortOrder) {
                 case 'date': return b.uploadDateObj - a.uploadDateObj;
@@ -999,7 +1005,6 @@
         }
 
         const rgb = hexToRgb(activeColor);
-        // --- 変更点: グラデーションの調整 (高さ300→400, 下端透明度0.0→0.1) ---
         let gradient = ctx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
         gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`);
