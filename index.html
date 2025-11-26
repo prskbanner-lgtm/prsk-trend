@@ -150,11 +150,16 @@
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .ranking-title-row i { color: var(--rank-1); }
         
-        /* --- 追加: ランキング件数表示用のスタイル --- */
+        /* --- 変更: ランキングコントロールのレイアウト --- */
         .ranking-count { font-family: var(--font-num); font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
 
         /* Ranking Controls */
-        .ranking-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .ranking-controls { 
+            display: grid; 
+            /* 130px以上で列を増やし、最大4列まで表示 */
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            gap: 10px; 
+        }
         .custom-select {
             width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
             background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer;
@@ -214,8 +219,7 @@
                    
                     <div class="tags">
                         <div id="currentUnit" class="tag-wrapper"></div>
-                        <div id="currentChar" class="tag-wrapper"></div>
-                    </div>
+                        <div id="currentBanner" class="tag-wrapper"></div> <div id="currentType" class="tag-wrapper"></div>   <div id="currentGenre" class="tag-wrapper"></div>  </div>
        
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
     
@@ -286,6 +290,14 @@
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
                         <option value="all">全ユニット</option>
+                    </select>
+                    <select id="bannerFilter" class="custom-select"> <option value="all">全バナー</option>
+                    </select>
+                    <select id="typeFilter" class="custom-select"> <option value="all">全種別</option>
+                        <option value="書き下ろし">書き下ろしのみ</option>
+                        <option value="カバー">カバーのみ</option>
+                    </select>
+                    <select id="genreFilter" class="custom-select"> <option value="all">全ジャンル</option>
                     </select>
                     <select id="sortOrder" class="custom-select">
                         <option value="views">総再生数順</option>
@@ -437,7 +449,12 @@
         });
 
         renderTrends(processedVideos);
-        populateUnitFilter(processedVideos);
+        
+        // 変更: 新しいフィルターの選択肢を生成
+        populateDropdown('unitFilter', processedVideos, 'unit', UNIT_SORT_ORDER);
+        populateDropdown('bannerFilter', processedVideos, 'character'); // 'character'を'banner'として表示
+        populateDropdown('genreFilter', processedVideos, 'genre');
+
         updateRankingDisplay();
 
         if (processedVideos.length > 0) {
@@ -445,9 +462,55 @@
             currentVideoId = newestVideo.id;
             updateDisplay(newestVideo); 
         }
-
+        
+        // 変更: 新しいフィルターのイベントリスナーを追加
         document.getElementById('unitFilter').addEventListener('change', updateRankingDisplay);
+        document.getElementById('bannerFilter').addEventListener('change', updateRankingDisplay);
+        document.getElementById('typeFilter').addEventListener('change', updateRankingDisplay);
+        document.getElementById('genreFilter').addEventListener('change', updateRankingDisplay);
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
+    }
+
+    // --- 変更: ドロップダウンを生成する汎用関数 ---
+    /**
+     * ドロップダウンの選択肢を動画データから生成する
+     * @param {string} selectId - select要素のID
+     * @param {Array<Object>} videos - 全動画データ
+     * @param {string} dataKey - videos[i].infoから取り出すキー (e.g., 'unit', 'character', 'genre')
+     * @param {Array<string>} [sortOrder=[]] - 特定のソート順序
+     */
+    function populateDropdown(selectId, videos, dataKey, sortOrder = []) {
+        const select = document.getElementById(selectId);
+        // 'all'オプションはHTMLで定義済みのため、それ以降のオプションを削除
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        const items = new Set();
+        videos.forEach(v => { 
+            const value = v.info[dataKey];
+            if(value && value !== '未分類') items.add(value); 
+        });
+        
+        let sortedItems = Array.from(items);
+        if (sortOrder.length > 0) {
+            sortedItems.sort((a, b) => {
+                let indexA = sortOrder.indexOf(a);
+                let indexB = sortOrder.indexOf(b);
+                if (indexA === -1) indexA = 999;
+                if (indexB === -1) indexB = 999;
+                return indexA - indexB;
+            });
+        } else {
+            sortedItems.sort();
+        }
+
+        sortedItems.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+        });
     }
 
     // --- 再生数到達予想 (重み付け線形回帰) の関数 ---
@@ -617,40 +680,34 @@
         container.innerHTML = tableHtml;
     }
 
-    // --- その他のヘルパー関数 ---
-
-    function populateUnitFilter(videos) {
-        const select = document.getElementById('unitFilter');
-        const units = new Set();
-        videos.forEach(v => { if(v.info.unit) units.add(v.info.unit); });
-        const sortedUnits = Array.from(units).sort((a, b) => {
-            let indexA = UNIT_SORT_ORDER.indexOf(a);
-            let indexB = UNIT_SORT_ORDER.indexOf(b);
-            if (indexA === -1) indexA = 999;
-            if (indexB === -1) indexB = 999;
-            return indexA - indexB;
-        });
-        sortedUnits.forEach(unit => {
-            const option = document.createElement('option');
-            option.value = unit;
-            option.textContent = unit;
-            select.appendChild(option);
-        });
-    }
-
+    // --- 変更: ランキングフィルタリングロジックの更新 ---
     function updateRankingDisplay() {
         const unitFilter = document.getElementById('unitFilter').value;
+        const bannerFilter = document.getElementById('bannerFilter').value; // NEW
+        const typeFilter = document.getElementById('typeFilter').value;     // NEW
+        const genreFilter = document.getElementById('genreFilter').value;   // NEW
         const sortOrder = document.getElementById('sortOrder').value;
 
         const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
         document.getElementById('rankingTitle').textContent = displayConfig.label;
         document.getElementById('rankingIcon').className = displayConfig.icon;
+        
         let filtered = processedVideos.filter(v => {
-            if (unitFilter === 'all') return true;
-            return v.info.unit === unitFilter;
+            // Unit Filter
+            if (unitFilter !== 'all' && v.info.unit !== unitFilter) return false;
+            
+            // Banner Filter (v.info.character を利用)
+            if (bannerFilter !== 'all' && v.info.character !== bannerFilter) return false;
+            
+            // Type Filter
+            if (typeFilter !== 'all' && v.info.type !== typeFilter) return false;
+
+            // Genre Filter
+            if (genreFilter !== 'all' && v.info.genre !== genreFilter) return false;
+            
+            return true;
         });
         
-        // --- 追加: 件数の更新 ---
         document.getElementById('rankingCount').textContent = `(${filtered.length}件)`;
 
         filtered.sort((a, b) => {
@@ -903,13 +960,19 @@
         }
     }
 
+    // 変更: メタデータ表示の更新 (バナー、種別、ジャンルの追加)
     function updateMetaData(video) {
         const unitTag = document.getElementById('currentUnit');
-        const charTag = document.getElementById('currentChar');
+        const bannerTag = document.getElementById('currentBanner'); // charTag -> bannerTag に変更
+        const typeTag = document.getElementById('currentType');     // NEW
+        const genreTag = document.getElementById('currentGenre');   // NEW
         
         const unitKey = video.info.unit;
-        const charKey = video.info.character;
+        const bannerKey = video.info.character; // データのキーは 'character' のまま使用
+        const typeKey = video.info.type;        // NEW
+        const genreKey = video.info.genre;      // NEW
 
+        // Unit Tag
         const unitImgSrc = IMAGE_CONFIG.units[unitKey];
         if (unitKey && unitImgSrc) {
             unitTag.className = 'tag-wrapper';
@@ -921,17 +984,28 @@
             unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
         }
 
-        const charImgSrc = IMAGE_CONFIG.characters[charKey];
-        if (charKey && charImgSrc) {
-            charTag.className = 'tag-wrapper';
-            charTag.innerHTML = `<img src="${charImgSrc}" class="tag-image" alt="${charKey}" title="${charKey}">`;
-            charTag.style.backgroundColor = 'transparent';
-            charTag.style.border = 'none';
+        // Banner Tag (旧: Char Tag)
+        const bannerImgSrc = IMAGE_CONFIG.characters[bannerKey];
+        if (bannerKey && bannerImgSrc) {
+            bannerTag.className = 'tag-wrapper';
+            bannerTag.innerHTML = `<img src="${bannerImgSrc}" class="tag-image" alt="${bannerKey}" title="${bannerKey}">`;
+            bannerTag.style.backgroundColor = 'transparent';
+            bannerTag.style.border = 'none';
         } else {
-            charTag.className = 'tag';
-            charTag.innerHTML = `<i class="ri-user-smile-line"></i> ${charKey || '-'}`;
+            bannerTag.className = 'tag';
+            bannerTag.innerHTML = `<i class="ri-user-smile-line"></i> ${bannerKey || '-'}`;
         }
         
+        // Type Tag (NEW: 種別)
+        const typeIcon = typeKey === "書き下ろし" ? 'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
+        typeTag.className = 'tag';
+        typeTag.innerHTML = `<i class="${typeIcon}"></i> ${typeKey || '未分類'}`;
+
+        // Genre Tag (NEW: ジャンル)
+        genreTag.className = 'tag';
+        genreTag.innerHTML = `<i class="ri-folder-open-line"></i> ${genreKey || '未分類'}`;
+
+
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
@@ -939,12 +1013,12 @@
         const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
         const linkEl = document.getElementById('currentLink');
-        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
+        linkEl.href = `https://www.youtube.com/watch?v=$${video.id}`;
         linkEl.style.display = 'inline-flex';
 
         let activeColor = COLOR_CONFIG.default;
-        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
-            activeColor = COLOR_CONFIG.characters[charKey];
+        if (bannerKey && bannerKey !== "-" && COLOR_CONFIG.characters[bannerKey]) {
+            activeColor = COLOR_CONFIG.characters[bannerKey];
         } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
             activeColor = COLOR_CONFIG.units[unitKey];
         }
@@ -958,8 +1032,10 @@
             }
         };
 
-        setTagStyleIfText(charTag, activeColor);
+        setTagStyleIfText(bannerTag, activeColor);
         setTagStyleIfText(unitTag, activeColor);
+        setTagStyleIfText(typeTag, activeColor); // NEW
+        setTagStyleIfText(genreTag, activeColor); // NEW
 
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
@@ -996,10 +1072,10 @@
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
         let activeColor = COLOR_CONFIG.default;
-        const charKey = video.info.character;
+        const bannerKey = video.info.character; // データのキーは 'character' のまま使用
         const unitKey = video.info.unit;
-        if (charKey && charKey !== "-" && COLOR_CONFIG.characters[charKey]) {
-            activeColor = COLOR_CONFIG.characters[charKey];
+        if (bannerKey && bannerKey !== "-" && COLOR_CONFIG.characters[bannerKey]) {
+            activeColor = COLOR_CONFIG.characters[bannerKey];
         } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
             activeColor = COLOR_CONFIG.units[unitKey];
         }
