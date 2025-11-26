@@ -88,6 +88,9 @@
         .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block; }
         .tag-wrapper { display: flex; align-items: center; }
 
+        /* スマホ用改行スペーサー */
+        .tag-break { display: none; }
+
         .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
         
         .meta-row { display: flex; gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap; }
@@ -119,11 +122,6 @@
         .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
         .comp-item .value { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; display: block; }
         
-        /* NEW: Mobile Tag Breakpoint Default Hide */
-        #mobileTagBreak {
-            display: none;
-        }
-
         .val-up { color: var(--primary); }
         .val-neutral { color: var(--text-secondary); }
         .val-down { color: #4169e1; }
@@ -155,13 +153,11 @@
         .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .ranking-title-row i { color: var(--rank-1); }
         
-        /* --- 変更: ランキングコントロールのレイアウト --- */
         .ranking-count { font-family: var(--font-num); font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
 
         /* Ranking Controls */
         .ranking-controls { 
             display: grid; 
-            /* 130px以上で列を増やし、最大4列まで表示 */
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
             gap: 10px; 
         }
@@ -197,13 +193,8 @@
             .chart-header { flex-direction: column; }
             .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
             
-            /* NEW: Mobile Tag Breakpoint Activation */
-            #mobileTagBreak {
-                display: block;
-                width: 100%; 
-                height: 0;
-                margin: 0;
-            }
+            /* スマホ用: タグの改行制御 */
+            .tag-break { display: block; width: 100%; height: 0; }
         }
     </style>
 </head>
@@ -232,10 +223,10 @@
                    
                     <div class="tags">
                         <div id="currentUnit" class="tag-wrapper"></div>
-                        <div id="currentBanner" class="tag-wrapper"></div> 
-                        <div id="mobileTagBreak"></div>
-                        <div id="currentType" class="tag-wrapper"></div>   
-                        <div id="currentGenre" class="tag-wrapper"></div>  
+                        <div id="currentBanner" class="tag-wrapper"></div>
+                        <div class="tag-break"></div>
+                        <div id="currentType" class="tag-wrapper"></div>
+                        <div id="currentGenre" class="tag-wrapper"></div>
                     </div>
        
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
@@ -406,14 +397,20 @@
         "Wonderlands x Showtime", "ワンダショ",
         "25-ji, Nightcord de.", "ニーゴ"
     ];
-    // --- 変更: バナーソート順序を追加 ---
+    // --- バナーソート順 ---
     const BANNER_SORT_ORDER = [
-        "一歌", "咲希", "穂波", "志歩",
-        "みのり", "遥", "愛莉", "雫",
-        "こはね", "杏", "彰人", "冬弥",
-        "司", "えむ", "寧々", "類",
+        "一歌", "咲希", "穂波", "志歩", "みのり", "遥", "愛莉", "雫",
+        "こはね", "杏", "彰人", "冬弥", "司", "えむ", "寧々", "類",
         "奏", "まふゆ", "絵名", "瑞希"
     ];
+    // --- ランキング表示用の設定 ---
+    const SORT_DISPLAY_CONFIG = {
+        'views': { label: '総再生数ランキング', icon: 'ri-trophy-line' },
+        'date': { label: '新着動画ランキング', icon: 'ri-time-line' },
+        'growth1d': { label: '急上昇ランキング (24H)', icon: 'ri-line-chart-line' },
+        'growth1w': { label: '急上昇ランキング (週間)', icon: 'ri-line-chart-line' },
+        'growth1m': { label: '急上昇ランキング (月間)', icon: 'ri-line-chart-line' }
+    };
     const TARGET_VIEWS = [
         1000000, 5000000, 10000000, 15000000, 20000000
     ];
@@ -467,10 +464,9 @@
 
         renderTrends(processedVideos);
         
-        // 変更: 新しいフィルターの選択肢を生成
+        // 変更: ソート順を適用してドロップダウンを生成
         populateDropdown('unitFilter', processedVideos, 'unit', UNIT_SORT_ORDER);
-        // --- 変更: BANNER_SORT_ORDERを渡してバナーのプルダウンを生成 ---
-        populateDropdown('bannerFilter', processedVideos, 'character', BANNER_SORT_ORDER); // 'character'を'banner'として表示
+        populateDropdown('bannerFilter', processedVideos, 'character', BANNER_SORT_ORDER); // BANNER_SORT_ORDERを適用
         populateDropdown('genreFilter', processedVideos, 'genre');
 
         updateRankingDisplay();
@@ -489,7 +485,7 @@
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
     }
 
-    // --- 変更: ドロップダウンを生成する汎用関数 ---
+    // --- ドロップダウンを生成する汎用関数 ---
     /**
      * ドロップダウンの選択肢を動画データから生成する
      * @param {string} selectId - select要素のID
@@ -505,11 +501,9 @@
         }
 
         const items = new Set();
-        // --- 変更: characterフィルターの場合、"-"を除外しない ---
-        const excludeFilter = dataKey === 'character' ? '未分類_ダミー値' : '未分類';
         videos.forEach(v => { 
             const value = v.info[dataKey];
-            if(value && value !== excludeFilter) items.add(value); 
+            if(value && value !== '未分類') items.add(value); 
         });
         
         let sortedItems = Array.from(items);
@@ -700,12 +694,12 @@
         container.innerHTML = tableHtml;
     }
 
-    // --- 変更: ランキングフィルタリングロジックの更新 ---
+    // --- ランキングフィルタリングロジック ---
     function updateRankingDisplay() {
         const unitFilter = document.getElementById('unitFilter').value;
-        const bannerFilter = document.getElementById('bannerFilter').value; // NEW
-        const typeFilter = document.getElementById('typeFilter').value;     // NEW
-        const genreFilter = document.getElementById('genreFilter').value;   // NEW
+        const bannerFilter = document.getElementById('bannerFilter').value;
+        const typeFilter = document.getElementById('typeFilter').value;
+        const genreFilter = document.getElementById('genreFilter').value;
         const sortOrder = document.getElementById('sortOrder').value;
 
         const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
@@ -716,7 +710,7 @@
             // Unit Filter
             if (unitFilter !== 'all' && v.info.unit !== unitFilter) return false;
             
-            // Banner Filter (v.info.character を利用)
+            // Banner Filter
             if (bannerFilter !== 'all' && v.info.character !== bannerFilter) return false;
             
             // Type Filter
@@ -980,17 +974,17 @@
         }
     }
 
-    // 変更: メタデータ表示の更新 (バナー、種別、ジャンルの追加)
+    // メタデータ表示の更新 (バナー、種別、ジャンルの追加)
     function updateMetaData(video) {
         const unitTag = document.getElementById('currentUnit');
-        const bannerTag = document.getElementById('currentBanner'); // charTag -> bannerTag に変更
-        const typeTag = document.getElementById('currentType');     // NEW
-        const genreTag = document.getElementById('currentGenre');   // NEW
+        const bannerTag = document.getElementById('currentBanner');
+        const typeTag = document.getElementById('currentType');
+        const genreTag = document.getElementById('currentGenre');
         
         const unitKey = video.info.unit;
-        const bannerKey = video.info.character; // データのキーは 'character' のまま使用
-        const typeKey = video.info.type;        // NEW
-        const genreKey = video.info.genre;      // NEW
+        const bannerKey = video.info.character;
+        const typeKey = video.info.type;
+        const genreKey = video.info.genre;
 
         // Unit Tag
         const unitImgSrc = IMAGE_CONFIG.units[unitKey];
@@ -1005,30 +999,32 @@
         }
 
         // Banner Tag (旧: Char Tag)
-        // --- 変更: bannerKeyが"-"の場合は非表示にする ---
+        // 変更: バナータグが "-" の場合は非表示、それ以外は表示
         if (bannerKey === "-") {
             bannerTag.style.display = 'none';
-            bannerTag.innerHTML = ''; // コンテンツもクリア
         } else {
-            bannerTag.style.display = ''; // 表示をリセット (flex itemとして表示)
+            bannerTag.style.display = ''; // 初期化 (クラス定義に従う)
+            
             const bannerImgSrc = IMAGE_CONFIG.characters[bannerKey];
             if (bannerKey && bannerImgSrc) {
                 bannerTag.className = 'tag-wrapper';
                 bannerTag.innerHTML = `<img src="${bannerImgSrc}" class="tag-image" alt="${bannerKey}" title="${bannerKey}">`;
                 bannerTag.style.backgroundColor = 'transparent';
                 bannerTag.style.border = 'none';
+                bannerTag.style.display = 'flex'; // tag-wrapperはflex推奨
             } else {
                 bannerTag.className = 'tag';
                 bannerTag.innerHTML = `<i class="ri-user-smile-line"></i> ${bannerKey || '-'}`;
+                bannerTag.style.display = 'inline-flex'; // tagはinline-flex推奨
             }
         }
         
-        // Type Tag (NEW: 種別)
+        // Type Tag (種別)
         const typeIcon = typeKey === "書き下ろし" ? 'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
         typeTag.className = 'tag';
         typeTag.innerHTML = `<i class="${typeIcon}"></i> ${typeKey || '未分類'}`;
 
-        // Genre Tag (NEW: ジャンル)
+        // Genre Tag (ジャンル)
         genreTag.className = 'tag';
         genreTag.innerHTML = `<i class="ri-folder-open-line"></i> ${genreKey || '未分類'}`;
 
@@ -1058,13 +1054,14 @@
                 el.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
             }
         };
-
-        if (bannerKey !== "-") { // バナーが"-"でない場合のみスタイルを適用
+        
+        // display:none でない場合のみスタイル適用
+        if (bannerTag.style.display !== 'none') {
             setTagStyleIfText(bannerTag, activeColor);
         }
         setTagStyleIfText(unitTag, activeColor);
-        setTagStyleIfText(typeTag, activeColor); // NEW
-        setTagStyleIfText(genreTag, activeColor); // NEW
+        setTagStyleIfText(typeTag, activeColor);
+        setTagStyleIfText(genreTag, activeColor);
 
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
@@ -1193,4 +1190,3 @@
 
 </body>
 </html>
-
