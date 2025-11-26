@@ -177,7 +177,9 @@ def main():
             "thumbnail": snippet['thumbnails']['high']['url'],
             "uploadDate": snippet['publishedAt'],
             "unit": target_info.get('unit', ''),
-            "character": target_info.get('character', '')
+            "character": target_info.get('character', ''),
+            "type": target_info.get('type', '未分類'),    # NEW: 書き下ろしかカバーか
+            "genre": target_info.get('genre', '未分類')  # NEW: ジャンル
         }
 
         # recent_historyに現在データを追加
