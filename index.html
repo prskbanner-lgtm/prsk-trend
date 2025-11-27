@@ -1044,50 +1044,60 @@
 
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
-        // 変更: 節目イベント（接近または到達）を全て取得
         const milestoneEvents = findMilestoneEvents(videos);
         
+        // 分類用のリスト作成
+        const approachingEvents = milestoneEvents.filter(e => e.type === 'approaching');
+        const achievedEvents = milestoneEvents.filter(e => e.type === 'achieved');
+
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
         const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0];
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
+        
         let cardConfig = [];
         
-        // 変更: 全ての節目イベントを追加
-        milestoneEvents.forEach(event => {
+        // 1. 到達目前 (Approaching)
+        approachingEvents.forEach(event => {
             const targetViewLabel = (event.targetViews / 10000).toLocaleString() + '万';
-            // 到達済み(achieved)か接近中(approaching)かで表示を分ける
-            const label = event.type === 'achieved' ? `Achieved! (${targetViewLabel})` : `Soon (${targetViewLabel})`;
-            const icon = event.type === 'achieved' ? 'ri-medal-fill' : 'ri-fire-fill';
-            
             cardConfig.push({ 
                 data: event.video, 
-                label: label, 
-                icon: icon, 
-                colorClass: 'type-milestone',
-                isMilestone: true
+                label: `Soon (${targetViewLabel})`, 
+                icon: 'ri-fire-fill', 
+                colorClass: 'type-milestone'
             });
         });
 
-        // 重複チェック用のSet
-        const milestoneVideoIds = new Set(milestoneEvents.map(e => e.video.id));
+        // 2. 到達済み (Achieved)
+        achievedEvents.forEach(event => {
+            const targetViewLabel = (event.targetViews / 10000).toLocaleString() + '万';
+            cardConfig.push({ 
+                data: event.video, 
+                label: `Achieved! (${targetViewLabel})`, 
+                icon: 'ri-medal-fill', 
+                colorClass: 'type-milestone'
+            });
+        });
 
-        // Milestoneに存在しない場合のみ追加
-        if (newest && !milestoneVideoIds.has(newest.id)) {
+        // 3. 新着 (Newest)
+        if (newest) {
             cardConfig.push({ data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' });
         }
-        if (trending && !milestoneVideoIds.has(trending.id)) {
+        
+        // 4. 急上昇 (Trending/Growth)
+        if (trending) {
             cardConfig.push({ data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' });
         }
-        if (mostViewed && !milestoneVideoIds.has(mostViewed.id)) {
+        
+        // 5. 最多再生 (Most Viewed)
+        if (mostViewed) {
             cardConfig.push({ data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' });
         }
-
 
         let html = '';
         if (cardConfig.length === 0) {
             html = '<div class="trend-card"><div class="trend-content">トレンドデータが見つかりませんでした。</div></div>';
         } else {
-            // 変更: slice(0, 4)を削除し、全てのカードを表示する
+            // 重複排除せずに全てのカードを表示
             cardConfig.forEach(card => { 
                 if(!card.data) return;
                 
