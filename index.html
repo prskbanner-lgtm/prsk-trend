@@ -33,169 +33,269 @@
             --font-num: 'Inter', sans-serif;
         }
 
-        body { font-family: var(--font-jp); background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        .container { max-width: 1280px; margin: 0 auto; padding: 30px 20px; }
+        body { font-family: var(--font-jp);
+            background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 30px 20px;
+        }
         
         /* Header */
-        .app-header { margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-        .app-header i { font-size: 1.5rem; color: var(--primary); }
-        .app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+        .app-header { margin-bottom: 30px;
+            display: flex; align-items: center; gap: 10px; }
+        .app-header i { font-size: 1.5rem;
+            color: var(--primary); }
+        .app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700;
+        }
 
         /* Trends */
-        .trend-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
-        .trend-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 20px; box-shadow: var(--shadow-card); display: flex; align-items: center; gap: 16px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; border: 1px solid transparent; position: relative; overflow: hidden; }
-        .trend-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--border-color); }
-        .trend-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+        .trend-section { display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .trend-card { background: var(--bg-card);
+            border-radius: var(--radius-l); padding: 20px; box-shadow: var(--shadow-card); display: flex; align-items: center; gap: 16px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer; border: 1px solid transparent; position: relative; overflow: hidden;
+        }
+        .trend-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--border-color);
+        }
+        .trend-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center;
+            justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
         
         .type-new { background: #e3f2fd; color: #2196f3; }
         .type-trend { background: #e8f5e9; color: #4caf50; }
         .type-top { background: #fff8e1; color: #ffc107; }
         .type-milestone { background: var(--primary-soft); color: var(--primary); }
-        .type-achieved { background: #fff3e0; color: #ff9800; } /* 達成済み用に追加 */
+        .type-achieved { background: #f3e5f5; color: #9c27b0; } /* 達成済み用の新カラー */
         
-        .trend-content { flex: 1; min-width: 0; }
-        .trend-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
-        .trend-title { font-size: 1rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
-        .trend-thumb-mini { width: 60px; height: 34px; border-radius: 6px; object-fit: cover; margin-left: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .trend-content { flex: 1;
+            min-width: 0; }
+        .trend-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
+        .trend-title { font-size: 1rem; font-weight: 700;
+            margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4;
+        }
+        .trend-thumb-mini { width: 60px; height: 34px; border-radius: 6px; object-fit: cover; margin-left: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
         /* Main Layout */
-        .main-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-        @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr; align-items: start; } }
+        .main-grid { display: grid;
+            grid-template-columns: 1fr; gap: 24px; }
+        @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr;
+            align-items: start; } }
 
         /* Chart Card */
-        .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
+        .chart-card { background: var(--bg-card);
+            border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
 
         /* Tab Controls */
-        .tab-controls { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
+        .tab-controls { display: flex;
+            border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
         .tab-btn {
-            background: transparent; border: none; padding: 10px 20px; 
+            background: transparent;
+            border: none; padding: 10px 20px; 
             font-size: 1rem; font-weight: 700; color: var(--text-secondary); 
             cursor: pointer; transition: color 0.2s; position: relative;
             font-family: var(--font-jp);
         }
-        .tab-btn:hover { color: var(--text-main); }
-        .tab-btn.active { color: var(--primary); }
+        .tab-btn:hover { color: var(--text-main);
+        }
+        .tab-btn.active { color: var(--primary);
+        }
         .tab-btn.active::after {
-            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; 
+            content: '';
+            position: absolute; bottom: -1px; left: 0; right: 0; 
             height: 3px; background: var(--primary); border-radius: 1px 1px 0 0;
         }
 
         /* Content Area Header */
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
-        .video-meta { flex: 1; }
+        .chart-header { display: flex;
+            justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+        .video-meta { flex: 1;
+        }
         
         /* Tags & Images Area */
-        .tags { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px; }
-        .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; transition: all 0.3s ease; }
-        .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block; }
-        .tag-wrapper { display: flex; align-items: center; }
+        .tags { display: flex;
+            gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px;
+        }
+        .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; transition: all 0.3s ease;
+        }
+        .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block;
+        }
+        .tag-wrapper { display: flex; align-items: center;
+        }
 
         /* スマホ用改行スペーサー */
-        .tag-break { display: none; }
+        .tag-break { display: none;
+        }
 
-        .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
+        .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4;
+        }
         
-        .meta-row { display: flex; gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap; }
-        .meta-item { display: flex; align-items: center; gap: 6px; }
-        .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
-        .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
+        .meta-row { display: flex;
+            gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap;
+        }
+        .meta-item { display: flex; align-items: center; gap: 6px;
+        }
+        .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600;
+            background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease;
+        }
+        .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px);
+        }
 
         /* Chart Controls */
-        .chart-controls { display: flex; gap: 8px; }
+        .chart-controls { display: flex;
+            gap: 8px; }
         .chart-btn {
-            background: var(--bg-body); border: 1px solid var(--border-color);
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
             color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s);
             font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
             font-family: var(--font-jp);
         }
-        .chart-btn:hover { background: var(--primary-soft); color: var(--primary); }
-        .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .chart-btn:hover { background: var(--primary-soft); color: var(--primary);
+        }
+        .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary);
+        }
 
-        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px;
+        }
         
         /* Stats Grid */
-        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
-        .main-stat { text-align: center; margin-bottom: 24px; }
-        .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block; }
-        .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main); line-height: 1; letter-spacing: -1px; }
+        .stats-container { border-top: 1px solid var(--border-color);
+            padding-top: 24px; }
+        .main-stat { text-align: center; margin-bottom: 24px;
+        }
+        .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block;
+        }
+        .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main);
+            line-height: 1; letter-spacing: -1px; }
 
-        .comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .comp-item { background: var(--bg-body); border-radius: var(--radius-m); padding: 16px 10px; text-align: center; }
-        .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
-        .comp-item .value { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; display: block; }
+        .comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; }
+        .comp-item { background: var(--bg-body); border-radius: var(--radius-m); padding: 16px 10px;
+            text-align: center; }
+        .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;
+            margin-bottom: 8px; display: block; }
+        .comp-item .value { font-family: var(--font-num); font-size: 1.1rem;
+            font-weight: 700; display: block; }
         
-        .val-up { color: var(--primary); }
-        .val-neutral { color: var(--text-secondary); }
-        .val-down { color: #4169e1; }
+        .val-up { color: var(--primary);
+        }
+        .val-neutral { color: var(--text-secondary);
+        }
+        .val-down { color: #4169e1;
+        }
 
         /* Prediction Table */
-        .prediction-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: 20px; }
-        .prediction-table th, .prediction-table td { padding: 12px; text-align: left; }
+        .prediction-table { width: 100%;
+            border-collapse: separate; border-spacing: 0 10px; margin-top: 20px; }
+        .prediction-table th, .prediction-table td { padding: 12px;
+            text-align: left; }
         .prediction-table th { 
-            font-size: 0.8rem; color: var(--text-secondary); font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--text-secondary); font-weight: 700;
             border-bottom: 2px solid var(--border-color);
         }
         .prediction-table tbody tr {
-            background: var(--bg-body); border-radius: var(--radius-m); 
+            background: var(--bg-body);
+            border-radius: var(--radius-m); 
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .prediction-table td { 
-            font-size: 1rem; font-weight: 500;
+            font-size: 1rem;
+            font-weight: 500;
             color: var(--text-main); font-family: var(--font-num);
         }
-        .prediction-table td:first-child { border-radius: var(--radius-m) 0 0 var(--radius-m); font-weight: 700; }
-        .prediction-table td:last-child { border-radius: 0 var(--radius-m) var(--radius-m) 0; font-family: var(--font-jp); font-weight: 600;}
-        .prediction-label { font-family: var(--font-jp); font-size: 0.9rem; font-weight: 500; }
-        .prediction-notice { padding: 30px; text-align: center; color: var(--text-secondary); font-style: italic; }
+        .prediction-table td:first-child { border-radius: var(--radius-m) 0 0 var(--radius-m);
+            font-weight: 700; }
+        .prediction-table td:last-child { border-radius: 0 var(--radius-m) var(--radius-m) 0; font-family: var(--font-jp);
+            font-weight: 600;}
+        .prediction-label { font-family: var(--font-jp); font-size: 0.9rem; font-weight: 500;
+        }
+        .prediction-notice { padding: 30px; text-align: center; color: var(--text-secondary); font-style: italic;
+        }
 
         /* Ranking */
-        .ranking-card { background: var(--bg-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden; }
-        .ranking-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
-        .ranking-title-row { display: flex; align-items: center; gap: 8px; }
-        .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-        .ranking-title-row i { color: var(--rank-1); }
+        .ranking-card { background: var(--bg-card);
+            border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden;
+        }
+        .ranking-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex;
+            flex-direction: column; gap: 12px; }
+        .ranking-title-row { display: flex; align-items: center; gap: 8px;
+        }
+        .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700;
+        }
+        .ranking-title-row i { color: var(--rank-1);
+        }
         
-        .ranking-count { font-family: var(--font-num); font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
+        .ranking-count { font-family: var(--font-num);
+            font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
 
         /* Ranking Controls */
         .ranking-controls { 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
             gap: 10px; 
         }
         .custom-select {
-            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
+            width: 100%;
+            padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
             background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer;
             outline: none; transition: border-color 0.2s;
         }
-        .custom-select:focus { border-color: var(--text-secondary); }
+        .custom-select:focus { border-color: var(--text-secondary);
+        }
 
-        .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1; }
-        .ranking-scroll::-webkit-scrollbar { width: 6px; }
-        .ranking-scroll::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
-        .rank-list { list-style: none; padding: 0; margin: 0; }
-        .rank-item { display: flex; align-items: center; padding: 10px; border-radius: var(--radius-m); margin-bottom: 6px; cursor: pointer; transition: background 0.2s; }
-        .rank-item:hover { background-color: var(--bg-body); }
-        .rank-item.active { background-color: var(--primary-soft); position: relative; }
-        .rank-item.active::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; background-color: var(--primary); border-radius: 0 4px 4px 0; }
-        .rank-badge { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--font-num); font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); margin-right: 10px; border-radius: 50%; background: #f0f2f5; flex-shrink: 0; }
-        .rank-item:nth-child(1) .rank-badge { background: var(--rank-1); color: #fff; }
-        .rank-item:nth-child(2) .rank-badge { background: var(--rank-2); color: #fff; }
-        .rank-item:nth-child(3) .rank-badge { background: var(--rank-3); color: #fff; }
-        .rank-thumb { width: 60px; height: 36px; object-fit: cover; border-radius: 6px; margin-right: 12px; flex-shrink: 0; }
-        .rank-info { flex: 1; min-width: 0; }
-        .rank-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .rank-views { font-family: var(--font-num); font-size: 0.75rem; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;}
-        .rank-sub-stat { color: var(--text-secondary); font-weight: 600; font-size: 0.7rem; background: #f0f2f5; padding: 0 6px; border-radius: 4px;}
+        .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1;
+        }
+        .ranking-scroll::-webkit-scrollbar { width: 6px;
+        }
+        .ranking-scroll::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px;
+        }
+        .rank-list { list-style: none; padding: 0; margin: 0;
+        }
+        .rank-item { display: flex; align-items: center; padding: 10px; border-radius: var(--radius-m); margin-bottom: 6px;
+            cursor: pointer; transition: background 0.2s; }
+        .rank-item:hover { background-color: var(--bg-body);
+        }
+        .rank-item.active { background-color: var(--primary-soft); position: relative;
+        }
+        .rank-item.active::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+            width: 3px; background-color: var(--primary); border-radius: 0 4px 4px 0; }
+        .rank-badge { width: 28px;
+            height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--font-num); font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); margin-right: 10px; border-radius: 50%;
+            background: #f0f2f5; flex-shrink: 0; }
+        .rank-item:nth-child(1) .rank-badge { background: var(--rank-1); color: #fff;
+        }
+        .rank-item:nth-child(2) .rank-badge { background: var(--rank-2); color: #fff;
+        }
+        .rank-item:nth-child(3) .rank-badge { background: var(--rank-3); color: #fff;
+        }
+        .rank-thumb { width: 60px; height: 36px; object-fit: cover; border-radius: 6px; margin-right: 12px;
+            flex-shrink: 0; }
+        .rank-info { flex: 1; min-width: 0;
+        }
+        .rank-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 2px 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-views { font-family: var(--font-num); font-size: 0.75rem;
+            color: var(--text-secondary); display: flex; gap: 8px; align-items: center;}
+        .rank-sub-stat { color: var(--text-secondary);
+            font-weight: 600; font-size: 0.7rem; background: #f0f2f5; padding: 0 6px; border-radius: 4px;}
         
         @media (max-width: 768px) { 
-            .ranking-card { max-height: 500px; } 
-            .chart-card { padding: 16px; }
-            .chart-area-wrapper { height: 250px; }
-            .chart-header { flex-direction: column; }
-            .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
+            .ranking-card { max-height: 500px;
+            } 
+            .chart-card { padding: 16px;
+            }
+            .chart-area-wrapper { height: 250px;
+            }
+            .chart-header { flex-direction: column;
+            }
+            .chart-controls { width: 100%; justify-content: flex-start;
+            margin-top: 10px;}
             
             /* スマホ用: タグの改行制御 */
-            .tag-break { display: block; width: 100%; height: 0; }
+            .tag-break { display: block;
+            width: 100%; height: 0; }
         }
     </style>
 </head>
@@ -225,6 +325,7 @@
                     <div class="tags">
                         <div id="currentUnit" class="tag-wrapper"></div>
                         <div id="currentBanner" class="tag-wrapper"></div>
+                        
                         <div class="tag-break"></div>
                         <div id="currentType" class="tag-wrapper"></div>
                         <div id="currentGenre" class="tag-wrapper"></div>
@@ -254,20 +355,24 @@
                     <canvas id="viewChart"></canvas>
                 </div>
                 <div class="stats-container">
+       
                     <div class="main-stat">
                         <span class="label">現在の予測再生数 (Now)</span>
                         <span class="value" id="currentViews">-</span>
                     </div>
               
                     <div class="comparison-grid">
+                        
                         <div class="comp-item">
                             <span class="label">前日比 (1 Day)</span>
                             <span class="value" id="diff-1d">-</span>
                         </div>
+              
                         <div class="comp-item">
                             <span class="label">前週比 (1 Week)</span>
                             <span class="value" id="diff-1w">-</span>
                         </div>
+    
                         <div class="comp-item">
                             <span class="label">前月比 (1 Month)</span>
                             <span class="value" id="diff-1m">-</span>
@@ -277,7 +382,8 @@
             </div>
 
             <div id="predictionArea" style="display:none;">
-                <div class="stats-container" style="border-top: none; padding-top: 0;">
+                <div class="stats-container" style="border-top: none;
+                padding-top: 0;">
                     <p class="prediction-label">※直近30日の再生数の伸びを基に、より新しいデータに重み付けをした線形回帰により予測しています。</p>
                     <div id="predictionContent">
                         <p class="prediction-notice">動画を選択すると、到達予想日時が表示されます。</p>
@@ -484,6 +590,13 @@
     }
 
     // --- ドロップダウンを生成する汎用関数 ---
+    /**
+     * ドロップダウンの選択肢を動画データから生成する
+     * @param {string} selectId - select要素のID
+     * @param {Array<Object>} videos - 全動画データ
+     * @param {string} dataKey - videos[i].infoから取り出すキー (e.g., 'unit', 'character', 'genre')
+     * @param {Array<string>} [sortOrder=[]] - 特定のソート順序
+     */
     function populateDropdown(selectId, videos, dataKey, sortOrder = []) {
         const select = document.getElementById(selectId);
         // 'all'オプションはHTMLで定義済みのため、それ以降のオプションを削除
@@ -518,6 +631,15 @@
     }
 
     // --- 再生数到達予想 (重み付け線形回帰) の関数 ---
+
+    /**
+     * 再生数到達予想日時の計算 (重み付け線形回帰)
+     * 直近のデータに重み (w = timeProgress^2) を適用し、勢いを反映させる。
+     * @param {number} currentViews 現在の再生数
+     * @param {Array<Object>} history 過去30日間の履歴
+     * @param {number} targetViews 目標再生数
+     * @returns {Date | null} 予想到達日時、または null
+     */
     function calculateTargetTime(currentViews, history, targetViews) {
         if (targetViews <= currentViews || history.length < 5) {
             return null;
@@ -534,7 +656,8 @@
             .filter(h => h.x >= startTimeLimit) // 30日以上前のデータは除く
             .sort((a, b) => a.x - b.x);
         if (recentHistory.length < 5) {
-            return null; // データが少なすぎる
+            return null;
+            // データが少なすぎる
         }
 
         // 1. 重みの計算
@@ -574,7 +697,8 @@
         const meanYw = sumWY / sumW;
         const interceptB = meanYw - slopeA * meanXw;
         if (slopeA <= 0) {
-            return null; // 再生数の伸びがゼロまたはマイナス
+            return null;
+            // 再生数の伸びがゼロまたはマイナス
         }
 
         // 5. 到達時間 (X) の予測: X = (Y - b) / a
@@ -589,40 +713,25 @@
     }
 
     /**
-     * 72時間以内に節目に到達しそうな動画と、72時間以内に達成した動画を検索
+     * 72時間以内に節目に到達しそうな動画を全て検索
      * @param {Array<Object>} videos 全動画データ
-     * @returns {{approaching: Array, achieved: Array}}
+     * @returns {Array<{video: Object, targetViews: number}>}
      */
-    function getMilestoneVideos(videos) {
+    function findApproachingMilestones(videos) {
+        const results = [];
         const now = new Date().getTime();
         const ms72h = 72 * 60 * 60 * 1000;
-        
-        let approaching = [];
-        let achieved = [];
 
         for (const video of videos) {
-            if (video.recent_history.length < 5) continue;
-            
+            if (video.latestViews === 0 || video.recent_history.length < 5) continue;
             for (const target of TARGET_VIEWS) {
-                // 1. 到達目前チェック (現在 < 目標 かつ 予測 <= 72h後)
-                if (video.latestViews < target && video.latestViews > 0) {
-                    const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
-                    if (predictedDate) {
-                        const predictedTime = predictedDate.getTime();
-                        if (predictedTime > now && predictedTime <= now + ms72h) {
-                            approaching.push({
-                                video: video,
-                                targetViews: target,
-                                predictedTime: predictedTime
-                            });
-                        }
-                    }
-                }
-                // 2. 最近達成済みチェック (現在 >= 目標 かつ 72h前 < 目標)
-                else if (video.latestViews >= target) {
-                    const views72hAgo = calculateValueAtWithFallback(video.recent_history, now - ms72h);
-                    if (views72hAgo < target) {
-                        achieved.push({
+                if (video.latestViews >= target) continue;
+                const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
+                
+                if (predictedDate) {
+                    const predictedTime = predictedDate.getTime();
+                    if (predictedTime > now && predictedTime <= now + ms72h) {
+                        results.push({
                             video: video,
                             targetViews: target
                         });
@@ -630,7 +739,39 @@
                 }
             }
         }
-        return { approaching, achieved };
+        // 目標再生数が大きい順にソート
+        return results.sort((a, b) => b.targetViews - a.targetViews);
+    }
+
+    /**
+     * 過去72時間以内に節目を達成した動画を全て検索
+     * @param {Array<Object>} videos 全動画データ
+     * @returns {Array<{video: Object, targetViews: number}>}
+     */
+    function findRecentMilestones(videos) {
+        const results = [];
+        const now = new Date().getTime();
+        const ms72h = 72 * 60 * 60 * 1000;
+        const time72hAgo = now - ms72h;
+
+        for (const video of videos) {
+            if (video.recent_history.length < 2) continue;
+            
+            // 72時間前の再生数を取得
+            const valOld = calculateValueAtWithFallback(video.recent_history, time72hAgo);
+
+            for (const target of TARGET_VIEWS) {
+                // 現在は達成済み かつ 72時間前は未達成の場合
+                if (video.latestViews >= target && valOld < target) {
+                    results.push({
+                        video: video,
+                        targetViews: target
+                    });
+                }
+            }
+        }
+        // 達成した再生数が大きい順にソート
+        return results.sort((a, b) => b.targetViews - a.targetViews);
     }
     
     function renderPrediction(video) {
@@ -820,45 +961,41 @@
 
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
-        // 節目情報の取得
-        const { approaching, achieved } = getMilestoneVideos(videos);
         
-        // ソート: 目標再生数が大きい順
-        approaching.sort((a, b) => b.targetViews - a.targetViews);
-        achieved.sort((a, b) => b.targetViews - a.targetViews);
+        // 1. 達成目前リストを取得
+        const approachingList = findApproachingMilestones(videos);
+        
+        // 2. 直近3日以内の達成済みリストを取得
+        const reachedList = findRecentMilestones(videos);
 
-        // その他のランキング
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
         const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0];
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
         
         let cardConfig = [];
         
-        // 1. 達成目前 (Approaching)
-        approaching.forEach(item => {
+        // 達成目前の動画を全て追加
+        approachingList.forEach(item => {
             const targetViewLabel = (item.targetViews / 10000).toLocaleString() + '万';
             cardConfig.push({ 
                 data: item.video, 
-                label: `達成目前 (${targetViewLabel})`, 
+                label: `Milestone Alert (${targetViewLabel})`, 
                 icon: 'ri-fire-fill', 
-                colorClass: 'type-milestone',
-                isMilestone: true
+                colorClass: 'type-milestone'
             });
         });
 
-        // 2. 達成済み (Achieved)
-        achieved.forEach(item => {
+        // 達成済みの動画を全て追加
+        reachedList.forEach(item => {
             const targetViewLabel = (item.targetViews / 10000).toLocaleString() + '万';
             cardConfig.push({ 
                 data: item.video, 
-                label: `祝・達成 (${targetViewLabel})`, 
-                icon: 'ri-medal-fill', 
-                colorClass: 'type-achieved',
-                isMilestone: true
+                label: `Achieved (${targetViewLabel})`, 
+                icon: 'ri-flag-fill', 
+                colorClass: 'type-achieved'
             });
         });
 
-        // 3. その他
         if (newest) {
             cardConfig.push({ data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' });
         }
@@ -873,15 +1010,14 @@
         if (cardConfig.length === 0) {
             html = '<div class="trend-card"><div class="trend-content">トレンドデータが見つかりませんでした。</div></div>';
         } else {
-            // 重複は許容してそのまま表示
             cardConfig.forEach(card => { 
                 if(!card.data) return;
-                const labelText = card.label;
+                
                 html += `
                     <div class="trend-card" onclick="selectVideo('${card.data.id}')">
                         <div class="trend-icon-box ${card.colorClass}"><i class="${card.icon}"></i></div>
                         <div class="trend-content">
-                            <span class="trend-label">${labelText}</span>
+                            <span class="trend-label">${card.label}</span>
                             <p class="trend-title">${card.data.info.title}</p>
                         </div>
                         <img src="${card.data.info.thumbnail}" class="trend-thumb-mini" alt="thumb">
@@ -1039,13 +1175,13 @@
         }
         
         // Type Tag (種別)
-        const typeIcon = typeKey === "書き下ろし" ? 'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
+        const typeIcon = typeKey === "書き下ろし" ?
+        'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
         typeTag.className = 'tag';
         typeTag.innerHTML = `<i class="${typeIcon}"></i> ${typeKey || '未分類'}`;
         // Genre Tag (ジャンル)
         genreTag.className = 'tag';
         genreTag.innerHTML = `<i class="ri-folder-open-line"></i> ${genreKey || '未分類'}`;
-
 
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
@@ -1185,11 +1321,12 @@
                                     return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
                                 }
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
-                            } 
+                            }
                         } 
                     },
                     y: { 
-                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
+                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false 
+                        }, 
                         ticks: { 
                             font: { size: 9, family: 'Inter' },
                             color: '#9ca3af', 
