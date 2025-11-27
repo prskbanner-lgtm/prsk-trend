@@ -33,172 +33,291 @@
             --font-num: 'Inter', sans-serif;
         }
 
-        body { font-family: var(--font-jp); background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        .container { max-width: 1280px; margin: 0 auto; padding: 30px 20px; }
+
+        body { font-family: var(--font-jp);
+            background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 30px 20px;
+        }
         
         /* Header */
-        .app-header { margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-        .app-header i { font-size: 1.5rem; color: var(--primary); }
-        .app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+        .app-header { margin-bottom: 30px;
+            display: flex; align-items: center; gap: 10px; }
+        .app-header i { font-size: 1.5rem;
+            color: var(--primary); }
+        .app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700;
+        }
+
 
         /* Trends */
-        .trend-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
-        .trend-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 20px; box-shadow: var(--shadow-card); display: flex; align-items: center; gap: 16px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; border: 1px solid transparent; position: relative; overflow: hidden; }
-        .trend-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--border-color); }
-        .trend-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
-        .type-new { background: #e3f2fd; color: #2196f3; }
-        .type-trend { background: #e8f5e9; color: #4caf50; }
-        .type-top { background: #fff8e1; color: #ffc107; }
-        .type-milestone { background: var(--primary-soft); color: var(--primary); }
+        .trend-section { display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .trend-card { background: var(--bg-card);
+            border-radius: var(--radius-l); padding: 20px; box-shadow: var(--shadow-card); display: flex; align-items: center; gap: 16px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer; border: 1px solid transparent; position: relative; overflow: hidden;
+        }
+        .trend-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--border-color);
+        }
+        .trend-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center;
+            justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+        .type-new { background: #e3f2fd; color: #2196f3;
+        }
+        .type-trend { background: #e8f5e9; color: #4caf50;
+        }
+        .type-top { background: #fff8e1; color: #ffc107;
+        }
+        .type-milestone { background: var(--primary-soft); color: var(--primary);
+        }
         
-        .trend-content { flex: 1; min-width: 0; }
-        .trend-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
-        .trend-title { font-size: 1rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
-        .trend-thumb-mini { width: 60px; height: 34px; border-radius: 6px; object-fit: cover; margin-left: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .trend-content { flex: 1;
+            min-width: 0; }
+        .trend-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
+        .trend-title { font-size: 1rem; font-weight: 700;
+            margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4;
+        }
+        .trend-thumb-mini { width: 60px; height: 34px; border-radius: 6px; object-fit: cover; margin-left: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
 
         /* Main Layout */
-        .main-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-        @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr; align-items: start; } }
+        .main-grid { display: grid;
+            grid-template-columns: 1fr; gap: 24px; }
+        @media (min-width: 960px) { .main-grid { grid-template-columns: 2.5fr 1fr;
+            align-items: start; } }
+
 
         /* Chart Card */
-        .chart-card { background: var(--bg-card); border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
+        .chart-card { background: var(--bg-card);
+            border-radius: var(--radius-l); padding: 24px; box-shadow: var(--shadow-card); }
+
 
         /* Tab Controls */
-        .tab-controls { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
+        .tab-controls { display: flex;
+            border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
         .tab-btn {
-            background: transparent; border: none; padding: 10px 20px; 
+            background: transparent;
+            border: none; padding: 10px 20px; 
             font-size: 1rem; font-weight: 700; color: var(--text-secondary); 
             cursor: pointer; transition: color 0.2s; position: relative;
             font-family: var(--font-jp);
         }
-        .tab-btn:hover { color: var(--text-main); }
-        .tab-btn.active { color: var(--primary); }
+        .tab-btn:hover { color: var(--text-main);
+        }
+        .tab-btn.active { color: var(--primary);
+        }
         .tab-btn.active::after {
-            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; 
+            content: '';
+            position: absolute; bottom: -1px; left: 0; right: 0; 
             height: 3px; background: var(--primary); border-radius: 1px 1px 0 0;
         }
 
+
         /* Content Area Header */
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
-        .video-meta { flex: 1; }
+        .chart-header { display: flex;
+            justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+        .video-meta { flex: 1;
+        }
         
         /* Tags & Images Area */
-        .tags { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px; }
-        .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; transition: all 0.3s ease; }
-        .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block; }
-        .tag-wrapper { display: flex; align-items: center; }
+        .tags { display: flex;
+            gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; min-height: 32px;
+        }
+        .tag { background: var(--bg-body); color: var(--text-secondary); padding: 4px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; transition: all 0.3s ease;
+        }
+        .tag-image { height: 40px; width: auto; object-fit: contain; border-radius: 4px; display: block;
+        }
+        .tag-wrapper { display: flex; align-items: center;
+        }
+
 
         /* スマホ用改行スペーサー */
-        .tag-break { display: none; }
+        .tag-break { display: none;
+        }
 
-        .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4; }
+
+        .current-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.4;
+        }
         
-        .meta-row { display: flex; gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap; }
-        .meta-item { display: flex; align-items: center; gap: 6px; }
-        .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600; background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; }
-        .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px); }
+        .meta-row { display: flex;
+            gap: 16px; margin-top: 8px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap;
+        }
+        .meta-item { display: flex; align-items: center; gap: 6px;
+        }
+        .youtube-link { color: #ff0000; text-decoration: none; font-weight: 600;
+            background: rgba(255, 0, 0, 0.05); padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease;
+        }
+        .youtube-link:hover { background: rgba(255, 0, 0, 0.1); transform: translateY(-1px);
+        }
+
 
         /* Chart Controls */
-        .chart-controls { display: flex; gap: 8px; }
+        .chart-controls { display: flex;
+            gap: 8px; }
         .chart-btn {
-            background: var(--bg-body); border: 1px solid var(--border-color);
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
             color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-s);
             font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
             font-family: var(--font-jp);
         }
-        .chart-btn:hover { background: var(--primary-soft); color: var(--primary); }
-        .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .chart-btn:hover { background: var(--primary-soft); color: var(--primary);
+        }
+        .chart-btn.active { background: var(--primary); color: #fff; border-color: var(--primary);
+        }
 
-        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+
+        .chart-area-wrapper { position: relative; height: 350px; width: 100%; margin-bottom: 30px;
+        }
         
         /* Stats Grid */
-        .stats-container { border-top: 1px solid var(--border-color); padding-top: 24px; }
-        .main-stat { text-align: center; margin-bottom: 24px; }
-        .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block; }
-        .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main); line-height: 1; letter-spacing: -1px; }
+        .stats-container { border-top: 1px solid var(--border-color);
+            padding-top: 24px; }
+        .main-stat { text-align: center; margin-bottom: 24px;
+        }
+        .main-stat .label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; display: block;
+        }
+        .main-stat .value { font-family: var(--font-num); font-size: 2.5rem; font-weight: 700; color: var(--text-main);
+            line-height: 1; letter-spacing: -1px; }
 
-        .comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .comp-item { background: var(--bg-body); border-radius: var(--radius-m); padding: 16px 10px; text-align: center; }
-        .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
-        .comp-item .value { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; display: block; }
+
+        .comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; }
+        .comp-item { background: var(--bg-body); border-radius: var(--radius-m); padding: 16px 10px;
+            text-align: center; }
+        .comp-item .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;
+            margin-bottom: 8px; display: block; }
+        .comp-item .value { font-family: var(--font-num); font-size: 1.1rem;
+            font-weight: 700; display: block; }
         
-        .val-up { color: var(--primary); }
-        .val-neutral { color: var(--text-secondary); }
-        .val-down { color: #4169e1; }
+        .val-up { color: var(--primary);
+        }
+        .val-neutral { color: var(--text-secondary);
+        }
+        .val-down { color: #4169e1;
+        }
+
 
         /* Prediction Table */
-        .prediction-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: 20px; }
-        .prediction-table th, .prediction-table td { padding: 12px; text-align: left; }
+        .prediction-table { width: 100%;
+            border-collapse: separate; border-spacing: 0 10px; margin-top: 20px; }
+        .prediction-table th, .prediction-table td { padding: 12px;
+            text-align: left; }
         .prediction-table th { 
-            font-size: 0.8rem; color: var(--text-secondary); font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--text-secondary); font-weight: 700;
             border-bottom: 2px solid var(--border-color);
         }
         .prediction-table tbody tr {
-            background: var(--bg-body); border-radius: var(--radius-m); 
+            background: var(--bg-body);
+            border-radius: var(--radius-m); 
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .prediction-table td { 
-            font-size: 1rem; font-weight: 500;
+            font-size: 1rem;
+            font-weight: 500;
             color: var(--text-main); font-family: var(--font-num);
         }
-        .prediction-table td:first-child { border-radius: var(--radius-m) 0 0 var(--radius-m); font-weight: 700; }
-        .prediction-table td:last-child { border-radius: 0 var(--radius-m) var(--radius-m) 0; font-family: var(--font-jp); font-weight: 600;}
-        .prediction-label { font-family: var(--font-jp); font-size: 0.9rem; font-weight: 500; }
-        .prediction-notice { padding: 30px; text-align: center; color: var(--text-secondary); font-style: italic; }
+        .prediction-table td:first-child { border-radius: var(--radius-m) 0 0 var(--radius-m);
+            font-weight: 700; }
+        .prediction-table td:last-child { border-radius: 0 var(--radius-m) var(--radius-m) 0; font-family: var(--font-jp);
+            font-weight: 600;}
+        .prediction-label { font-family: var(--font-jp); font-size: 0.9rem; font-weight: 500;
+        }
+        .prediction-notice { padding: 30px; text-align: center; color: var(--text-secondary); font-style: italic;
+        }
+
 
         /* Ranking */
-        .ranking-card { background: var(--bg-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden; }
-        .ranking-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
-        .ranking-title-row { display: flex; align-items: center; gap: 8px; }
-        .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-        .ranking-title-row i { color: var(--rank-1); }
+        .ranking-card { background: var(--bg-card);
+            border-radius: var(--radius-l); box-shadow: var(--shadow-card); display: flex; flex-direction: column; height: 100%; max-height: 750px; overflow: hidden;
+        }
+        .ranking-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex;
+            flex-direction: column; gap: 12px; }
+        .ranking-title-row { display: flex; align-items: center; gap: 8px;
+        }
+        .ranking-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700;
+        }
+        .ranking-title-row i { color: var(--rank-1);
+        }
         
-        .ranking-count { font-family: var(--font-num); font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
+        .ranking-count { font-family: var(--font-num);
+            font-size: 0.9rem; color: var(--text-secondary); margin-left: 4px; font-weight: 600; }
+
 
         /* Ranking Controls */
         .ranking-controls { 
-            display: grid; 
+            display: grid;
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
             gap: 10px; 
         }
         .custom-select {
-            width: 100%; padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
+            width: 100%;
+            padding: 8px 12px; border-radius: var(--radius-s); border: 1px solid var(--border-color);
             background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-jp); font-size: 0.85rem; cursor: pointer;
             outline: none; transition: border-color 0.2s;
         }
-        .custom-select:focus { border-color: var(--text-secondary); }
+        .custom-select:focus { border-color: var(--text-secondary);
+        }
 
-        .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1; }
-        .ranking-scroll::-webkit-scrollbar { width: 6px; }
-        .ranking-scroll::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
-        .rank-list { list-style: none; padding: 0; margin: 0; }
-        .rank-item { display: flex; align-items: center; padding: 10px; border-radius: var(--radius-m); margin-bottom: 6px; cursor: pointer; transition: background 0.2s; }
-        .rank-item:hover { background-color: var(--bg-body); }
-        .rank-item.active { background-color: var(--primary-soft); position: relative; }
-        .rank-item.active::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; background-color: var(--primary); border-radius: 0 4px 4px 0; }
-        .rank-badge { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--font-num); font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); margin-right: 10px; border-radius: 50%; background: #f0f2f5; flex-shrink: 0; }
-        .rank-item:nth-child(1) .rank-badge { background: var(--rank-1); color: #fff; }
-        .rank-item:nth-child(2) .rank-badge { background: var(--rank-2); color: #fff; }
-        .rank-item:nth-child(3) .rank-badge { background: var(--rank-3); color: #fff; }
-        .rank-thumb { width: 60px; height: 36px; object-fit: cover; border-radius: 6px; margin-right: 12px; flex-shrink: 0; }
-        .rank-info { flex: 1; min-width: 0; }
-        .rank-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .rank-views { font-family: var(--font-num); font-size: 0.75rem; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;}
-        .rank-sub-stat { color: var(--text-secondary); font-weight: 600; font-size: 0.7rem; background: #f0f2f5; padding: 0 6px; border-radius: 4px;}
+
+        .ranking-scroll { padding: 12px; overflow-y: auto; flex: 1;
+        }
+        .ranking-scroll::-webkit-scrollbar { width: 6px;
+        }
+        .ranking-scroll::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px;
+        }
+        .rank-list { list-style: none; padding: 0; margin: 0;
+        }
+        .rank-item { display: flex; align-items: center; padding: 10px; border-radius: var(--radius-m); margin-bottom: 6px;
+            cursor: pointer; transition: background 0.2s; }
+        .rank-item:hover { background-color: var(--bg-body);
+        }
+        .rank-item.active { background-color: var(--primary-soft); position: relative;
+        }
+        .rank-item.active::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+            width: 3px; background-color: var(--primary); border-radius: 0 4px 4px 0; }
+        .rank-badge { width: 28px;
+            height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--font-num); font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); margin-right: 10px; border-radius: 50%;
+            background: #f0f2f5; flex-shrink: 0; }
+        .rank-item:nth-child(1) .rank-badge { background: var(--rank-1); color: #fff;
+        }
+        .rank-item:nth-child(2) .rank-badge { background: var(--rank-2); color: #fff;
+        }
+        .rank-item:nth-child(3) .rank-badge { background: var(--rank-3); color: #fff;
+        }
+        .rank-thumb { width: 60px; height: 36px; object-fit: cover; border-radius: 6px; margin-right: 12px;
+            flex-shrink: 0; }
+        .rank-info { flex: 1; min-width: 0;
+        }
+        .rank-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 2px 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-views { font-family: var(--font-num); font-size: 0.75rem;
+            color: var(--text-secondary); display: flex; gap: 8px; align-items: center;}
+        .rank-sub-stat { color: var(--text-secondary);
+            font-weight: 600; font-size: 0.7rem; background: #f0f2f5; padding: 0 6px; border-radius: 4px;}
         
         @media (max-width: 768px) { 
-            .ranking-card { max-height: 500px; } 
-            .chart-card { padding: 16px; }
-            .chart-area-wrapper { height: 250px; }
-            .chart-header { flex-direction: column; }
-            .chart-controls { width: 100%; justify-content: flex-start; margin-top: 10px;}
+            .ranking-card { max-height: 500px;
+            } 
+            .chart-card { padding: 16px;
+            }
+            .chart-area-wrapper { height: 250px;
+            }
+            .chart-header { flex-direction: column;
+            }
+            .chart-controls { width: 100%; justify-content: flex-start;
+            margin-top: 10px;}
             
             /* スマホ用: タグの改行制御 */
-            .tag-break { display: block; width: 100%; height: 0; }
+            .tag-break { display: block;
+            width: 100%; height: 0; }
         }
     </style>
 </head>
 <body>
+
 
 <div class="container">
     <div class="app-header">
@@ -206,116 +325,142 @@
         <h1>Analytics Dashboard</h1>
     </div>
 
+
     <div class="trend-section" id="trendSection">
         <div class="trend-card"><div class="trend-content">読み込み中...</div></div>
     </div>
 
+
     <div class="main-grid">
         <div class="chart-card">
             
+          
             <div class="tab-controls">
                 <button class="tab-btn active" id="tab-graph" onclick="switchTab('graph')">再生数グラフ</button>
                 <button class="tab-btn" id="tab-prediction" onclick="switchTab('prediction')">到達予想</button>
             </div>
 
+
             <div class="chart-header">
                 <div class="video-meta">
-                   
+                
+   
                     <div class="tags">
                         <div id="currentUnit" class="tag-wrapper"></div>
                         <div id="currentBanner" class="tag-wrapper"></div>
+                        
                         <div class="tag-break"></div>
                         <div id="currentType" class="tag-wrapper"></div>
                         <div id="currentGenre" class="tag-wrapper"></div>
                     </div>
        
+                    
                     <h2 class="current-title" id="currentTitle">動画を選択してください</h2>
     
                     <div class="meta-row">
                         <span class="meta-item" id="currentDate">
                             <i class="ri-calendar-line"></i> -
+                 
                         </span>
    
                         <a id="currentLink" href="#" target="_blank" class="meta-item youtube-link" style="display:none;">
                             <i class="ri-youtube-fill"></i> YouTubeで見る
                         </a>
-                   
+      
                     </div>
                 </div>
             </div>
 
+
             <div id="chartArea">
                 <div class="chart-controls">
+         
                     <button class="chart-btn active" id="btnMode1m" onclick="setGraphMode('1m')">直近1ヶ月</button>
                     <button class="chart-btn" id="btnModeAll" onclick="setGraphMode('all')">全期間</button>
                 </div>
                 
                 <div class="chart-area-wrapper">
+             
                     <canvas id="viewChart"></canvas>
                 </div>
                 <div class="stats-container">
        
                     <div class="main-stat">
                         <span class="label">現在の予測再生数 (Now)</span>
+     
                         <span class="value" id="currentViews">-</span>
                     </div>
               
                     <div class="comparison-grid">
+                        
                         <div class="comp-item">
                             <span class="label">前日比 (1 Day)</span>
                             <span class="value" id="diff-1d">-</span>
                         </div>
+              
                         <div class="comp-item">
                             <span class="label">前週比 (1 Week)</span>
                             <span class="value" id="diff-1w">-</span>
                         </div>
+    
                         <div class="comp-item">
                             <span class="label">前月比 (1 Month)</span>
                             <span class="value" id="diff-1m">-</span>
+                  
                         </div>
                     </div>
                 </div>
             </div>
 
+
             <div id="predictionArea" style="display:none;">
-                <div class="stats-container" style="border-top: none; padding-top: 0;">
+                <div class="stats-container" style="border-top: none;
+                padding-top: 0;">
                     <p class="prediction-label">※直近30日の再生数の伸びを基に、より新しいデータに重み付けをした線形回帰により予測しています。</p>
                     <div id="predictionContent">
                         <p class="prediction-notice">動画を選択すると、到達予想日時が表示されます。</p>
                     </div>
+            
                 </div>
             </div>
 
+
         </div>
+
 
         <div class="ranking-card">
             <div class="ranking-header">
                 <div class="ranking-title-row">
                     <i id="rankingIcon" class="ri-trophy-line"></i>
+               
                     <h3 id="rankingTitle">再生数ランキング</h3>
                     <span id="rankingCount" class="ranking-count"></span>
                 </div>
                 <div class="ranking-controls">
                     <select id="unitFilter" class="custom-select">
+                 
                         <option value="all">全ユニット</option>
                     </select>
                     <select id="bannerFilter" class="custom-select"> <option value="all">全バナー</option>
                     </select>
                     <select id="typeFilter" class="custom-select"> <option value="all">全種別</option>
+    
                         <option value="書き下ろし">書き下ろしのみ</option>
                         <option value="カバー">カバーのみ</option>
                     </select>
                     <select id="genreFilter" class="custom-select"> <option value="all">全ジャンル</option>
+          
                     </select>
                     <select id="sortOrder" class="custom-select">
                         <option value="views">総再生数順</option>
                         <option value="date">投稿日が新しい順</option>
+                  
                         <option value="growth1d">1日の伸びが大きい順</option>
                         <option value="growth1w">1週間の伸びが大きい順</option>
                         <option value="growth1m">1か月の伸びが大きい順</option>
                     </select>
                 </div>
-           
+       
             </div>
             <div class="ranking-scroll">
                 <ul class="rank-list" id="rankingList"></ul>
@@ -323,6 +468,7 @@
         </div>
     </div>
 </div>
+
 
 <script>
     // --- カラー設定 ---
@@ -334,19 +480,22 @@
             "志歩": "#BBDD22", "Hinomori Shiho": "#BBDD22",
             "みのり": "#FFCCAA", "Hanasato Minori": "#FFCCAA",
             "遥": "#99CCFF", "Kiritani Haruka": "#99CCFF",
+          
             "愛莉": "#FFAACC", "Momoi Airi": "#FFAACC",
             "雫": "#99EEDD", "Hinomori Shizuku": "#99EEDD",
             "こはね": "#FF6699", "Azusawa Kohane": "#FF6699",
             "杏": "#00BBDD", "Shiraishi An": "#00BBDD",
             "彰人": "#FF7722", "Shinonome Akito": "#FF7722",
             "冬弥": "#0077DD", "Aoyagi Toya": "#0077DD",
-            "司": "#FFBB00", "Tenma Tsukasa": "#FFBB00",
+            "司": "#FFBB00", 
+            "Tenma Tsukasa": "#FFBB00",
             "えむ": "#FF66BB", "Otori Emu": "#FF66BB",
             "寧々": "#33DD99", "Kusanagi Nene": "#33DD99",
             "類": "#BB88EE", "Kamishiro Rui": "#BB88EE",
             "奏": "#BB6688", "Yoisaki Kanade": "#BB6688",
             "まふゆ": "#8888CC", "Asahina Mafuyu": "#8888CC",
             "絵名": "#CCAA88", "Shinonome Ena": "#CCAA88",
+  
             "瑞希": "#DDAACC", "Akiyama Mizuki": "#DDAACC"
         },
         units: {
@@ -354,6 +503,7 @@
             "MORE MORE JUMP!": "#88DD44", "モモジャン": "#88DD44",
             "Vivid BAD SQUAD": "#EE1166", "ビビバス": "#EE1166",
             "Wonderlands x Showtime": "#FF9900", "ワンダショ": "#FF9900",
+   
             "25-ji, Nightcord de.": "#884499", "ニーゴ": "#884499"
         },
         default: "#ff4b4b"
@@ -365,7 +515,8 @@
             "MORE MORE JUMP!": "./images/units/2logo_mmj.png", "モモジャン": "./images/units/2logo_mmj.png",
             "Vivid BAD SQUAD": "./images/units/3logo_vbs.png", "ビビバス": "./images/units/3logo_vbs.png",
             "Wonderlands x Showtime": "./images/units/4logo_wnd.png", "ワンダショ": "./images/units/4logo_wnd.png",
-            "25-ji, Nightcord de.": "./images/units/5logo_nig.png", "ニーゴ": "./images/units/5logo_nig.png"
+            "25-ji, Nightcord de.": 
+            "./images/units/5logo_nig.png", "ニーゴ": "./images/units/5logo_nig.png"
         },
         characters: {
             "一歌": "./images/chars/11logo_ichika.png",
@@ -374,6 +525,7 @@
             "志歩": "./images/chars/14logo_shiho.png",
             "みのり": "./images/chars/21logo_minori.png",
             "遥": "./images/chars/22logo_haruka.png",
+   
             "愛莉": "./images/chars/23logo_airi.png",
             "雫": "./images/chars/24logo_shizuku.png",
             "こはね": "./images/chars/31logo_kohane.png",
@@ -381,6 +533,7 @@
             "彰人": "./images/chars/33logo_akito.png",
             "冬弥": "./images/chars/34logo_touya.png",
             "司": "./images/chars/41logo_tsukasa.png",
+            
             "えむ": "./images/chars/42logo_emu.png",
             "寧々": "./images/chars/43logo_nene.png",
             "類": "./images/chars/44logo_rui.png",
@@ -421,6 +574,7 @@
     let currentGraphMode = '1m';
     let currentTab = 'graph'; 
 
+
     fetch('stats_history.json')
         .then(response => response.json())
         .then(data => {
@@ -430,7 +584,9 @@
         .catch(err => {
             console.error('Data load error:', err);
             document.getElementById('trendSection').innerHTML = '<p style="color:red; padding:20px;">データ読み込みエラー。JSONファイルを確認してください。</p>';
+ 
         });
+
 
     function initApp(data) {
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
@@ -444,33 +600,39 @@
             const recentHist = vData.recent_history || vData.history || [];
             const dailyHist = vData.daily_history || [];
 
+
             const currentPredicted = calculateValueAt(recentHist, currentTimestamp);
             const val1dAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1d);
+           
             const val1wAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1w);
             const val1mAgo = calculateValueAtWithFallback(recentHist, currentTimestamp - ms1m);
             
             return {
                 id: key,
                 info: vData.info,
+                
                 latestViews: Math.round(currentPredicted),
                 growth1d: Math.round(currentPredicted - val1dAgo),
                 growth1w: Math.round(currentPredicted - val1wAgo),
                 growth1m: Math.round(currentPredicted - val1mAgo),
                 recent_history: recentHist,
                 daily_history: dailyHist,
+        
                 uploadDateObj: new Date(vData.info.uploadDate)
             };
         });
+
 
         renderTrends(processedVideos);
         
         // 変更: ソート順を適用してドロップダウンを生成
         populateDropdown('unitFilter', processedVideos, 'unit', UNIT_SORT_ORDER);
-        populateDropdown('bannerFilter', processedVideos, 'character', BANNER_SORT_ORDER); // BANNER_SORT_ORDERを適用
+        populateDropdown('bannerFilter', processedVideos, 'character', BANNER_SORT_ORDER);
+        // BANNER_SORT_ORDERを適用
         populateDropdown('genreFilter', processedVideos, 'genre');
 
-        updateRankingDisplay();
 
+        updateRankingDisplay();
         if (processedVideos.length > 0) {
             const newestVideo = [...processedVideos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
             currentVideoId = newestVideo.id;
@@ -484,6 +646,7 @@
         document.getElementById('genreFilter').addEventListener('change', updateRankingDisplay);
         document.getElementById('sortOrder').addEventListener('change', updateRankingDisplay);
     }
+
 
     // --- ドロップダウンを生成する汎用関数 ---
     /**
@@ -500,24 +663,26 @@
             select.remove(1);
         }
 
+
         const items = new Set();
         videos.forEach(v => { 
             const value = v.info[dataKey];
             if(value && value !== '未分類') items.add(value); 
         });
-        
         let sortedItems = Array.from(items);
         if (sortOrder.length > 0) {
             sortedItems.sort((a, b) => {
                 let indexA = sortOrder.indexOf(a);
                 let indexB = sortOrder.indexOf(b);
                 if (indexA === -1) indexA = 999;
-                if (indexB === -1) indexB = 999;
+                if 
+                (indexB === -1) indexB = 999;
                 return indexA - indexB;
             });
         } else {
             sortedItems.sort();
         }
+
 
         sortedItems.forEach(item => {
             const option = document.createElement('option');
@@ -527,7 +692,9 @@
         });
     }
 
+
     // --- 再生数到達予想 (重み付け線形回帰) の関数 ---
+
 
     /**
      * 再生数到達予想日時の計算 (重み付け線形回帰)
@@ -535,12 +702,14 @@
      * @param {number} currentViews 現在の再生数
      * @param {Array<Object>} history 過去30日間の履歴
      * @param {number} targetViews 目標再生数
-     * @returns {Date | null} 予想到達日時、または null
+     * @returns {Date |
+                null} 予想到達日時、または null
      */
     function calculateTargetTime(currentViews, history, targetViews) {
         if (targetViews <= currentViews || history.length < 5) {
             return null;
         }
+
 
         const ms30d = 30 * 24 * 60 * 60 * 1000;
         const now = new Date().getTime();
@@ -550,11 +719,14 @@
                 x: new Date(h.timestamp).getTime(), // タイムスタンプ (ms)
                 y: h.views                         // 再生数 (views)
             }))
+     
             .filter(h => h.x >= startTimeLimit) // 30日以上前のデータは除く
             .sort((a, b) => a.x - b.x);
         if (recentHistory.length < 5) {
-            return null; // データが少なすぎる
+            return null;
+            // データが少なすぎる
         }
+
 
         // 1. 重みの計算
         const tMin = recentHistory[0].x;
@@ -563,6 +735,7 @@
         if (tRange <= 1000) { // 1秒未満のデータ範囲は予測不可として扱う
             return null;
         }
+
 
         const weightedPoints = recentHistory.map(p => {
             const timeProgress = (p.x - tMin) / tRange; // 0 (最も古い) から 1 (最も新しい)
@@ -584,7 +757,8 @@
         const numerator = sumWXY - (sumWX * sumWY) / sumW;
         const denominator = sumWXX - (sumWX * sumWX) / sumW;
         
-        const slopeA = denominator !== 0 ? numerator / denominator : 0; // views/ms
+        const slopeA = denominator !== 0 ?
+                numerator / denominator : 0; // views/ms
         
         // 4. 切片 b (interceptB) の計算
         // Weighted Mean: meanXw = sumWX / sumW, meanYw = sumWY / sumW
@@ -593,8 +767,10 @@
         const meanYw = sumWY / sumW;
         const interceptB = meanYw - slopeA * meanXw;
         if (slopeA <= 0) {
-            return null; // 再生数の伸びがゼロまたはマイナス
+            return null;
+            // 再生数の伸びがゼロまたはマイナス
         }
+
 
         // 5. 到達時間 (X) の予測: X = (Y - b) / a
         const targetTimeMs = (targetViews - interceptB) / slopeA;
@@ -604,35 +780,56 @@
              return new Date(targetTimeMs);
         }
 
+
         return null;
     }
 
+
     /**
-     * 72時間以内に節目に到達しそうな動画を検索
+     * 72時間以内に節目に到達しそうな動画、および過去72時間以内に到達した動画を全て検索
      * @param {Array<Object>} videos 全動画データ
-     * @returns {{video: Object, targetViews: number} | null}
+     * @returns {Array<{type: 'approaching'|'achieved', video: Object, targetViews: number}>}
      */
-    function findApproachingMilestone(videos) {
+    function findMilestoneEvents(videos) {
+        const events = [];
         const now = new Date().getTime();
         const ms72h = 72 * 60 * 60 * 1000;
+
         for (const video of videos) {
             if (video.latestViews === 0 || video.recent_history.length < 5) continue;
+            
+            // 72時間前の数値を計算（到達済み判定用）
+            const val72hAgo = calculateValueAtWithFallback(video.recent_history, now - ms72h);
+
             for (const target of TARGET_VIEWS) {
-                if (video.latestViews >= target) continue;
-                const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
-                
-                if (predictedDate) {
-                    const predictedTime = predictedDate.getTime();
-                    if (predictedTime > now && predictedTime <= now + ms72h) {
-                        return {
+                // 1. 今後72時間以内に到達するか (Approaching)
+                if (video.latestViews < target) {
+                    const predictedDate = calculateTargetTime(video.latestViews, video.recent_history, target);
+                    if (predictedDate) {
+                        const predictedTime = predictedDate.getTime();
+                        if (predictedTime > now && predictedTime <= now + ms72h) {
+                            events.push({
+                                type: 'approaching',
+                                video: video,
+                                targetViews: target
+                            });
+                        }
+                    }
+                }
+                // 2. 過去72時間以内に到達したか (Achieved)
+                // 条件: 現在は超えている かつ 72時間前は超えていなかった
+                else if (video.latestViews >= target) {
+                    if (val72hAgo < target) {
+                        events.push({
+                            type: 'achieved',
                             video: video,
                             targetViews: target
-                        };
+                        });
                     }
                 }
             }
         }
-        return null;
+        return events;
     }
     
     function renderPrediction(video) {
@@ -642,11 +839,13 @@
             return;
         }
 
+
         let tableHtml = `
             <table class="prediction-table">
                 <thead>
                     <tr>
                         <th>目標再生数</th>
+                
                         <th>到達までの日数</th>
                         <th>到達予想日時 (JST)</th>
                     </tr>
@@ -660,18 +859,22 @@
             let displayTime = '';
             let daysRemaining = '-';
 
+
             if (video.latestViews >= target) {
                 displayTime = `<span style="color:#4caf50; font-weight:700;">達成済み</span>`;
+               
                 daysRemaining = `<span style="color:#4caf50;">-</span>`;
             } else if (predictedDate) {
                 const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' };
                 displayTime = predictedDate.toLocaleString('ja-JP', dateOptions);
                 
+             
                 // 日数計算
                 const diffMs = predictedDate.getTime() - now;
                 if (diffMs > 0) {
                     const days = diffMs / (24 * 60 * 60 * 1000);
-                    daysRemaining = `あと ${days.toFixed(1)} 日`;
+                    daysRemaining = `あと ${days.toFixed(1)} 
+                    日`;
                 } else {
                     daysRemaining = 'まもなく';
                 }
@@ -679,11 +882,13 @@
                 displayTime = `<span style="color:var(--text-secondary);">データ不足/伸び率低</span>`;
             }
 
+
             tableHtml += `
                 <tr>
                     <td>${target.toLocaleString()}</td>
                     <td>${daysRemaining}</td>
                     <td>${displayTime}</td>
+          
                 </tr>
             `;
         });
@@ -694,6 +899,7 @@
         container.innerHTML = tableHtml;
     }
 
+
     // --- ランキングフィルタリングロジック ---
     function updateRankingDisplay() {
         const unitFilter = document.getElementById('unitFilter').value;
@@ -701,11 +907,9 @@
         const typeFilter = document.getElementById('typeFilter').value;
         const genreFilter = document.getElementById('genreFilter').value;
         const sortOrder = document.getElementById('sortOrder').value;
-
         const displayConfig = SORT_DISPLAY_CONFIG[sortOrder] || SORT_DISPLAY_CONFIG['views'];
         document.getElementById('rankingTitle').textContent = displayConfig.label;
         document.getElementById('rankingIcon').className = displayConfig.icon;
-        
         let filtered = processedVideos.filter(v => {
             // Unit Filter
             if (unitFilter !== 'all' && v.info.unit !== unitFilter) return false;
@@ -713,28 +917,34 @@
             // Banner Filter
             if (bannerFilter !== 'all' && v.info.character !== bannerFilter) return false;
             
+ 
             // Type Filter
             if (typeFilter !== 'all' && v.info.type !== typeFilter) return false;
+
 
             // Genre Filter
             if (genreFilter !== 'all' && v.info.genre !== genreFilter) return false;
             
             return true;
+      
         });
         
         document.getElementById('rankingCount').textContent = `(${filtered.length}件)`;
+
 
         filtered.sort((a, b) => {
             switch (sortOrder) {
                 case 'date': return b.uploadDateObj - a.uploadDateObj;
                 case 'growth1d': return b.growth1d - a.growth1d;
                 case 'growth1w': return b.growth1w - a.growth1w;
+              
                 case 'growth1m': return b.growth1m - a.growth1m;
                 case 'views': default: return b.latestViews - a.latestViews;
             }
         });
         renderRanking(filtered, sortOrder);
     }
+
 
     function calculateValueAt(history, targetTime) {
         if (!history || history.length === 0) return 0;
@@ -771,6 +981,7 @@
         return sortedHistory[0].views;
     }
 
+
     function calculateValueAtWithFallback(history, targetTime) {
         if (!history || history.length === 0) return 0;
         const firstTime = new Date(history[0].timestamp).getTime();
@@ -778,17 +989,21 @@
         return calculateValueAt(history, targetTime);
     }
 
+
     function generateGraphData(video, mode) {
         const nowJST = new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"});
         const nowTime = new Date(nowJST).getTime();
         const dataPoints = [];
 
+
         if (mode === '1m') {
-            const hist = video.recent_history || [];
+            const hist = video.recent_history ||
+            [];
             if(hist.length === 0) return [];
             
             const sortedHistory = hist.map(h => ({ time: new Date(h.timestamp).getTime(), views: h.views })).sort((a, b) => a.time - b.time);
             const startTime = sortedHistory[0].time;
+
 
             let iterTime = new Date(startTime);
             iterTime.setMinutes(iterTime.getMinutes() < 30 ? 0 : 30);
@@ -796,17 +1011,20 @@
             iterTime.setMilliseconds(0);
             let iterTs = iterTime.getTime();
 
+
             while (iterTs <= nowTime) {
                 if (iterTs >= startTime) {
                     dataPoints.push({
                         x: iterTs, 
-                        y: Math.round(calculateValueAt(hist, iterTs))
+                        y: Math.round(calculateValueAt(hist, 
+                        iterTs))
                     });
                 }
                 iterTs += 30 * 60 * 1000;
             }
         } else {
-            const hist = video.daily_history || [];
+            const hist = video.daily_history ||
+            [];
             hist.forEach(h => {
                 dataPoints.push({
                     x: new Date(h.timestamp).getTime(),
@@ -815,6 +1033,7 @@
             });
         }
 
+
         dataPoints.push({
             x: nowTime,
             y: video.latestViews
@@ -822,59 +1041,77 @@
         return dataPoints.sort((a, b) => a.x - b.x);
     }
 
+
     function renderTrends(videos) {
         const section = document.getElementById('trendSection');
-        const approaching = findApproachingMilestone(videos);
+        // 変更: 節目イベント（接近または到達）を全て取得
+        const milestoneEvents = findMilestoneEvents(videos);
         
         const newest = [...videos].sort((a, b) => b.uploadDateObj - a.uploadDateObj)[0];
         const trending = [...videos].sort((a, b) => b.growth1d - a.growth1d)[0];
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
         let cardConfig = [];
         
-        if (approaching) {
-            const targetViewLabel = (approaching.targetViews / 10000).toLocaleString() + '万';
+        // 変更: 全ての節目イベントを追加
+        milestoneEvents.forEach(event => {
+            const targetViewLabel = (event.targetViews / 10000).toLocaleString() + '万';
+            // 到達済み(achieved)か接近中(approaching)かで表示を分ける
+            const label = event.type === 'achieved' ? `Achieved! (${targetViewLabel})` : `Soon (${targetViewLabel})`;
+            const icon = event.type === 'achieved' ? 'ri-medal-fill' : 'ri-fire-fill';
+            
             cardConfig.push({ 
-                data: approaching.video, 
-                label: `Milestone Alert (${targetViewLabel})`, 
-                icon: 'ri-fire-fill', 
+                data: event.video, 
+                label: label, 
+                icon: icon, 
                 colorClass: 'type-milestone',
                 isMilestone: true
             });
-        }
+        });
 
-        if (newest && (!approaching || newest.id !== approaching.video.id)) {
+        // 重複チェック用のSet
+        const milestoneVideoIds = new Set(milestoneEvents.map(e => e.video.id));
+
+        // Milestoneに存在しない場合のみ追加
+        if (newest && !milestoneVideoIds.has(newest.id)) {
             cardConfig.push({ data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' });
         }
-        if (trending && (!approaching || trending.id !== approaching.video.id)) {
+        if (trending && !milestoneVideoIds.has(trending.id)) {
             cardConfig.push({ data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' });
         }
-        if (mostViewed && (!approaching || mostViewed.id !== approaching.video.id)) {
+        if (mostViewed && !milestoneVideoIds.has(mostViewed.id)) {
             cardConfig.push({ data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' });
         }
+
 
         let html = '';
         if (cardConfig.length === 0) {
             html = '<div class="trend-card"><div class="trend-content">トレンドデータが見つかりませんでした。</div></div>';
         } else {
-            cardConfig.slice(0, 4).forEach(card => { 
+            // 変更: slice(0, 4)を削除し、全てのカードを表示する
+            cardConfig.forEach(card => { 
                 if(!card.data) return;
                 
-                const labelText = card.isMilestone ? card.label : card.label;
+                const labelText = card.label;
+
 
                 html += `
+        
                     <div class="trend-card" onclick="selectVideo('${card.data.id}')">
                         <div class="trend-icon-box ${card.colorClass}"><i class="${card.icon}"></i></div>
                         <div class="trend-content">
                             <span class="trend-label">${labelText}</span>
+     
                             <p class="trend-title">${card.data.info.title}</p>
                         </div>
                         <img src="${card.data.info.thumbnail}" class="trend-thumb-mini" alt="thumb">
                     </div>
+     
                 `;
             });
         }
         section.innerHTML = html;
     }
+
 
     function renderRanking(videos, sortType = 'views') {
         const list = document.getElementById('rankingList');
@@ -890,23 +1127,28 @@
             li.onclick = () => selectVideo(video.id);
             
             let subStatHtml = '';
+  
             if (sortType.startsWith('growth')) {
                 let val = video[sortType];
                 subStatHtml = `<span class="rank-sub-stat" style="color:${val>=0?'var(--primary)':'#4169e1'}">${val>0?'+':''}${val.toLocaleString()}</span>`;
             } else if (sortType === 'date') {
                 const d = video.uploadDateObj;
+            
                 subStatHtml = `<span class="rank-sub-stat">${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</span>`;
             }
+
 
             li.innerHTML = `
                 <div class="rank-badge">${index + 1}</div>
                 <img class="rank-thumb" src="${video.info.thumbnail}" alt="thumb">
                 <div class="rank-info">
+            
                     <p class="rank-title">${video.info.title}</p>
                     <span class="rank-views">
                         <i class="ri-play-circle-line" style="vertical-align: text-bottom;"></i> ${video.latestViews.toLocaleString()} ${subStatHtml}
                     </span>
                 </div>
+     
             `;
             list.appendChild(li);
         });
@@ -916,12 +1158,14 @@
         }
     }
 
+
     window.switchTab = function(tabName) {
         currentTab = tabName;
         document.getElementById('tab-graph').classList.remove('active');
         document.getElementById('tab-prediction').classList.remove('active');
         document.getElementById('chartArea').style.display = 'none';
         document.getElementById('predictionArea').style.display = 'none';
+
 
         if (tabName === 'graph') {
             document.getElementById('tab-graph').classList.add('active');
@@ -940,16 +1184,19 @@
         }
     }
 
+
     window.setGraphMode = function(mode) {
         currentGraphMode = mode;
         document.getElementById('btnMode1m').classList.toggle('active', mode === '1m');
         document.getElementById('btnModeAll').classList.toggle('active', mode === 'all');
+
 
         if (currentVideoId) {
             const targetVideo = processedVideos.find(v => v.id === currentVideoId);
             if (targetVideo) updateGraph(targetVideo);
         }
     };
+
 
     window.selectVideo = function(id) {
         currentVideoId = id;
@@ -965,6 +1212,7 @@
         }
     }
 
+
     function updateDisplay(video) {
         updateMetaData(video);
         if (currentTab === 'graph') {
@@ -973,6 +1221,7 @@
             renderPrediction(video);
         }
     }
+
 
     // メタデータ表示の更新 (バナー、種別、ジャンルの追加)
     function updateMetaData(video) {
@@ -986,6 +1235,7 @@
         const typeKey = video.info.type;
         const genreKey = video.info.genre;
 
+
         // Unit Tag
         const unitImgSrc = IMAGE_CONFIG.units[unitKey];
         if (unitKey && unitImgSrc) {
@@ -998,12 +1248,14 @@
             unitTag.innerHTML = `<i class="ri-team-line"></i> ${unitKey || '-'}`;
         }
 
+
         // Banner Tag (旧: Char Tag)
         // 変更: バナータグが "-" の場合は非表示、それ以外は表示
         if (bannerKey === "-") {
             bannerTag.style.display = 'none';
         } else {
-            bannerTag.style.display = ''; // 初期化 (クラス定義に従う)
+            bannerTag.style.display = '';
+            // 初期化 (クラス定義に従う)
             
             const bannerImgSrc = IMAGE_CONFIG.characters[bannerKey];
             if (bannerKey && bannerImgSrc) {
@@ -1011,33 +1263,40 @@
                 bannerTag.innerHTML = `<img src="${bannerImgSrc}" class="tag-image" alt="${bannerKey}" title="${bannerKey}">`;
                 bannerTag.style.backgroundColor = 'transparent';
                 bannerTag.style.border = 'none';
-                bannerTag.style.display = 'flex'; // tag-wrapperはflex推奨
+                bannerTag.style.display = 'flex';
+                // tag-wrapperはflex推奨
             } else {
                 bannerTag.className = 'tag';
                 bannerTag.innerHTML = `<i class="ri-user-smile-line"></i> ${bannerKey || '-'}`;
-                bannerTag.style.display = 'inline-flex'; // tagはinline-flex推奨
+                bannerTag.style.display = 'inline-flex';
+                // tagはinline-flex推奨
             }
         }
         
         // Type Tag (種別)
-        const typeIcon = typeKey === "書き下ろし" ? 'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
+        const typeIcon = typeKey === "書き下ろし" ?
+        'ri-edit-line' : typeKey === "カバー" ? 'ri-music-fill' : 'ri-price-tag-3-line';
         typeTag.className = 'tag';
         typeTag.innerHTML = `<i class="${typeIcon}"></i> ${typeKey || '未分類'}`;
-
         // Genre Tag (ジャンル)
         genreTag.className = 'tag';
-        genreTag.innerHTML = `<i class="ri-folder-open-line"></i> ${genreKey || '未分類'}`;
+        genreTag.innerHTML = `<i class="ri-folder-open-line"></i> ${genreKey ||
+        '未分類'}`;
+
+
 
 
         document.getElementById('currentTitle').textContent = video.info.title;
         document.getElementById('currentViews').textContent = video.latestViews.toLocaleString();
 
+
         const d = new Date(video.info.uploadDate);
         const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
         const linkEl = document.getElementById('currentLink');
-        linkEl.href = `https://www.youtube.com/watch?v=$${video.id}`;
+        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
         linkEl.style.display = 'inline-flex';
+
 
         let activeColor = COLOR_CONFIG.default;
         if (bannerKey && bannerKey !== "-" && COLOR_CONFIG.characters[bannerKey]) {
@@ -1045,6 +1304,7 @@
         } else if (unitKey && COLOR_CONFIG.units[unitKey]) {
             activeColor = COLOR_CONFIG.units[unitKey];
         }
+
 
         const setTagStyleIfText = (el, color) => {
             if (el.classList.contains('tag')) {
@@ -1063,10 +1323,12 @@
         setTagStyleIfText(typeTag, activeColor);
         setTagStyleIfText(genreTag, activeColor);
 
+
         updateDiffElement('diff-1d', video.growth1d);
         updateDiffElement('diff-1w', video.growth1w);
         updateDiffElement('diff-1m', video.growth1m);
     }
+
 
     function updateDiffElement(elementId, diff) {
         const el = document.getElementById(elementId);
@@ -1079,6 +1341,7 @@
         else el.classList.add('val-neutral');
     }
 
+
     function hexToRgb(hex) {
         const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
         hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
@@ -1090,15 +1353,18 @@
         } : { r: 255, g: 75, b: 75 };
     }
 
+
     function updateGraph(video) {
         if(currentTab !== 'graph') return;
         const ctx = document.getElementById('viewChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
+
         const graphDataPoints = generateGraphData(video, currentGraphMode);
         
         let activeColor = COLOR_CONFIG.default;
-        const bannerKey = video.info.character; // データのキーは 'character' のまま使用
+        const bannerKey = video.info.character;
+        // データのキーは 'character' のまま使用
         const unitKey = video.info.unit;
         if (bannerKey && bannerKey !== "-" && COLOR_CONFIG.characters[bannerKey]) {
             activeColor = COLOR_CONFIG.characters[bannerKey];
@@ -1106,44 +1372,49 @@
             activeColor = COLOR_CONFIG.units[unitKey];
         }
 
+
         const rgb = hexToRgb(activeColor);
         let gradient = ctx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
         gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`);
-        
         // データ範囲の取得 (X軸の最小値・最大値を設定するため)
         const minTimeX = graphDataPoints.length > 0 ? graphDataPoints[0].x : undefined;
         const maxTimeX = graphDataPoints.length > 0 ? graphDataPoints[graphDataPoints.length - 1].x : undefined;
-
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: [{
                     label: '再生回数',
                     data: graphDataPoints,
+           
                     borderColor: activeColor,
                     backgroundColor: gradient,
                     borderWidth: 3,
                     pointRadius: currentGraphMode === 'all' ? 1 : 2,
-                    pointHoverRadius: currentGraphMode === 'all' ? 3 : 4,
+                    pointHoverRadius: 
+                    currentGraphMode === 'all' ? 3 : 4,
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: activeColor,
                     tension: 0.1,
                     fill: true
+          
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+           
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                     
                         titleFont: { family: 'Noto Sans JP', size: 13 },
                         callbacks: {
                             title: function(context) {
-                                const d = new Date(context[0].parsed.x);
+                                const d 
+                                = new Date(context[0].parsed.x);
                                 return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
                             },
                             label: function(context) {
@@ -1154,13 +1425,16 @@
                 },
                 scales: {
                     x: { 
+ 
                         type: 'linear',
                         min: minTimeX,
                         max: maxTimeX, 
-                        grid: { display: false },
+                        grid: 
+                        { display: false },
                         ticks: { 
                             font: { size: 9, family: 'Inter' }, 
                             color: '#9ca3af', 
+      
                             maxTicksLimit: 8,
                             callback: function(value) {
                                 const d = new Date(value);
@@ -1172,10 +1446,12 @@
                         } 
                     },
                     y: { 
-                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false }, 
+                        grid: { borderDash: [4, 4], color: '#f3f4f6', drawBorder: false 
+                        }, 
                         ticks: { 
                             font: { size: 9, family: 'Inter' },
                             color: '#9ca3af', 
+         
                             callback: function(value) { 
                                 if(value >= 10000) return (value/10000) + '万';
                                 return value; 
@@ -1187,6 +1463,7 @@
         });
     }
 </script>
+
 
 </body>
 </html>
