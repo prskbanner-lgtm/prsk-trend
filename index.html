@@ -51,6 +51,7 @@
         .type-trend { background: #e8f5e9; color: #4caf50; }
         .type-top { background: #fff8e1; color: #ffc107; }
         .type-milestone { background: var(--primary-soft); color: var(--primary); }
+        /* 達成済み用のスタイル追加 */
         .type-achieved { background: #f3e5f5; color: #9c27b0; }
         
         .trend-content { flex: 1; min-width: 0; }
@@ -823,7 +824,6 @@
         const mostViewed = [...videos].sort((a, b) => b.latestViews - a.latestViews)[0];
 
         let cardConfig = [];
-        const addedVideoIds = new Set(); // 重複防止用
 
         // 1. 到達目前（すべて）
         approaching.forEach(item => {
@@ -834,7 +834,6 @@
                 icon: 'ri-fire-fill', 
                 colorClass: 'type-milestone'
             });
-            addedVideoIds.add(item.video.id);
         });
 
         // 2. 到達済み（すべて）
@@ -846,25 +845,21 @@
                 icon: 'ri-medal-fill', 
                 colorClass: 'type-achieved'
             });
-            addedVideoIds.add(item.video.id);
         });
 
-        // 3. 新着（未追加の場合のみ）
-        if (newest && !addedVideoIds.has(newest.id)) {
+        // 3. 新着（重複排除なし）
+        if (newest) {
             cardConfig.push({ data: newest, label: 'Newest', icon: 'ri-time-line', colorClass: 'type-new' });
-            addedVideoIds.add(newest.id);
         }
         
-        // 4. 伸び最多（未追加の場合のみ）
-        if (trending && !addedVideoIds.has(trending.id)) {
+        // 4. 伸び最多（重複排除なし）
+        if (trending) {
             cardConfig.push({ data: trending, label: 'Best Trend (1D)', icon: 'ri-line-chart-line', colorClass: 'type-trend' });
-            addedVideoIds.add(trending.id);
         }
 
-        // 5. 累計最多（未追加の場合のみ）
-        if (mostViewed && !addedVideoIds.has(mostViewed.id)) {
+        // 5. 累計最多（重複排除なし）
+        if (mostViewed) {
             cardConfig.push({ data: mostViewed, label: 'Top Viewed', icon: 'ri-trophy-fill', colorClass: 'type-top' });
-            addedVideoIds.add(mostViewed.id);
         }
 
         let html = '';
@@ -1046,7 +1041,7 @@
         const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         document.getElementById('currentDate').innerHTML = `<i class="ri-calendar-line"></i> ${dateStr}`;
         const linkEl = document.getElementById('currentLink');
-        linkEl.href = `https://www.youtube.com/watch?v=${video.id}`;
+        linkEl.href = `https://www.youtube.com/watch?v=$$${video.id}`;
         linkEl.style.display = 'inline-flex';
 
         let activeColor = COLOR_CONFIG.default;
